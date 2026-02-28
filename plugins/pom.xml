@@ -93,6 +93,8 @@
         <module>hypervisors/ucs</module>
         <module>hypervisors/xenserver</module>
 
+        <module>iac/nimble</module>
+
         <module>integrations/cloudian</module>
         <module>integrations/prometheus</module>
         <module>integrations/kubernetes-service</module>
