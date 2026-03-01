@@ -1,0 +1,33 @@
+tosca_definitions_version: tosca_2_0
+
+description: >
+  Apache CloudStack TOSCA profile Volume node type definition.
+
+node_types:
+  Volume:
+    description: >
+      Apache CloudStack Volume node type.
+    derived_from: Root
+    attributes:
+      id:
+        type: string
+        description: ID of the volume.
+      name:
+        type: string
+        description: The name of the volume.
+      disk-offering-id:
+        type: string
+        description: The ID of the disk offering used by the volume.
+    properties:
+      zone-id:
+        type: string
+        description: The ID of the zone in which the volume will be created.
+        required: true
+      disk-offering-id:
+        type: string
+        description: The ID of the disk offering for the volume.
+        required: true
+      name:
+        type: string
+        description: The name for the volume.
+        required: true

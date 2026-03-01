@@ -20,7 +20,7 @@ import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.BaseListCmd;
 import org.apache.cloudstack.api.response.IacResourceTypesResponse;
-import org.apache.cloudstack.nimble.NimbleService;
+import org.apache.cloudstack.service.NimbleService;
 
 import javax.inject.Inject;
 

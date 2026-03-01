@@ -87,3 +87,13 @@ CALL `cloud`.`INSERT_EXTENSION_DETAIL_IF_NOT_EXISTS`('MaaS', 'orchestratorrequir
 
 CALL `cloud`.`IDEMPOTENT_DROP_UNIQUE_KEY`('counter', 'uc_counter__provider__source__value');
 CALL `cloud`.`IDEMPOTENT_ADD_UNIQUE_KEY`('cloud.counter', 'uc_counter__provider__source__value__removed', '(provider, source, value, removed)');
+
+-- NIMBLE
+CREATE TABLE IF NOT EXISTS `cloud`.`iac_templates_profile` (
+    `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `uuid` VARCHAR(40) UNIQUE,
+    `name` VARCHAR(100) NOT NULL COMMENT 'Profile''s element name.',
+    `type` VARCHAR(100) NOT NULL COMMENT 'Profile''s element type. Valid values are: `CAPABILITY`, `RELATIONSHIP` and `NODE`.',
+    `element_content_file_path` VARCHAR(255) NOT NULL COMMENT 'Profile''s element content file path.',
+    PRIMARY KEY (`id`)
+);

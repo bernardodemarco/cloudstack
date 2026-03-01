@@ -14,21 +14,34 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package org.apache.cloudstack.nimble;
+package org.apache.cloudstack.service;
 
 import com.cloud.utils.component.ManagerBase;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.framework.config.ConfigKey;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfile;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileDao;
 
+import javax.inject.Inject;
 import javax.naming.ConfigurationException;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class NimbleManagerImpl extends ManagerBase implements NimbleService {
+    @Inject
+    private IacTemplatesProfileDao iacTemplatesProfileDao;
+
     private ExecutorService nimbleExecutorPool;
+
+    private List<IacTemplatesProfile> toscaProfile;
 
     @Override
     public void listIacResourceTypes() {
@@ -43,7 +56,27 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         logger.debug("Configuring NIMBLE's fixed thread pool with [{}] threads.", nimbleServicePoolSize);
         nimbleExecutorPool = Executors.newFixedThreadPool(nimbleServicePoolSize);
 
+        loadToscaProfile();
+
         return true;
+    }
+
+    protected List<String> loadToscaProfile() {
+        logger.info("Loading NIMBLE's TOSCA profile.");
+        List<IacTemplatesProfile> profileElements = iacTemplatesProfileDao.listAll();
+        return profileElements.stream().map(element -> {
+            String elementContent = getElementDefinition(element.getElementContentFilePath());
+            return elementContent;
+        }).collect(Collectors.toList());
+    }
+
+    protected String getElementDefinition(String resource) {
+        Path path = Paths.get(String.format("%s%s", NIMBLE_CONFIG_PATH, "tosca/profile/storage/volume.yaml"));
+        try {
+            return Files.readString(path);
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     @Override
