@@ -64,14 +64,15 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     protected List<String> loadToscaProfile() {
         logger.info("Loading NIMBLE's TOSCA profile.");
         List<IacTemplatesProfile> profileElements = iacTemplatesProfileDao.listAll();
+
         return profileElements.stream().map(element -> {
             String elementContent = getElementDefinition(element.getElementContentFilePath());
             return elementContent;
         }).collect(Collectors.toList());
     }
 
-    protected String getElementDefinition(String resource) {
-        Path path = Paths.get(String.format("%s%s", NIMBLE_CONFIG_PATH, "tosca/profile/storage/volume.yaml"));
+    protected String getElementDefinition(String elementContentFilePath) {
+        Path path = Paths.get(String.format("%s%s", NIMBLE_CONFIG_PATH, elementContentFilePath));
         try {
             return Files.readString(path);
         } catch (IOException e) {
