@@ -17,4 +17,9 @@ public class ToscaPropertyDefinition extends ToscaFieldDefinition {
     public Object getValidation() {
         return validation;
     }
+
+    @Override
+    public String toString() {
+        return String.format("%s: %s", this.getClass().getName(), super.toString());
+    }
 }

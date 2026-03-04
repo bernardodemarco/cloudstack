@@ -22,4 +22,5 @@
                       http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="nimbleManager" class="org.apache.cloudstack.service.NimbleManagerImpl" />
     <bean id="iacTemplateProfileDao" class="org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileDaoImpl" />
+    <bean id="toscaParser" class="org.apache.cloudstack.tosca.parser.ToscaParser" />
 </beans>

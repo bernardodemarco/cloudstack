@@ -1,5 +1,7 @@
 package org.apache.cloudstack.tosca.model;
 
+import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
+
 import java.util.Map;
 
 public class ToscaNodeType {
@@ -23,5 +25,10 @@ public class ToscaNodeType {
 
     public Map<String, ToscaAttributeDefinition> getAttributes() {
         return attributes;
+    }
+
+    @Override
+    public String toString() {
+        return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name", "properties", "attributes");
     }
 }

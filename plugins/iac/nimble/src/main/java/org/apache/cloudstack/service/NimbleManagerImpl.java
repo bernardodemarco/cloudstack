@@ -21,12 +21,11 @@ import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfile;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileDao;
+import org.apache.cloudstack.tosca.model.ToscaNodeType;
+import org.apache.cloudstack.tosca.parser.ToscaParser;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,11 +36,14 @@ import java.util.stream.Collectors;
 
 public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Inject
+    private ToscaParser toscaParser;
+
+    @Inject
     private IacTemplatesProfileDao iacTemplatesProfileDao;
 
     private ExecutorService nimbleExecutorPool;
 
-    private List<IacTemplatesProfile> toscaProfile;
+    private Map<String, ToscaNodeType> toscaProfile;
 
     @Override
     public void listIacResourceTypes() {
@@ -55,29 +57,17 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         int nimbleServicePoolSize = NimbleService.NimbleServicePoolSize.value();
         logger.debug("Configuring NIMBLE's fixed thread pool with [{}] threads.", nimbleServicePoolSize);
         nimbleExecutorPool = Executors.newFixedThreadPool(nimbleServicePoolSize);
-
-        loadToscaProfile();
-
+        toscaProfile = loadToscaProfile();
         return true;
     }
 
-    protected List<String> loadToscaProfile() {
+    protected Map<String, ToscaNodeType> loadToscaProfile() {
         logger.info("Loading NIMBLE's TOSCA profile.");
         List<IacTemplatesProfile> profileElements = iacTemplatesProfileDao.listAll();
 
-        return profileElements.stream().map(element -> {
-            String elementContent = getElementDefinition(element.getElementContentFilePath());
-            return elementContent;
-        }).collect(Collectors.toList());
-    }
-
-    protected String getElementDefinition(String elementContentFilePath) {
-        Path path = Paths.get(String.format("%s%s", NIMBLE_CONFIG_PATH, elementContentFilePath));
-        try {
-            return Files.readString(path);
-        } catch (IOException e) {
-            return null;
-        }
+        return profileElements.stream()
+                .map(element -> toscaParser.parseNodeType(Paths.get(String.format("%s/%s", NIMBLE_PROFILE_FOLDER_PATH, element.getElementContentFilePath()))))
+                .collect(Collectors.toMap(ToscaNodeType::getName, nodeType -> nodeType));
     }
 
     @Override

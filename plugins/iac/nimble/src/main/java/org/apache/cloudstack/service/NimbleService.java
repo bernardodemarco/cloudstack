@@ -21,7 +21,7 @@ import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
 
 public interface NimbleService extends PluggableService, Configurable {
-    String NIMBLE_CONFIG_PATH = "/usr/share/cloudstack-management/nimble/";
+    String NIMBLE_PROFILE_FOLDER_PATH = "/usr/share/cloudstack-management/nimble/profile";
 
     ConfigKey<Boolean> NimbleServiceEnabled = new ConfigKey<>("Advanced", Boolean.class,
             "nimble.service.enabled", "false",

@@ -1,5 +1,7 @@
 package org.apache.cloudstack.tosca.model;
 
+import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
+
 public abstract class ToscaFieldDefinition {
     private String name;
     private String description;
@@ -21,5 +23,10 @@ public abstract class ToscaFieldDefinition {
 
     public ToscaPrimitiveType getType() {
         return type;
+    }
+
+    @Override
+    public String toString() {
+        return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name", "description", "type");
     }
 }
