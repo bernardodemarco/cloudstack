@@ -20,5 +20,5 @@ import com.cloud.utils.db.GenericDaoBase;
 import org.springframework.stereotype.Component;
 
 @Component
-public class IacTemplatesProfileDaoImpl extends GenericDaoBase<IacTemplatesProfile, Long> implements IacTemplatesProfileDao {
+public class IacTemplatesProfileDaoImpl extends GenericDaoBase<IacTemplatesProfileVO, Long> implements IacTemplatesProfileDao {
 }

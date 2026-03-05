@@ -18,6 +18,6 @@ package org.apache.cloudstack.persistence.iactemplatesprofile;
 
 import com.cloud.utils.db.GenericDao;
 
-public interface IacTemplatesProfileDao extends GenericDao<IacTemplatesProfile, Long> {
+public interface IacTemplatesProfileDao extends GenericDao<IacTemplatesProfileVO, Long> {
 
 }

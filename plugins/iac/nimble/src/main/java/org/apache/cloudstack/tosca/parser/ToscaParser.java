@@ -32,7 +32,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ToscaParser {
-    private Logger logger = LogManager.getLogger(ToscaParser.class);
+    private final Logger logger = LogManager.getLogger(ToscaParser.class);
 
     enum FieldDefinitionType {
         ATTRIBUTE, PROPERTY
@@ -71,17 +71,17 @@ public class ToscaParser {
             String fieldName = field.getKey();
             Map<String, Object> fieldBody = ToscaYamlHelper.asMap(field.getValue());
             ToscaPrimitiveType fieldType = EnumUtils.getEnumIgnoreCase(ToscaPrimitiveType.class, ToscaYamlHelper.asString(fieldBody.get("type")));
-            String propertyDescription = ToscaYamlHelper.asString(fieldBody.get("description"));
+            String fieldDescription = ToscaYamlHelper.asString(fieldBody.get("description"));
 
-            if (fieldDefinitionType == FieldDefinitionType.PROPERTY) {
-                ToscaAttributeDefinition attributeDefinition = new ToscaAttributeDefinition(fieldName, propertyDescription, fieldType);
-                logger.debug("Successfully parsed the following property: [{}].", attributeDefinition::toString);
+            if (fieldDefinitionType == FieldDefinitionType.ATTRIBUTE) {
+                ToscaAttributeDefinition attributeDefinition = new ToscaAttributeDefinition(fieldName, fieldDescription, fieldType);
+                logger.debug("Successfully parsed the following attribute: [{}].", attributeDefinition::toString);
                 return attributeDefinition;
             }
 
             boolean required = BooleanUtils.toBoolean(ToscaYamlHelper.asString(fieldBody.get("required")));
             Object validation = fieldBody.get("validation");
-            ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(fieldName, propertyDescription, fieldType, required, validation);;
+            ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(fieldName, fieldDescription, fieldType, required, validation);
             logger.debug("Successfully parsed the following property: [{}].", propertyDefinition::toString);
             return propertyDefinition;
         }).collect(Collectors.toMap(ToscaFieldDefinition::getName, (field) -> field));

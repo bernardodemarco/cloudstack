@@ -16,15 +16,22 @@
 // under the License.
 package com.cloud.upgrade.dao;
 
+import com.cloud.utils.FileUtil;
 import com.cloud.utils.exception.CloudRuntimeException;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgrade, DbUpgradeSystemVmTemplate {
+    private static final Path NIMBLE_RESOURCE_TYPES_DIRECTORY = Paths.get("nimble", "resource-types");
 
     @Override
     public String[] getUpgradableVersionRange() {
@@ -51,6 +58,7 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
     public void performDataMigration(Connection conn) {
         updateSnapshotPolicyOwnership(conn);
         updateBackupScheduleOwnership(conn);
+        populateNimbleIacResourceTypes(conn);
     }
 
     protected void updateSnapshotPolicyOwnership(Connection conn) {
@@ -98,6 +106,32 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
             }
         } catch (SQLException e) {
             throw new CloudRuntimeException("Unable to update backup_schedule table with account_id and domain_id", e);
+        }
+
+    }
+
+    protected void populateNimbleIacResourceTypes(Connection conn) {
+        String insertResourceTypeQuery = "INSERT INTO iac_templates_profile (uuid, name, element_content) VALUES (UUID(), ?, ?)";
+
+        List<String> filePaths = FileUtil.getFilesPathsUnderResourceDirectory(NIMBLE_RESOURCE_TYPES_DIRECTORY.toString());
+        logger.info("Found the following NIMBLE's resource types files: [{}]. " +
+                "Each one of them will be iterated and its corresponding content will be inserted in the database.", filePaths);
+        for (String filePath : filePaths) {
+            try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(filePath);
+                 PreparedStatement preparedStatement = conn.prepareStatement(insertResourceTypeQuery)) {
+                if (inputStream == null) {
+                    throw new Exception(String.format("[%s] file's input stream is [null].", filePath));
+                }
+
+                String resourceTypeElementContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+                preparedStatement.setString(1, filePath);
+                preparedStatement.setString(2, resourceTypeElementContent);
+                preparedStatement.executeUpdate();
+            } catch (SQLException exception) {
+                logger.warn("Unable to insert resource type [{}] in the database. Skipping it.", filePath, exception);
+            } catch (Exception exception) {
+                logger.warn("Unable to read file: [{}]. Skipping it.", filePath, exception);
+            }
         }
     }
 }

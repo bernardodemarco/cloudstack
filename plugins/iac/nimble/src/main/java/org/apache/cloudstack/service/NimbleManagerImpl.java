@@ -19,8 +19,8 @@ package org.apache.cloudstack.service;
 import com.cloud.utils.component.ManagerBase;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.framework.config.ConfigKey;
-import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfile;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileDao;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
 
@@ -63,7 +63,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
 
     protected Map<String, ToscaNodeType> loadToscaProfile() {
         logger.info("Loading NIMBLE's TOSCA profile.");
-        List<IacTemplatesProfile> profileElements = iacTemplatesProfileDao.listAll();
+        List<IacTemplatesProfileVO> profileElements = iacTemplatesProfileDao.listAll();
 
         return profileElements.stream()
                 .map(element -> toscaParser.parseNodeType(Paths.get(String.format("%s/%s", NIMBLE_PROFILE_FOLDER_PATH, element.getElementContentFilePath()))))

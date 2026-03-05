@@ -1,0 +1,86 @@
+tosca_definitions_version: tosca_2_0
+
+description: >
+  KubernetesCluster node type definition.
+
+node_types:
+  KubernetesCluster:
+    derived_from: Root
+    properties:
+      name:
+        type: string
+        description: The name of the Kubernetes cluster.
+        required: true
+      zone-id:
+        type: string
+        description: The ID of the availability zone.
+        required: true
+      description:
+        type: string
+        description: The description of the cluster.
+        required: false
+      account:
+        type: string
+        description: The account associated with the VPC.
+        required: false
+      domain-id:
+        type: string
+        description: The domain ID associated with the VPC.
+        required: false
+      project-id:
+        type: string
+        description: The project ID associated with the VPC.
+        required: false
+      kubernetes-version-id:
+        type: string
+        description: Kubernetes version ID used to launch the cluster.
+        required: false
+      network-id:
+        type: string
+        description: The ID of the network in which the cluster will be launched.
+        required: false
+      node-root-disk-size:
+        type: integer
+        description: Root disk size (GB) for each node.
+        required: false
+      service-offering-id:
+        type: string
+        description: Service offering ID for the VMs in the cluster.
+        required: false
+      size:
+        type: integer
+        description: Number of worker nodes in the cluster.
+        required: false
+      control-nodes:
+        type: integer
+        description: Number of control nodes in the cluster.
+        required: false
+      key-pair:
+        type: string
+        description: SSH key pair name for logging into the VMs.
+        required: false
+      cluster-type:
+        type: string
+        description: Kubernetes cluster type (CloudManaged or ExternalManaged).
+        required: false
+        validation: { $valid_values: [ $value, [CloudManaged, ExternalManaged] ] }
+      docker-registry-password:
+        type: string
+        description: Password for the Docker image private registry.
+        required: false
+      docker-registry-url:
+        type: string
+        description: URL for the Docker image private registry.
+        required: false
+      docker-registry-username:
+        type: string
+        description: Username for the Docker image private registry.
+        required: false
+      external-load-balancer-ip-address:
+        type: string
+        description: External load balancer IP address for HA clusters.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the Kubernetes cluster.

@@ -27,6 +27,6 @@ public abstract class ToscaFieldDefinition {
 
     @Override
     public String toString() {
-        return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name", "description", "type");
+        return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name", "type");
     }
 }

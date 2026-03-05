@@ -29,6 +29,7 @@ public class ToscaNodeType {
 
     @Override
     public String toString() {
-        return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name", "properties", "attributes");
+        return String.format("%s: %s", name,
+                ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "properties", "attributes"));
     }
 }
