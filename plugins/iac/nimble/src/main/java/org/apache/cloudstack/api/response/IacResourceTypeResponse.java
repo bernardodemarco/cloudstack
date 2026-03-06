@@ -14,10 +14,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package org.apache.cloudstack.persistence.iactemplatesprofile;
+package org.apache.cloudstack.api.response;
 
-import com.cloud.utils.db.GenericDao;
+import org.apache.cloudstack.api.BaseResponseWithAnnotations;
+import org.apache.cloudstack.api.EntityReference;
 
-public interface IacTemplatesProfileDao extends GenericDao<IacTemplatesProfileVO, Long> {
-
+@EntityReference(value = {})
+public class IacResourceTypeResponse extends BaseResponseWithAnnotations {
 }

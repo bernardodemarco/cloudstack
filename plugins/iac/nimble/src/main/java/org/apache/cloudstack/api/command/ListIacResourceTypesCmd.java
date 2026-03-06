@@ -18,22 +18,42 @@ package org.apache.cloudstack.api.command;
 
 import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.APICommand;
+import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseListCmd;
-import org.apache.cloudstack.api.response.IacResourceTypesResponse;
+import org.apache.cloudstack.api.Parameter;
+import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.ListResponse;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.service.NimbleService;
 
 import javax.inject.Inject;
 
 @APICommand(name = "listIacResourceTypes",
-        description = "Lists available IaC resource types, such as TOSCA's node, relationship and capacity types.",
-        responseObject = IacResourceTypesResponse.class, requestHasSensitiveInfo = false, responseHasSensitiveInfo = false,
-        authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
+        description = "Lists all available IaC resource types, such as TOSCA node types.",
+        responseObject = IacResourceTypeResponse.class, requestHasSensitiveInfo = false, responseHasSensitiveInfo = false,
+        entityType = {IacResourceType.class}, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
 public class ListIacResourceTypesCmd extends BaseListCmd {
     @Inject
     private NimbleService nimbleService;
 
+    @Parameter(name = ApiConstants.ID, type = CommandType.UUID, entityType = IacResourceTypeResponse.class, description = "The ID of the IaC resource type.")
+    private Long id;
+
+    @Parameter(name = ApiConstants.NAME, type = CommandType.STRING, description = "The name of the IaC resource type.")
+    private String name;
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     @Override
     public void execute() {
-        nimbleService.listIacResourceTypes();
+        ListResponse<IacResourceTypeResponse> response = nimbleService.listIacResourceTypes(this);
+        response.setResponseName(getCommandName());
+        setResponseObject(response);
     }
 }

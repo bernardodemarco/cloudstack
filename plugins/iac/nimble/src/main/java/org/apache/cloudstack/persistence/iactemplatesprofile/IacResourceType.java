@@ -19,13 +19,7 @@ package org.apache.cloudstack.persistence.iactemplatesprofile;
 import org.apache.cloudstack.api.Identity;
 import org.apache.cloudstack.api.InternalIdentity;
 
-public interface IacTemplatesProfile extends Identity, InternalIdentity {
-    enum Type {
-        CAPABILITY, RELATIONSHIP, NODE
-    }
-
-    long getId();
+public interface IacResourceType extends Identity, InternalIdentity {
     String getName();
-    Type getType();
-    String getElementContentFilePath();
+    String getElementContent();
 }

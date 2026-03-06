@@ -25,8 +25,8 @@ import javax.persistence.Table;
 import java.util.UUID;
 
 @Entity
-@Table(name = "iac_templates_profile")
-public class IacTemplatesProfileVO implements IacTemplatesProfile {
+@Table(name = "iac_resource_types")
+public class IacResourceTypeVO implements IacResourceType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -38,11 +38,8 @@ public class IacTemplatesProfileVO implements IacTemplatesProfile {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "type", nullable = false, length = 100)
-    private IacTemplatesProfile.Type type;
-
-    @Column(name = "element_content_file_path", nullable = false)
-    private String elementContentFilePath;
+    @Column(name = "element_content", nullable = false, length = 65535)
+    private String elementContent;
 
     @Override
     public long getId() {
@@ -60,12 +57,7 @@ public class IacTemplatesProfileVO implements IacTemplatesProfile {
     }
 
     @Override
-    public Type getType() {
-        return type;
-    }
-
-    @Override
-    public String getElementContentFilePath() {
-        return elementContentFilePath;
+    public String getElementContent() {
+        return elementContent;
     }
 }

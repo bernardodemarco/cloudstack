@@ -19,7 +19,6 @@ package com.cloud.upgrade.dao;
 import com.cloud.utils.FileUtil;
 import com.cloud.utils.exception.CloudRuntimeException;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -31,7 +30,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgrade, DbUpgradeSystemVmTemplate {
-    private static final Path NIMBLE_RESOURCE_TYPES_DIRECTORY = Paths.get("nimble", "resource-types");
+    private static final String NIMBLE_RESOURCE_TYPES_DIRECTORY = Paths.get("nimble", "resource-types").toString();
 
     @Override
     public String[] getUpgradableVersionRange() {
@@ -56,8 +55,8 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
 
     @Override
     public void performDataMigration(Connection conn) {
-        updateSnapshotPolicyOwnership(conn);
-        updateBackupScheduleOwnership(conn);
+//        updateSnapshotPolicyOwnership(conn);
+//        updateBackupScheduleOwnership(conn);
         populateNimbleIacResourceTypes(conn);
     }
 
@@ -111,9 +110,9 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
     }
 
     protected void populateNimbleIacResourceTypes(Connection conn) {
-        String insertResourceTypeQuery = "INSERT INTO iac_templates_profile (uuid, name, element_content) VALUES (UUID(), ?, ?)";
+        String insertResourceTypeQuery = "INSERT INTO iac_resource_types (uuid, name, element_content) VALUES (UUID(), ?, ?)";
 
-        List<String> filePaths = FileUtil.getFilesPathsUnderResourceDirectory(NIMBLE_RESOURCE_TYPES_DIRECTORY.toString());
+        List<String> filePaths = FileUtil.getFilesPathsUnderResourceDirectory(NIMBLE_RESOURCE_TYPES_DIRECTORY);
         logger.info("Found the following NIMBLE's resource types files: [{}]. " +
                 "Each one of them will be iterated and its corresponding content will be inserted in the database.", filePaths);
         for (String filePath : filePaths) {
@@ -124,7 +123,7 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
                 }
 
                 String resourceTypeElementContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-                preparedStatement.setString(1, filePath);
+                preparedStatement.setString(1, getIacResourceTypeNameFromFilePath(filePath));
                 preparedStatement.setString(2, resourceTypeElementContent);
                 preparedStatement.executeUpdate();
             } catch (SQLException exception) {
@@ -133,5 +132,21 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
                 logger.warn("Unable to read file: [{}]. Skipping it.", filePath, exception);
             }
         }
+    }
+
+    protected String getIacResourceTypeNameFromFilePath(String filePath) {
+        String fileName = Path.of(filePath).getFileName().toString();
+        int fileExtensionDelimiterPosition = fileName.lastIndexOf('.');
+        String resourceNameInKebabCase = fileExtensionDelimiterPosition == -1 ?
+                fileName : fileName.substring(0, fileExtensionDelimiterPosition);
+        StringBuilder resourceNameInCamelCase = new StringBuilder();
+        for (String resourceNamePart : resourceNameInKebabCase.split("-")) {
+            if (!resourceNamePart.isEmpty()) {
+                resourceNameInCamelCase.append(Character.toUpperCase(resourceNamePart.charAt(0)))
+                        .append(resourceNamePart.substring(1));
+            }
+        }
+
+        return resourceNameInCamelCase.toString();
     }
 }

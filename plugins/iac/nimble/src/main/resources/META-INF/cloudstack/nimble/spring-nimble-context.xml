@@ -21,6 +21,7 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans
                       http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="nimbleManager" class="org.apache.cloudstack.service.NimbleManagerImpl" />
-    <bean id="iacTemplateProfileDao" class="org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileDaoImpl" />
+    <bean id="iacTemplateProfileDao" class="org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDaoImpl" />
     <bean id="toscaParser" class="org.apache.cloudstack.tosca.parser.ToscaParser" />
+    <bean id="nimbleResponseBuilder" class="org.apache.cloudstack.api.response.NimbleResponseBuilder" />
 </beans>

@@ -16,9 +16,5 @@
 // under the License.
 package org.apache.cloudstack.api.response;
 
-import org.apache.cloudstack.api.BaseResponseWithAnnotations;
-import org.apache.cloudstack.api.EntityReference;
-
-@EntityReference(value = {})
-public class IacResourceTypesResponse extends BaseResponseWithAnnotations {
+public class NimbleResponseBuilder {
 }

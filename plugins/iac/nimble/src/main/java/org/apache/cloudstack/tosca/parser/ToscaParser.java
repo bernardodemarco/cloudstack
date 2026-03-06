@@ -26,7 +26,6 @@ import org.apache.commons.lang3.EnumUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -43,17 +42,15 @@ public class ToscaParser {
     private static final String NODE_TYPES_ATTRIBUTES_KEY = "attributes";
 
     @SuppressWarnings("unchecked")
-    public ToscaNodeType parseNodeType(Path path) {
-        Object rawYaml = ToscaYamlHelper.loadYaml(path);
+    public ToscaNodeType parseNodeType(String nodeTypeName, String nodeTypeContent) {
+        Object rawYaml = ToscaYamlHelper.loadYaml(nodeTypeContent);
         Map<String, Object> yamlRoot = ToscaYamlHelper.asMap(rawYaml);
-        logger.debug("Trying to extract only one node type from the [{}] file, since it is expected for each node type to be declared separately.", path);
+        logger.debug("Trying to extract only one node type from the [{}] YAML definition file, since it is expected for each node type to be declared separately.", nodeTypeName);
         Optional<Map.Entry<String, Object>> nodeTypeRaw = ToscaYamlHelper.asMap(yamlRoot.get(NODE_TYPES_KEY)).entrySet().stream().findFirst();
         if (nodeTypeRaw.isEmpty()) {
-            logger.error("No node types are declared in [{}].", path);
+            logger.error("No node types are declared in the [{}] YAML definition file.", nodeTypeName);
             return null;
         }
-        String nodeTypeName = nodeTypeRaw.get().getKey();
-        logger.debug("Parsing the following node type: [{}].", nodeTypeName);
         Map<String, Object> nodeTypeBody = ToscaYamlHelper.asMap(nodeTypeRaw.get().getValue());
         Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) parseFieldDefinition(nodeTypeBody.get(NODE_TYPES_PROPERTIES_KEY), FieldDefinitionType.PROPERTY);
         Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) parseFieldDefinition(nodeTypeBody.get(NODE_TYPES_ATTRIBUTES_KEY), FieldDefinitionType.ATTRIBUTE);
@@ -64,7 +61,7 @@ public class ToscaParser {
 
     private Map<String, ? extends ToscaFieldDefinition> parseFieldDefinition(Object rawFields, FieldDefinitionType fieldDefinitionType) {
         Map<String, Object> fields = ToscaYamlHelper.asMap(rawFields);
-        logger.debug("Parsing the following {}: [{}].",
+        logger.debug("Parsing the following {}: {}.",
                 () -> fieldDefinitionType == FieldDefinitionType.ATTRIBUTE ? "attributes" : "properties", fields::keySet);
 
         return fields.entrySet().stream().map((field) -> {

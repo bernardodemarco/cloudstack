@@ -16,17 +16,20 @@
 // under the License.
 package org.apache.cloudstack.service;
 
+import com.cloud.utils.Pair;
 import com.cloud.utils.component.ManagerBase;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
+import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.ListResponse;
+import org.apache.cloudstack.api.response.NimbleResponseBuilder;
 import org.apache.cloudstack.framework.config.ConfigKey;
-import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileDao;
-import org.apache.cloudstack.persistence.iactemplatesprofile.IacTemplatesProfileVO;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,15 +42,23 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     private ToscaParser toscaParser;
 
     @Inject
-    private IacTemplatesProfileDao iacTemplatesProfileDao;
+    private IacResourceTypeDao iacResourceTypeDao;
+
+    @Inject
+    private NimbleResponseBuilder responseBuilder;
 
     private ExecutorService nimbleExecutorPool;
 
     private Map<String, ToscaNodeType> toscaProfile;
 
     @Override
-    public void listIacResourceTypes() {
-        logger.info("All set :) -> let's finish this!!!");
+    public ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd) {
+        Pair<List<IacResourceTypeVO>, Integer> iacResourceTypes = iacResourceTypeDao.listIacResourceTypes(cmd.getId(), cmd.getName(),
+                cmd.getKeyword(), cmd.getPageSizeVal(), cmd.getStartIndex());
+        List<IacResourceTypeResponse> iacResourceTypeResponses = iacResourceTypes.first().stream().map(iacResourceType -> new IacResourceTypeResponse()).collect(Collectors.toList());
+        ListResponse<IacResourceTypeResponse> response = new ListResponse<>();
+        response.setResponses(iacResourceTypeResponses, iacResourceTypes.second());
+        return response;
     }
 
     @Override
@@ -63,10 +74,10 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
 
     protected Map<String, ToscaNodeType> loadToscaProfile() {
         logger.info("Loading NIMBLE's TOSCA profile.");
-        List<IacTemplatesProfileVO> profileElements = iacTemplatesProfileDao.listAll();
+        List<IacResourceTypeVO> profileResourceTypes = iacResourceTypeDao.listAll();
 
-        return profileElements.stream()
-                .map(element -> toscaParser.parseNodeType(Paths.get(String.format("%s/%s", NIMBLE_PROFILE_FOLDER_PATH, element.getElementContentFilePath()))))
+        return profileResourceTypes.stream()
+                .map(resourceType -> toscaParser.parseNodeType(resourceType.getName(), resourceType.getElementContent()))
                 .collect(Collectors.toMap(ToscaNodeType::getName, nodeType -> nodeType));
     }
 

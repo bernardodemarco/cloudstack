@@ -17,12 +17,13 @@
 package org.apache.cloudstack.service;
 
 import com.cloud.utils.component.PluggableService;
+import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
+import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
 
 public interface NimbleService extends PluggableService, Configurable {
-    String NIMBLE_PROFILE_FOLDER_PATH = "/usr/share/cloudstack-management/nimble/profile";
-
     ConfigKey<Boolean> NimbleServiceEnabled = new ConfigKey<>("Advanced", Boolean.class,
             "nimble.service.enabled", "false",
             "Indicates whether NIMBLE (Native IaC Management, Build & Launch Engine) is enabled.", false);
@@ -33,5 +34,5 @@ public interface NimbleService extends PluggableService, Configurable {
                     "tune this setting based on service utilization to optimize provisioning performance.",
             true, NimbleServiceEnabled.key());
 
-    void listIacResourceTypes();
+    ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
 }

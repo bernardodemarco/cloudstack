@@ -14,31 +14,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package org.apache.cloudstack.tosca.parser;
+package org.apache.cloudstack.persistence.iactemplatesprofile;
 
-import org.yaml.snakeyaml.Yaml;
+import com.cloud.utils.db.GenericDaoBase;
+import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
-public class ToscaYamlHelper {
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> asMap(Object rawObject) {
-        if (!(rawObject instanceof Map)) {
-            return Map.of();
-        }
-
-        return (Map<String, Object>) rawObject;
-    }
-
-    public static String asString(Object rawObject) {
-        if (!(rawObject instanceof String)) {
-            return null;
-        }
-
-        return (String) rawObject;
-    }
-
-    public static Object loadYaml(String yamlContent) {
-        return new Yaml().load(yamlContent);
-    }
+@Component
+public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Long> implements IacResourceTypeDao {
 }
