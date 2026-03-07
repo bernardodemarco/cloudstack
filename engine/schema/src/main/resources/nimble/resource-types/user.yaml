@@ -17,28 +17,47 @@
 tosca_definitions_version: tosca_2_0
 
 description: >
-  InstanceGroup node type definition.
+  User node type definition.
 
 node_types:
-  InstanceGroup:
+  User:
     properties:
-      name:
-        type: string
-        description: Name of the instance group.
-        required: true
       account:
         type: string
-        description: "The name of the account associated with the instance group. It must be used with the 'domain-id' property."
-        required: false
+        description: "The account of the user. It must be used with the 'domain-id' property."
+        required: true
       domain-id:
         type: string
-        description: The domain ID associated with the instance group.
-        required: false
-      project-id:
+        description: The ID of the domain associated with the user's account.
+        required: true
+      username:
         type: string
-        description: The project ID associated with the instance group.
+        description: The username of the user.
+        required: true
+      password:
+        type: string
+        description: The password of the user.
+        required: true
+      email:
+        type: string
+        description: The email of the user.
+        required: true
+      first-name:
+        type: string
+        description: The first name of the user.
+        required: true
+      last-name:
+        type: string
+        description: The last name of the user.
+        required: true
+      timezone:
+        type: string
+        description: The timezone of the user.
         required: false
     attributes:
       id:
         type: string
-        description: The ID of the instance group.
+        description: The ID of the user.
+      account-id:
+        type: string
+        description: The ID of the account associated with the user.

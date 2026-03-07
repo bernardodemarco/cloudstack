@@ -17,28 +17,37 @@
 tosca_definitions_version: tosca_2_0
 
 description: >
-  InstanceGroup node type definition.
+  AffinityGroup node type definition.
 
 node_types:
-  InstanceGroup:
+  AffinityGroup:
     properties:
       name:
         type: string
-        description: Name of the instance group.
+        description: Name of the affinity group.
         required: true
+      type:
+        type: string
+        description: "Type of the affinity group. Valid values are: 'host affinity', 'host anti-affinity', 'non-strict host affinity', 'non-strict host anti-affinity'."
+        required: true
+        validation: { $valid_values: [ $value, [host affinity, host anti-affinity, non-strict host affinity, non-strict host anti-affinity] ] }
+      description:
+        type: string
+        description: Description of the affinity group.
+        required: false
       account:
         type: string
-        description: "The name of the account associated with the instance group. It must be used with the 'domain-id' property."
+        description: "The name of the account associated with the affinity group. It must be used with the 'domain-id' property."
         required: false
       domain-id:
         type: string
-        description: The domain ID associated with the instance group.
+        description: The domain ID associated with the affinity group.
         required: false
       project-id:
         type: string
-        description: The project ID associated with the instance group.
+        description: The project ID associated with the affinity group.
         required: false
     attributes:
       id:
         type: string
-        description: The ID of the instance group.
+        description: The ID of the affinity group.

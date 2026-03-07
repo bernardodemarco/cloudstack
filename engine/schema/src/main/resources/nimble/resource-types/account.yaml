@@ -17,46 +17,53 @@
 tosca_definitions_version: tosca_2_0
 
 description: >
-  Volume node type definition.
+  Account node type definition.
 
 node_types:
-  Volume:
+  Account:
     properties:
-      zone-id:
+      domain-id:
         type: string
-        description: The ID of the zone in which the volume will be created.
+        description: The ID of the domain associated with the user's account.
         required: true
-      disk-offering-id:
+      username:
         type: string
-        description: The ID of the disk offering for the volume.
-        required: false
-      snapshot-id:
-        type: string
-        description: The ID of the snapshot to be used to create the volume.
-        required: false
-      name:
-        type: string
-        description: The name for the volume.
+        description: The username that will be used to created the first user of the account.
         required: true
       account:
         type: string
-        description: The account name associated with the volume. It must be used with the domain-id property.
+        description: >
+          "The name of the account to be created. If not specified, the value
+          defined in the 'username' property will be used."
         required: false
-      domain-id:
+      role-id:
         type: string
-        description: The domain ID associated with the volume.
-        required: false
-      project-id:
+        description: The ID of the role to be assigned to the account.
+        required: true
+      password:
         type: string
-        description: The project ID associated with the volume.
+        description: The password of the user.
+        required: true
+      email:
+        type: string
+        description: The email of the user.
+        required: true
+      first-name:
+        type: string
+        description: The first name of the user.
+        required: true
+      last-name:
+        type: string
+        description: The last name of the user.
+        required: true
+      timezone:
+        type: string
+        description: The timezone of the user.
         required: false
     attributes:
       id:
         type: string
-        description: ID of the volume.
-      name:
+        description: The ID of the account.
+      user-id:
         type: string
-        description: The name of the volume.
-      disk-offering-id:
-        type: string
-        description: The ID of the disk offering used by the volume.
+        description: The ID of the account's user.

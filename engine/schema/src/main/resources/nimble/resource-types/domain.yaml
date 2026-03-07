@@ -17,28 +17,23 @@
 tosca_definitions_version: tosca_2_0
 
 description: >
-  InstanceGroup node type definition.
+  Domain node type definition.
 
 node_types:
-  InstanceGroup:
+  Domain:
     properties:
       name:
         type: string
-        description: Name of the instance group.
+        description: Name of the domain.
         required: true
-      account:
+      parent-domain-id:
         type: string
-        description: "The name of the account associated with the instance group. It must be used with the 'domain-id' property."
-        required: false
-      domain-id:
-        type: string
-        description: The domain ID associated with the instance group.
-        required: false
-      project-id:
-        type: string
-        description: The project ID associated with the instance group.
+        description: "ID of the parent domain. If not specified, the 'ROOT' domain is assumed."
         required: false
     attributes:
       id:
         type: string
-        description: The ID of the instance group.
+        description: The ID of the domain.
+      path:
+        type: string
+        description: The path of the domain.
