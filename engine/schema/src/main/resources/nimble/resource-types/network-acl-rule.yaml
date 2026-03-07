@@ -1,0 +1,77 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  NetworkAclRule node type definition.
+
+node_types: 
+  NetworkAclRule:
+    properties:
+      acl-id:
+        type: string
+        description: The ID of the ACL this rule belongs to.
+        required: true
+      number:
+        type: integer
+        description: The priority number of the network ACL rule.
+        required: true
+      cidr-list:
+        type: list
+        entry_schema:
+          type: string
+        description: The CIDR list for the network ACL rule.
+        required: true
+      action:
+        type: string
+        validation: { $valid_values: [ $value, [allow, deny] ] }
+        description: "The action of the network ACL rule. Valid values are: 'allow' or 'deny'."
+        required: true
+      protocol:
+        type: string
+        validation: { $valid_values: [ $value, [TCP, UDP, ICMP, ALL] ] }
+        description: "The protocol of the network ACL rule. Valid values are: 'TCP', 'UDP', 'ICMP' or 'ALL'."
+        required: true
+      traffic-type:
+        type: string
+        validation: { $valid_values: [ $value, [ ingress, egress ] ] }
+        description: "The traffic type of the network ACL rule. Valid values are: 'ingress' or 'egress'."
+        required: true
+      start-port:
+        type: integer
+        description: The starting port of the network ACL rule.
+        required: false
+      end-port:
+        type: integer
+        description: The ending port of the network ACL rule.
+        required: false
+      icmp-type:
+        type: integer
+        description: The ICMP type of the network ACL rule.
+        required: false
+      icmp-code:
+        type: integer
+        description: The ICMP code of the network ACL rule.
+        required: false
+      description:
+        type: string
+        description: The description of the network ACL rule.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the network ACL rule.
