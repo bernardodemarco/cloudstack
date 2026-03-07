@@ -1,0 +1,44 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  InstanceGroup node type definition.
+
+node_types:
+  InstanceGroup:
+    properties:
+      name:
+        type: string
+        description: Name of the instance group.
+        required: true
+      account:
+        type: string
+        description: The name of the account associated with the instance group. It must be used with the domain-id property.
+        required: false
+      domain-id:
+        type: string
+        description: The domain ID associated with the instance group.
+        required: false
+      project-id:
+        type: string
+        description: The project ID associated with the instance group.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the instance group.
