@@ -1,0 +1,78 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  PortForwardingRule node type definition.
+
+node_types:
+  PortForwardingRule:
+    properties:
+      ip-address-id:
+        type: string
+        description: The ID of the public IP address.
+        required: true
+      protocol:
+        type: string
+        description: "The protocol of the port forwarding rule. Valid values are ''TCP' and 'UDP'."
+        validation: { $valid_values: [ $value, [TCP, UDP, ICMP, ALL] ] }
+        required: true
+      private-start-port:
+        type: integer
+        description: The starting private port of the port forwarding rule.
+        required: true
+      private-end-port:
+        type: integer
+        description: The ending private port of the port forwarding rule.
+        required: false
+      public-start-port:
+        type: integer
+        description: The starting public port of the port forwarding rule.
+        required: true
+      public-end-port:
+        type: integer
+        description: The ending public port of the port forwarding rule.
+        required: false
+      virtual-machine-id:
+        type: string
+        description: The ID of the virtual machine.
+        required: true
+      vm-guest-ip:
+        type: string
+        description: The VM IP address for the port forwarding rule.
+        required: false
+      network-id:
+        type: string
+        description: >
+          The network for which the port forwarding rule will be applied. 
+          Required for when the public IP address is not associated with any guest network.
+        required: false
+      cidr-list:
+        type: list
+        entry_schema:
+          type: string
+        description: The source CIDR list to allow traffic from.
+        required: false
+      open-firewall:
+        type: boolean
+        description: >
+          If true, firewall rules for the starting and ending public ports are automatically created.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the port forwarding rule.
