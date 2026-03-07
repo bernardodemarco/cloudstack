@@ -1,0 +1,82 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  Vpc node type definition.
+
+node_types:
+  Vpc:
+    properties:
+      zone-id:
+        type: string
+        description: The ID of the availability zone.
+        required: true
+      vpc-offering-id:
+        type: string
+        description: The ID of the VPC offering.
+        required: true
+      name:
+        type: string
+        description: The name of the VPC.
+        required: true
+      display-text:
+        type: string
+        description: Display text of the VPC.
+        required: false
+      cidr:
+        type: string
+        description: The CIDR of the VPC.
+        required: true
+      source-nat-ip-address:
+        type: string
+        description: The source NAT IPv4 address for the VPC.
+        required: false
+      start:
+        type: boolean
+        description: Whether the VPC should start immediately.
+        required: false
+      account:
+        type: string
+        description: "The name of the account associated with the VPC. It must be used with the 'domain-id' property."
+        required: false
+      domain-id:
+        type: string
+        description: The domain ID associated with the VPC.
+        required: false
+      project-id:
+        type: string
+        description: The ID of the project associated with the VPC.
+        required: false
+      first-dns:
+        type: string
+        description: The first IPv4 DNS of the VPC.
+        required: false
+      second-dns:
+        type: string
+        description: The second IPv4 DNS of the VPC.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the VPC.
+      source-nat-ip-address:
+        type: string
+        description: The source NAT IP address of the VPC.
+      source-nat-ip-id:
+        type: string
+        description: The ID of the source NAT IP of the VPC.

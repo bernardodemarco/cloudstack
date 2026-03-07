@@ -110,4 +110,4 @@ node_types:
         description: The source NAT IP address of the network.
       source-nat-ip-id:
         type: string
-        description: The ID of the source NAT IP.
+        description: The ID of the source NAT IP of the network.
