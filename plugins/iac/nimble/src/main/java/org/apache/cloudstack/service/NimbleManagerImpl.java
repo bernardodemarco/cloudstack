@@ -55,7 +55,10 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     public ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd) {
         Pair<List<IacResourceTypeVO>, Integer> iacResourceTypes = iacResourceTypeDao.listIacResourceTypes(cmd.getId(), cmd.getName(),
                 cmd.getKeyword(), cmd.getPageSizeVal(), cmd.getStartIndex());
-        List<IacResourceTypeResponse> iacResourceTypeResponses = iacResourceTypes.first().stream().map(iacResourceType -> new IacResourceTypeResponse()).collect(Collectors.toList());
+        List<IacResourceTypeResponse> iacResourceTypeResponses = iacResourceTypes.first().stream()
+                .map(iacResourceType -> responseBuilder.createIacResourceTypeResponse(iacResourceType))
+                .collect(Collectors.toList());
+
         ListResponse<IacResourceTypeResponse> response = new ListResponse<>();
         response.setResponses(iacResourceTypeResponses, iacResourceTypes.second());
         return response;
@@ -77,7 +80,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         List<IacResourceTypeVO> profileResourceTypes = iacResourceTypeDao.listAll();
 
         return profileResourceTypes.stream()
-                .map(resourceType -> toscaParser.parseNodeType(resourceType.getName(), resourceType.getElementContent()))
+                .map(resourceType -> toscaParser.parseNodeType(resourceType.getName(), resourceType.getContent()))
                 .collect(Collectors.toMap(ToscaNodeType::getName, nodeType -> nodeType));
     }
 

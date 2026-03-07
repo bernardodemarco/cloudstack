@@ -21,5 +21,5 @@ import org.apache.cloudstack.api.InternalIdentity;
 
 public interface IacResourceType extends Identity, InternalIdentity {
     String getName();
-    String getElementContent();
+    String getContent();
 }

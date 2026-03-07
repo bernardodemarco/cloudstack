@@ -16,9 +16,48 @@
 // under the License.
 package org.apache.cloudstack.api.response;
 
-import org.apache.cloudstack.api.BaseResponseWithAnnotations;
+import com.cloud.serializer.Param;
+import com.google.gson.annotations.SerializedName;
+import org.apache.cloudstack.api.ApiConstants;
+import org.apache.cloudstack.api.BaseResponse;
 import org.apache.cloudstack.api.EntityReference;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 
-@EntityReference(value = {})
-public class IacResourceTypeResponse extends BaseResponseWithAnnotations {
+@EntityReference(value = {IacResourceType.class})
+public class IacResourceTypeResponse extends BaseResponse {
+    @SerializedName(ApiConstants.ID)
+    @Param(description = "The ID of the IaC resource type.")
+    private String id;
+
+    @SerializedName(ApiConstants.NAME)
+    @Param(description = "The name of the IaC resource type.")
+    private String name;
+
+    @SerializedName(ApiConstants.IAC_RESOURCE_TYPE_CONTENT)
+    @Param(description = "The content of the IaC resource type.")
+    private String iacResourceTypeContent;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getIacResourceTypeContent() {
+        return iacResourceTypeContent;
+    }
+
+    public void setIacResourceTypeContent(String iacResourceTypeContent) {
+        this.iacResourceTypeContent = iacResourceTypeContent;
+    }
 }

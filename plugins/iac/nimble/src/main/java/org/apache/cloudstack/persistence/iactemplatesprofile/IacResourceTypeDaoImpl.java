@@ -16,9 +16,41 @@
 // under the License.
 package org.apache.cloudstack.persistence.iactemplatesprofile;
 
+import com.cloud.utils.Pair;
+import com.cloud.utils.db.Filter;
 import com.cloud.utils.db.GenericDaoBase;
+import com.cloud.utils.db.SearchBuilder;
+import com.cloud.utils.db.SearchCriteria;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Long> implements IacResourceTypeDao {
+    private static final String ID = "id";
+    private static final String NAME = "name";
+    private static final String NAME_LIKE_KEYWORD = "nameLikeKeyword";
+
+    private final SearchBuilder<IacResourceTypeVO> listIacResourceTypesSearchBuilder;
+
+    public IacResourceTypeDaoImpl() {
+        listIacResourceTypesSearchBuilder = createSearchBuilder();
+        listIacResourceTypesSearchBuilder.and(ID, listIacResourceTypesSearchBuilder.entity().getId(), SearchCriteria.Op.EQ);
+        listIacResourceTypesSearchBuilder.and(NAME, listIacResourceTypesSearchBuilder.entity().getName(), SearchCriteria.Op.EQ);
+        listIacResourceTypesSearchBuilder.and(NAME_LIKE_KEYWORD, listIacResourceTypesSearchBuilder.entity().getName(), SearchCriteria.Op.LIKE);
+        listIacResourceTypesSearchBuilder.done();
+    }
+
+    @Override
+    public Pair<List<IacResourceTypeVO>, Integer> listIacResourceTypes(Long id, String name, String keyword, Long pageSizeVal, Long startIndex) {
+        SearchCriteria<IacResourceTypeVO> searchCriteria = listIacResourceTypesSearchBuilder.create();
+        searchCriteria.setParametersIfNotNull(ID, id);
+        searchCriteria.setParametersIfNotNull(NAME, name);
+        if (keyword != null) {
+            searchCriteria.setParameters(NAME_LIKE_KEYWORD, "%" + keyword + "%");
+        }
+
+        Filter filter = new Filter(IacResourceTypeVO.class, ID, true, startIndex, pageSizeVal);
+        return searchAndCount(searchCriteria, filter);
+    }
 }

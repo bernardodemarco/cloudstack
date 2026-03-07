@@ -38,8 +38,8 @@ public class IacResourceTypeVO implements IacResourceType {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "element_content", nullable = false, length = 65535)
-    private String elementContent;
+    @Column(name = "content", nullable = false, length = 65535)
+    private String content;
 
     @Override
     public long getId() {
@@ -57,7 +57,7 @@ public class IacResourceTypeVO implements IacResourceType {
     }
 
     @Override
-    public String getElementContent() {
-        return elementContent;
+    public String getContent() {
+        return content;
     }
 }
