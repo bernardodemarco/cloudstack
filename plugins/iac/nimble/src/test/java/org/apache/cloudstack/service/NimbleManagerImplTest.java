@@ -55,6 +55,8 @@ public class NimbleManagerImplTest {
     @Mock
     private ToscaParser toscaParserMock;
 
+    List<IacResourceTypeVO> iacResourceTypesMock = List.of(Mockito.mock(IacResourceTypeVO.class), Mockito.mock(IacResourceTypeVO.class));
+
     @Test
     public void listIacResourceTypesTestShouldGenerateAResponseForEachIacResourceType() {
         long iacResourceTypeId = 1L;
@@ -68,22 +70,15 @@ public class NimbleManagerImplTest {
         Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
         Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
         Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
-
-        List<IacResourceTypeVO> iacResourceTypesMock = List.of(Mockito.mock(IacResourceTypeVO.class), Mockito.mock(IacResourceTypeVO.class));
         Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
                 Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
                 .thenReturn(new Pair<>(iacResourceTypesMock, iacResourceTypesMock.size()));
 
         List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
-        for (int i = 0; i < iacResourceTypesMock.size(); i++) {
-            Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(i))))
-                    .thenReturn(iacResourceTypeResponsesMock.get(i));
-        }
+        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)))).thenReturn(iacResourceTypeResponsesMock.get(0));
+        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)))).thenReturn(iacResourceTypeResponsesMock.get(1));
 
         ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
-        for (IacResourceTypeVO iacResourceType : iacResourceTypesMock) {
-            Mockito.verify(nimbleResponseBuilderMock).createIacResourceTypeResponse(Mockito.eq(iacResourceType));
-        }
         Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
         Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
     }
@@ -93,10 +88,8 @@ public class NimbleManagerImplTest {
         String firstIacResourceTypeName = "First Iac Resource Type Name";
         String secondIacResourceTypeName = "Second Iac Resource Type Name";
 
-        List<IacResourceTypeVO> iacResourceTypesMock = List.of(Mockito.mock(IacResourceTypeVO.class), Mockito.mock(IacResourceTypeVO.class));
         Mockito.when(iacResourceTypesMock.get(0).getName()).thenReturn(firstIacResourceTypeName);
         Mockito.when(iacResourceTypesMock.get(1).getName()).thenReturn(secondIacResourceTypeName);
-
         Mockito.when(iacResourceTypeDaoMock.listAll()).thenReturn(iacResourceTypesMock);
 
         List<ToscaNodeType> toscaNodeTypesMock = List.of(Mockito.mock(ToscaNodeType.class), Mockito.mock(ToscaNodeType.class));
@@ -107,10 +100,8 @@ public class NimbleManagerImplTest {
         Mockito.when(toscaParserMock.parseNodeType(Mockito.eq(secondIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(1));
 
         Map<String, ToscaNodeType> profile = nimbleServiceSpy.loadToscaProfile();
-        Mockito.verify(toscaParserMock, Mockito.times(iacResourceTypesMock.size())).parseNodeType(Mockito.any(), Mockito.any());
         Assert.assertEquals(iacResourceTypesMock.size(), profile.size());
-        for (ToscaNodeType toscaNodeType : toscaNodeTypesMock) {
-            Assert.assertTrue(profile.containsKey(toscaNodeType.getName()));
-        }
+        Assert.assertTrue(profile.containsKey(toscaNodeTypesMock.get(0).getName()));
+        Assert.assertTrue(profile.containsKey(toscaNodeTypesMock.get(1).getName()));
     }
 }

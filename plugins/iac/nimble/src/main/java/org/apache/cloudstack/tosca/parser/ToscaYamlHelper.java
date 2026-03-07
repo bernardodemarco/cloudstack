@@ -16,6 +16,7 @@
 // under the License.
 package org.apache.cloudstack.tosca.parser;
 
+import org.apache.commons.lang.BooleanUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import java.util.Map;
@@ -36,6 +37,18 @@ public class ToscaYamlHelper {
         }
 
         return (String) rawObject;
+    }
+
+    public static boolean asBoolean(Object rawObject) {
+        if (rawObject instanceof Boolean) {
+            return (Boolean) rawObject;
+        }
+
+        if (rawObject instanceof String) {
+            return BooleanUtils.toBoolean((String) rawObject);
+        }
+
+        return false;
     }
 
     public static Object loadYaml(String yamlContent) {

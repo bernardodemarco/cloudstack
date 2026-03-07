@@ -76,7 +76,7 @@ public class ToscaParser {
                 return attributeDefinition;
             }
 
-            boolean required = BooleanUtils.toBoolean(ToscaYamlHelper.asString(fieldBody.get("required")));
+            boolean required = ToscaYamlHelper.asBoolean(fieldBody.get("required"));
             Object validation = fieldBody.get("validation");
             ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(fieldName, fieldDescription, fieldType, required, validation);
             logger.debug("Successfully parsed the following property: [{}].", propertyDefinition::toString);
