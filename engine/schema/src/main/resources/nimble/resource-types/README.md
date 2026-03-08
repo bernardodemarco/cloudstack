@@ -1,6 +1,6 @@
 # TOSCA Profile
 
-24 / 31
+25 / 31
 
 - [X] Domain
 - [X] Account
@@ -32,4 +32,4 @@
 - [X] AutoScalingVmGroup
 - [X] AutoScalingPolicy
 - [ ] AutoScalingVmProfile MAPAS
-- [ ] SharedFileSystem AQUI
+- [X] SharedFileSystem

@@ -1,0 +1,89 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  SharedFilesystem node type definition.
+
+node_types:
+  SharedFilesystem:
+    properties:
+      zone-id:
+        type: string
+        description: The ID of the availability zone.
+        required: true
+      name:
+        type: string
+        description: The name of the shared filesystem.
+        required: true
+      description:
+        type: string
+        description: The description of the shared filesystem.
+        required: false
+      account:
+        type: string
+        description: "The name of the account associated with the shared filesystem. It must be used with the 'domain-id' property."
+        required: false
+      domain-id:
+        type: string
+        description: The domain ID associated with the shared filesystem.
+        required: false
+      project-id:
+        type: string
+        description: The project ID associated with the shared filesystem.
+        required: false
+      filesystem:
+        type: string
+        description: >
+          The filesystem format that will be installed on the shared filesystem.
+          Valid values are: 'xfs' and 'ext4'.
+        validation: { $valid_values: [ $value, [ xfs, ext4 ] ] }
+        required: true
+      network-id:
+        type: string
+        description: The ID of the network in which the shared filesystem will be attached to.
+        required: true
+      service-offering-id:
+        type: string
+        description: Service offering ID for the shared filesystem VM hosting the data.
+        required: true
+      disk-offering-id:
+        type: string
+        description: Disk offering ID to use for the underlying storage.
+        required: true
+      size:
+        type: integer
+        description: The size of the shared filesystem in GiB.
+        required: false
+      provider:
+        type: string
+        description: > 
+          The provider of the shared filesystem. The list of providers
+          can be fetched by using the 'listSharedFileSystemProviders' API.
+        required: false
+      min-iops:
+        type: integer
+        description: Minimum IOPS.
+        required: false
+      max-iops:
+        type: integer
+        description: Maximum IOPS.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the shared filesystem.
