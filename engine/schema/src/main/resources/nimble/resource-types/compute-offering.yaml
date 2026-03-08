@@ -1,0 +1,195 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  ComputeOffering node type definition.
+
+node_types:
+  ComputeOffering:
+    properties:
+      name:
+        type: string
+        description: Name of the compute offering.
+        required: true
+      display-text:
+        type: string
+        description: Display text of the compute offering.
+        required: false
+      zone-id:
+        type: string
+        description: The ID of the availability zone. If not specified, the compute offering will be public.
+        required: false
+      domain-id:
+        type: string
+        description: The ID of the domain for which the compute offering will be available. If not specified, the compute offering will be public.
+        required: false
+      storage-type:
+        type: string
+        description: "The type of storage used by the compute offering. Valid values are 'local' and 'shared'."
+        required: false
+        validation: { $valid_values: [ $value, [ local, shared ] ] }
+      provisioning-type:
+        type: string
+        description: "The type of provisioning used by the compute offering. Valid values are 'thin', 'sparse' and 'fat'."
+        required: false
+        validation: { $valid_values: [ $value, [ thin, sparse, fat ] ] }
+      cache-mode:
+        type: string
+        description: "The cache mode used by the compute offering. Valid values are 'none', 'writethrough', 'writeback' and 'hypervisor default'."
+        required: false
+        validation: { $valid_values: [ $value, [ none, writethrough, writeback, hypervisor default ] ] }
+      encrypt-root:
+        type: boolean
+        description: VMs using this compute offering require root volume encryption.
+        required: false
+      root-disk-size:
+        type: integer
+        description: The root disk size of the compute offering in GB.
+        required: false
+      disk-offering-strictness:
+        type: boolean
+        description: Indicates whether the compute offering is strictly associated with the compute offering.
+        required: false
+      disk-offering-id:
+        type: string
+        description: The ID of the compute offering.
+        required: false
+      deployment-planner:
+        type: string
+        description: The deployment planner for the compute offering.
+        required: false
+      offer-ha:
+        type: boolean
+        description: Whether the compute offering offers HA.
+        required: false
+      network-rate:
+        type: integer
+        description: The network rate of the compute offering in Mbps.
+        required: false
+      dynamic-scaling-enabled:
+        type: boolean
+        description: Whether the compute offering supports dynamic scaling.
+        required: false
+      min-memory:
+        type: integer
+        description: The minimum memory for the compute offering in MB.
+        required: false
+      max-memory:
+        type: integer
+        description: The maximum memory for the compute offering in MB.
+        required: false
+      memory:
+        type: integer
+        description: The memory for the compute offering in MB.
+        required: false
+      cpu-speed:
+        type: integer
+        description: The CPU speed for the compute offering in MHz.
+        required: false
+      cpu-number:
+        type: integer
+        description: The number of vCPUs for the compute offering.
+        required: false
+      min-cpu-number:
+        type: integer
+        description: The minimum number of vCPUs for the compute offering.
+        required: false
+      max-cpu-number:
+        type: integer
+        description: The maximum number of vCPUs for the compute offering.
+        required: false
+      limit-cpu-use:
+        type: boolean
+        description: Whether CPU limitation will be applied for VMs created from this compute offering.
+        required: false
+      volatile:
+        type: boolean
+        description: >
+          True if the VM needs to be volatile, so that on every reboot of the VM, its original root disk is detached
+          and destroyed, and a new root disk is created and attached.
+        required: false
+      host-tags:
+        type: list
+        entry_schema:
+          type: string
+        description: The host tags of the compute offering.
+        required: false
+      customized-iops:
+        type: boolean
+        description: Whether the compute offering IOPS is custom or not.
+        required: false
+      min-iops:
+        type: integer
+        description: The minimum IOPS for the compute offering.
+        required: false
+      max-iops:
+        type: integer
+        description: The maximum IOPS for the compute offering.
+        required: false
+      iops-read-rate:
+        type: integer
+        description: The IO requests read rate of the compute offering.
+        required: false
+      iops-read-rate-max:
+        type: integer
+        description: Burst requests read rate of the compute offering.
+        required: false
+      iops-read-rate-max-length:
+        type: integer
+        description: Burst requests read rate length (in seconds) of the compute offering.
+        required: false
+      iops-write-rate:
+        type: integer
+        description: The IO requests write rate of the compute offering.
+        required: false
+      iops-write-rate-max:
+        type: integer
+        description: Burst IO requests write rate of the compute offering.
+        required: false
+      iops-write-rate-max-length:
+        type: integer
+        description: Burst requests write rate length (in seconds) of the compute offering.
+        required: false
+      bytes-write-rate:
+        type: integer
+        description: The bytes write rate for the compute offering.
+        required: false
+      bytes-write-rate-max:
+        type: integer
+        description: Burst bytes write rate for the compute offering.
+        required: false
+      bytes-write-rate-max-length:
+        type: integer
+        description: Burst bytes write rate length (in seconds) for the compute offering.
+        required: false
+      bytes-read-rate:
+        type: integer
+        description: The bytes read rate for the compute offering.
+        required: false
+      bytes-read-rate-max:
+        type: integer
+        description: Burst bytes read rate for the compute offering.
+        required: false
+      bytes-read-rate-max-length:
+        type: integer
+        description: Burst bytes read rate length (in seconds) for the compute offering.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the compute offering.

@@ -1,0 +1,141 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  DiskOffering node type definition.
+
+node_types:
+  DiskOffering:
+    properties:
+      name:
+        type: string
+        description: Name of the disk offering.
+        required: true
+      display-text:
+        type: string
+        description: Display text of the disk offering.
+        required: false
+      zone-id:
+        type: string
+        description: The ID of the availability zone. If not specified, the disk offering will be public.
+        required: false
+      domain-id:
+        type: string
+        description: The ID of the domain for which the disk offering will be available. If not specified, the disk offering will be public.
+        required: false
+      storage-type:
+        type: string
+        description: "The type of storage used by the disk offering. Valid values are 'local' and 'shared'."
+        required: false
+        validation: { $valid_values: [ $value, [ local, shared ] ] }
+      provisioning-type:
+        type: string
+        description: "The type of provisioning used by the disk offering. Valid values are 'thin', 'sparse' and 'fat'."
+        required: false
+        validation: { $valid_values: [ $value, [ thin, sparse, fat ] ] }
+      cache-mode:
+        type: string
+        description: "The cache mode used by the disk offering. Valid values are 'none', 'writethrough', 'writeback' and 'hypervisor default'."
+        required: false
+        validation: { $valid_values: [ $value, [ none, writethrough, writeback, hypervisor default ] ] }
+      encrypt:
+        type: boolean
+        description: If true, the disk offering will be encrypted.
+        required: false
+      disk-size-strictness:
+        type: boolean
+        description: Indicates whether the resize operation will be allowed for disks created with this disk offering.
+        required: false
+      disk-size:
+        type: integer
+        description: The disk size of the disk offering in GB.
+        required: false
+      customized:
+        type: boolean
+        description: If true, the disk offering is customized, i.e., its size is arbitrarily defined.
+        required: false
+      storage-tags:
+        type: list
+        entry_schema:
+          type: string
+        description: The storage tags of the disk offering.
+        required: false
+      customized-iops:
+        type: boolean
+        description: Whether the disk offering IOPS is custom or not.
+        required: false
+      min-iops:
+        type: integer
+        description: The minimum IOPS for the disk offering.
+        required: false
+      max-iops:
+        type: integer
+        description: The maximum IOPS for the disk offering.
+        required: false
+      iops-read-rate:
+        type: integer
+        description: The IO requests read rate of the disk offering.
+        required: false
+      iops-read-rate-max:
+        type: integer
+        description: Burst requests read rate of the disk offering.
+        required: false
+      iops-read-rate-max-length:
+        type: integer
+        description: Burst requests read rate length (in seconds) of the disk offering.
+        required: false
+      iops-write-rate:
+        type: integer
+        description: The IO requests write rate of the disk offering.
+        required: false
+      iops-write-rate-max:
+        type: integer
+        description: Burst IO requests write rate of the disk offering.
+        required: false
+      iops-write-rate-max-length:
+        type: integer
+        description: Burst requests write rate length (in seconds) of the disk offering.
+        required: false
+      bytes-write-rate:
+        type: integer
+        description: The bytes write rate for the disk offering.
+        required: false
+      bytes-write-rate-max:
+        type: integer
+        description: Burst bytes write rate for the disk offering.
+        required: false
+      bytes-write-rate-max-length:
+        type: integer
+        description: Burst bytes write rate length (in seconds) for the disk offering.
+        required: false
+      bytes-read-rate:
+        type: integer
+        description: The bytes read rate for the disk offering.
+        required: false
+      bytes-read-rate-max:
+        type: integer
+        description: Burst bytes read rate for the disk offering.
+        required: false
+      bytes-read-rate-max-length:
+        type: integer
+        description: Burst bytes read rate length (in seconds) for the disk offering.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the disk offering.

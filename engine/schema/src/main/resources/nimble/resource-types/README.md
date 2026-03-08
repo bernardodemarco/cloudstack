@@ -1,13 +1,13 @@
 # TOSCA Profile
 
-18 / 31
+20 / 31
 
 - [X] Domain
 - [X] Account
 - [X] User
 - [X] Project
-- [ ] ComputeOffering AQUI
-- [ ] DiskOffering AQUI
+- [X] ComputeOffering
+- [X] DiskOffering
 - [ ] NetworkOffering MAPAS
 - [ ] VpcOffering MAPAS
 - [X] InstanceGroup
@@ -33,4 +33,3 @@
 - [ ] AutoScalingPolicy AQUI
 - [ ] AutoScalingVmProfile AQUI
 - [ ] SharedFileSystem AQUI
-
