@@ -22,6 +22,10 @@ description: >
 node_types:
   Volume:
     properties:
+      name:
+        type: string
+        description: The name for the volume.
+        required: true
       zone-id:
         type: string
         description: The ID of the zone in which the volume will be created.
@@ -30,14 +34,18 @@ node_types:
         type: string
         description: The ID of the disk offering for the volume.
         required: false
-      snapshot-id:
-        type: string
-        description: The ID of the snapshot to be used to create the volume.
+      size:
+        type: integer
+        description: The size of the volume.
         required: false
-      name:
-        type: string
-        description: The name for the volume.
-        required: true
+      min-iops:
+        type: integer
+        description: The minimum IOPS for the volume.
+        required: false
+      max-iops:
+        type: integer
+        description: The maximum IOPS for the volume.
+        required: false
       account:
         type: string
         description: The account name associated with the volume. It must be used with the domain-id property.
@@ -54,9 +62,6 @@ node_types:
       id:
         type: string
         description: ID of the volume.
-      name:
-        type: string
-        description: The name of the volume.
       disk-offering-id:
         type: string
         description: The ID of the disk offering used by the volume.

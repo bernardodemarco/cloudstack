@@ -1,0 +1,53 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  AutoScalingPolicy node type definition.
+
+node_types:
+  AutoScalingPolicy:
+    properties:
+      name:
+        type: string
+        description: The name of the auto scaling policy.
+        required: false
+      action:
+        type: string
+        description: >
+          The action to be executed if all conditions are met for the specified duration.
+          Valid values are: 'scaleup' and 'scaledown'.
+        validation: { $valid_values: [ $value, [ scaleup, scaledown ] ] }
+        required: true
+      condition-ids:
+        type: list
+        entry_schema:
+          type: string
+        description: The list of condition IDs that are evaluated on every interval.
+        required: true
+      duration:
+        type: integer
+        description: The duration in which the conditions must be met before the action is executed.
+        required: true
+      quiet-time:
+        type: integer
+        description: The cooldown period in which the policy should not be evaluated after the action has been taken.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: ID of the auto scaling policy.

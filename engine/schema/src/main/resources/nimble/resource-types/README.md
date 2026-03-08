@@ -1,6 +1,6 @@
 # TOSCA Profile
 
-20 / 31
+24 / 31
 
 - [X] Domain
 - [X] Account
@@ -14,8 +14,8 @@
 - [X] SshKeyPair
 - [X] UserData
 - [X] AffinityGroup
-- [ ] Volume AQUI
-- [ ] VolumeAttachment AQUI
+- [X] Volume
+- [X] VolumeAttachment
 - [X] Network
 - [X] Vpc
 - [X] IpAddress
@@ -29,7 +29,7 @@
 - [X] StaticNat
 - [ ] KubernetesCluster PARTIAL - VER COMO LIDAR COM MAPAS
 - [ ] VirtualMachine MAPAS
-- [ ] AutoScalingGroup AQUI
-- [ ] AutoScalingPolicy AQUI
-- [ ] AutoScalingVmProfile AQUI
+- [X] AutoScalingVmGroup
+- [X] AutoScalingPolicy
+- [ ] AutoScalingVmProfile MAPAS
 - [ ] SharedFileSystem AQUI
