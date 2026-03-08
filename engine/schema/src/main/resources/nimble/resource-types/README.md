@@ -1,6 +1,6 @@
 # TOSCA Profile
 
-25 / 31
+28 / 31
 
 - [X] Domain
 - [X] Account
@@ -9,7 +9,7 @@
 - [X] ComputeOffering
 - [X] DiskOffering
 - [ ] NetworkOffering MAPAS
-- [ ] VpcOffering MAPAS
+- [X] VpcOffering
 - [X] InstanceGroup
 - [X] SshKeyPair
 - [X] UserData
@@ -22,12 +22,12 @@
 - [X] EgressFirewallRule
 - [X] FirewallRule
 - [X] LoadBalancer
-- [ ] LoadBalancerVirtualMachineAssigner MAPAS
+- [X] LoadBalancerAttachment
 - [X] PortForwardingRule
 - [X] NetworkAclList
 - [X] NetworkAclRule
 - [X] StaticNat
-- [ ] KubernetesCluster PARTIAL - VER COMO LIDAR COM MAPAS
+- [X] KubernetesCluster
 - [ ] VirtualMachine MAPAS
 - [X] AutoScalingVmGroup
 - [X] AutoScalingPolicy

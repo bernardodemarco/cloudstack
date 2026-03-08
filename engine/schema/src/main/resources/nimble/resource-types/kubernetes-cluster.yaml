@@ -19,6 +19,24 @@ tosca_definitions_version: tosca_2_0
 description: >
   KubernetesCluster node type definition.
 
+data_types:
+  NodeOffering:
+    properties:
+      node:
+        type: string
+        description: "Node type (e.g. 'control', 'worker') for which the offering will be applied."
+      offering:
+        type: string
+        description: ID of the service offering to be used for this node type.
+  NodeTemplate:
+    properties:
+      node:
+        type: string
+        description: "Node type (e.g. 'control', 'worker') for which the template will be used."
+      template:
+        type: string
+        description: ID of the template to be used for this node type.
+
 node_types:
   KubernetesCluster:
     properties:
@@ -78,7 +96,7 @@ node_types:
         type: string
         description: Kubernetes cluster type (CloudManaged or ExternalManaged).
         required: false
-        validation: { $valid_values: [ $value, [CloudManaged, ExternalManaged] ] }
+        validation: { $valid_values: [ $value, [ CloudManaged, ExternalManaged ] ] }
       docker-registry-password:
         type: string
         description: Password for the Docker image private registry.
@@ -103,7 +121,18 @@ node_types:
         type: integer
         description: Number of etcd nodes in the cluster.
         required: false
-#      node templates, nodeofferings
+      node-offerings:
+        type: list
+        entry_schema:
+          type: NodeOffering
+        description: "Compute offerings for each node type. If used, overrides the 'service-offering-id' property."
+        required: false
+      node-templates:
+        type: list
+        entry_schema:
+          type: NodeTemplate
+        description: Templates for each node type. If not specified, the system VM templates will be used.
+        required: false
     attributes:
       id:
         type: string

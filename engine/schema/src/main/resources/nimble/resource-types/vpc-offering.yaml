@@ -1,0 +1,78 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  VpcOffering node type definition.
+
+data_types:
+  NetworkServiceProviderMapping:
+    properties:
+      service:
+        type: string
+        description: The network service.
+      provider:
+        type: string
+        description: The network service provider.
+
+node_types:
+  VpcOffering:
+    properties:
+      name:
+        type: string
+        description: Name of the VPC offering.
+        required: true
+      display-text:
+        type: string
+        description: Display text of the VPC offering.
+        required: false
+      zone-id:
+        type: string
+        description: The ID of the availability zone. If not specified, the VPC offering will be public.
+        required: false
+      domain-id:
+        type: string
+        description: The ID of the domain for which the VPC offering will be available. If not specified, the compute offering will be public.
+        required: false
+      enable:
+        type: boolean
+        description: Whether the VPC offering will be enabled during creation.
+        required: false
+      internet-protocol:
+        type: list
+        description: "The internet protocol of the offering. Valid values are 'ipv4' and 'dualstack'."
+        required: false
+      supported-services:
+        type: list
+        entry_schema:
+          type: string
+        description: The network services supported by the offering.
+        required: false
+      service-provider-map:
+        type: list
+        entry_schema:
+          type: NetworkServiceProviderMapping
+        description: The network services mapped to their providers.
+        required: false
+      service-offering-id:
+        type: string
+        description: The ID of the network service offering for the VPC router.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the VPC offering.
