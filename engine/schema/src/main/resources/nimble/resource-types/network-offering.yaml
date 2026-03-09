@@ -1,0 +1,139 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  NetworkOffering node type definition.
+
+data_types:
+  NetworkServiceProviderMapping:
+    properties:
+      service:
+        type: string
+        description: The network service.
+        required: true
+      provider:
+        type: string
+        description: The network service provider.
+        required: true
+  ServiceCapability:
+    properties:
+      capability-type:
+        type: string
+        description: The capability type.
+        required: true
+      capability-value:
+        type: string
+        description: The capability value.
+        required: true
+
+node_types:
+  NetworkOffering:
+    properties:
+      name:
+        type: string
+        description: Name of the network offering.
+        required: true
+      guest-ip-type:
+        type: string
+        description: "The type of the network created from the offering. Valid values are 'isolated', 'l2' and 'shared'."
+        validation: { $valid_values: [ $value, [ isolated, l2, shared ] ] }
+        required: true
+      traffic-type:
+        type: string
+        description: The traffic type of the network offering.
+        required: true
+      display-text:
+        type: string
+        description: Display text of the network offering.
+        required: false
+      zone-id:
+        type: string
+        description: The ID of the availability zone. If not specified, the network offering will be public.
+        required: false
+      domain-id:
+        type: string
+        description: The ID of the domain for which the network offering will be available. If not specified, the compute offering will be public.
+        required: false
+      enable:
+        type: boolean
+        description: Whether the network offering will be enabled during creation.
+        required: false
+      internet-protocol:
+        type: string
+        description: "The internet protocol of the offering. Valid values are 'ipv4' and 'dualstack'."
+        validation: { $valid_values: [ $value, [ ipv4, dualstack ] ] }
+        required: false
+      for-vpc:
+        type: boolean
+        description: Whether the network offering is for VPC tiers.
+        required: false
+      egress-default-policy:
+        type: string
+        description: "The default egress policy for the network created from the offering. Valid values are 'allow' and 'deny'."
+        validation: { $valid_values: [ $value, [ allow, deny ] ] }
+        required: false
+      supported-services:
+        type: list
+        entry_schema:
+          type: string
+        description: The network services supported by the offering.
+        required: false
+      service-provider-list:
+        type: list
+        entry_schema:
+          type: NetworkServiceProviderMapping
+        description: The network services mapped to their providers.
+        required: false
+      service-offering-id:
+        type: string
+        description: The ID of the network service offering for the network router.
+        required: false
+      tags:
+        type: list
+        entry_schema:
+          type: string
+        description: The list of tags associated with the network offering.
+      specify-vlan:
+        type: boolean
+        description: Whether the network offering requires a VLAN ID to be specified..
+        required: false
+      specify-ip-ranges:
+        type: boolean
+        description: Whether the network offering requires IP ranges to be specified.
+        required: false
+      network-rate:
+        type: integer
+        description: The network rate in Mbps.
+        required: false
+      persistent:
+        type: boolean
+        description: Whether the network created from this offering will be persistent.
+        required: false
+      conserve-mode:
+        type: boolean
+        description: Whether the conserve mode is enabled.
+      service-capability-list:
+        type: list
+        entry_schema:
+          type: ServiceCapability
+        description: The list of service capabilities.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the network offering.

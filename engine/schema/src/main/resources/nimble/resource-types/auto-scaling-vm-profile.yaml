@@ -1,0 +1,110 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  AutoScalingVmProfile node type definition.
+
+data_types:
+  NameValueMapping:
+    properties:
+      name:
+        type: string
+        description: The name of the key-value pair.
+        required: true
+      value:
+        type: string
+        description: The value of the key-value pair.
+        required: true
+
+node_types:
+  AutoScalingVmProfile:
+    properties:
+      zone-id:
+        type: string
+        description: The ID of the availability zone.
+        required: true
+      service-offering-id:
+        type: string
+        description: Service offering ID for the VMs in the auto scaling VM profile.
+        required: true
+      template-id:
+        type: string
+        description: The ID of the template from which the VMs will be launched.
+        required: true
+      user-data-id:
+        type: string
+        description: The ID of the user data.
+        required: false
+      user-data-details:
+        type: map
+        entry_schema:
+          type: string
+        description: User data details.
+        required: false
+      user-data:
+        type: string
+        description: User data.
+        required: false
+      other-deploy-params:
+        type: list
+        entry_schema:
+          type: NameValueMapping
+        description: Other deployment parameters.
+        required: false
+      expunge-vm-grace-period:
+        type: integer
+        description: The time allowed for existing connections to get closed before a VM is expunged.
+        required: false
+      name:
+        type: string
+        description: The name of the auto scaling VM profile.
+        required: false
+      description:
+        type: string
+        description: The description of the auto scaling VM profile.
+        required: false
+      account:
+        type: string
+        description: "The name of the account associated with the auto scaling VM profile. It must be used with the 'domain-id' property."
+        required: false
+      domain-id:
+        type: string
+        description: The domain ID associated with the auto scaling VM profile.
+        required: false
+      project-id:
+        type: string
+        description: The project ID associated with the auto scaling VM profile.
+        required: false
+      auto-scale-user-id:
+        type: string
+        description: The ID of the user used to launch and destroy the VMs.
+        required: false
+      network-id:
+        type: string
+        description: The ID of the network in which the auto scaling VM profile will be launched.
+        required: false
+      counter-parameters:
+        type: list
+        entry_schema:
+          type: NameValueMapping
+        required: false
+        description: Counter parameters list.
+    attributes:
+      id:
+        type: string
+        description: The ID of the auto scaling VM profile.

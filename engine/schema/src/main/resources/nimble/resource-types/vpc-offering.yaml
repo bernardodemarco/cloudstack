@@ -25,9 +25,11 @@ data_types:
       service:
         type: string
         description: The network service.
+        required: true
       provider:
         type: string
         description: The network service provider.
+        required: true
 
 node_types:
   VpcOffering:
@@ -53,8 +55,9 @@ node_types:
         description: Whether the VPC offering will be enabled during creation.
         required: false
       internet-protocol:
-        type: list
+        type: string
         description: "The internet protocol of the offering. Valid values are 'ipv4' and 'dualstack'."
+        validation: { $valid_values: [ $value, [ ipv4, dualstack ] ] }
         required: false
       supported-services:
         type: list
@@ -62,7 +65,7 @@ node_types:
           type: string
         description: The network services supported by the offering.
         required: false
-      service-provider-map:
+      service-provider-list:
         type: list
         entry_schema:
           type: NetworkServiceProviderMapping

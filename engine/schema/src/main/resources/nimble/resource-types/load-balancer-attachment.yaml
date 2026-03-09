@@ -25,9 +25,11 @@ data_types:
       virtual-machine-id:
         type: string
         description: The ID of the virtual machine.
+        required: true
       ip:
         type: string
         description: The internal IP address of the virtual machine.
+        required: true
 
 node_types:
   LoadBalancerAttachment:

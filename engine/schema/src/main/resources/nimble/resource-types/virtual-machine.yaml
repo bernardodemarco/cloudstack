@@ -1,0 +1,191 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+tosca_definitions_version: tosca_2_0
+
+description: >
+  VirtualMachine node type definition.
+
+data_types:
+  IpNetworkMapping:
+    properties:
+      network-id:
+        type: string
+        description: The ID of the network.
+        required: true
+      ip:
+        type: string
+        description: The IP address of the network.
+        required: false
+
+node_types:
+  VirtualMachine:
+    properties:
+      zone-id:
+        type: string
+        description: The ID of the availability zone.
+        required: true
+      name:
+        type: string
+        description: The name of the VM.
+        required: false
+      display-name:
+        type: string
+        description: The display name of the VM.
+        required: false
+      account:
+        type: string
+        description: "The name of the account associated with the VM. It must be used with the 'domain-id' property."
+        required: false
+      domain-id:
+        type: string
+        description: The domain ID associated with the VM.
+        required: false
+      project-id:
+        type: string
+        description: The project ID associated with the VM.
+        required: false
+      host-id:
+        type: string
+        description: The ID of the host in which the VM will be launched.
+        required: false
+      cluster-id:
+        type: string
+        description: The ID of the cluster in which the VM will be launched.
+        required: false
+      pod-id:
+        type: string
+        description: The ID of the pod in which the VM will be launched.
+        required: false
+      service-offering-id:
+        type: string
+        description: Service offering ID for the VM.
+        required: true
+      template-id:
+        type: string
+        description: The ID of the template from which the VM will be launched.
+        required: false
+      start-vm:
+        type: boolean
+        description: Whether to start the VM after creation.
+        required: false
+      root-disk-size:
+        type: integer
+        description: The size of the root disk in GB.
+        required: false
+      override-disk-offering-id:
+        type: string
+        description: The ID of the disk offering for the VM to be used by its root volume.
+        required: false
+      disk-offering-id:
+        type: string
+        description: >
+          The ID of the disk offering. For VMs created from ISOs, this is the ID of the disk offering used to create the root disk.
+          For VMs created from templates, this is the ID of the disk offering used to create data disks.
+        required: false
+      size:
+        type: integer
+        description: The size of the data disk.
+        required: false
+      ip-network-list:
+        type: list
+        entry_schema:
+          type: IpNetworkMapping
+        description: The IP addresses of the networks in which the VM will be launched.
+        required: false
+      password:
+        type: string
+        description: The password for the VM.
+        required: false
+      nic-multiqueue-number:
+        type: integer
+        description: The number of queues for multiqueue NICs
+        required: false
+      nic-packed-virt-queues-enabled:
+        type: boolean
+        description: Whether to enable packed virtqueues or not.
+      mac-address:
+        type: string
+        description: The MAC address for the default VM's network.
+        required: false
+      dynamic-scaling-enabled:
+        type: boolean
+        description: Whether to enable dynamic scaling for the VM.
+        required: false
+      key-pairs:
+        type: list
+        entry_schema:
+          type: string
+        description: The IDs of the key pairs to be used for SSH access to the VM.
+        required: false
+      io-threads-enabled:
+        type: boolean
+        description: Whether to enable IO threads for the VM.
+        required: false
+      io-driver-policy:
+        type: string
+        description: The I/O driver policy for the VM.
+        required: false
+      boot-type:
+        type: string
+        description: "The boot type for the VM. Valid values are 'bios' and 'uefi'."
+        required: false
+        validation: { $valid_values: [ $value, [ bios, uefi ] ] }
+      boot-mode:
+        type: string
+        description: "The boot mode for the VM. Valid values are 'legacy' and 'secure'."
+        required: false
+        validation: { $valid_values: [ $value, [ bios, uefi ] ] }
+      affinity-group-ids:
+        type: list
+        entry_schema:
+          type: string
+        description: The IDs of the affinity groups to which the VM will be added.
+      affinity-group-names:
+        type: list
+        entry_schema:
+          type: string
+        description: The names of the affinity groups to which the VM will be added.
+      user-data-id:
+        type: string
+        description: The ID of the user data.
+        required: false
+      user-data-details:
+        type: map
+        entry_schema:
+          type: string
+        description: User data details.
+        required: false
+      user-data:
+        type: string
+        description: User data.
+        required: false
+      instance-group:
+        type: string
+        description: The name of the instance group in which the VM will be launched.
+        required: false
+      volume-id:
+        type: string
+        description: ID of the volume to be attached to the VM.
+        required: false
+      snapshot-id:
+        type: string
+        description: ID of the snapshot to be used to create the volume.
+        required: false
+    attributes:
+      id:
+        type: string
+        description: The ID of the VM.

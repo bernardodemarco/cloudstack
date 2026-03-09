@@ -25,17 +25,21 @@ data_types:
       node:
         type: string
         description: "Node type (e.g. 'control', 'worker') for which the offering will be applied."
+        required: true
       offering:
         type: string
         description: ID of the service offering to be used for this node type.
+        required: true
   NodeTemplate:
     properties:
       node:
         type: string
         description: "Node type (e.g. 'control', 'worker') for which the template will be used."
+        required: true
       template:
         type: string
         description: ID of the template to be used for this node type.
+        required: true
 
 node_types:
   KubernetesCluster:
