@@ -42,24 +42,6 @@ node_types:
         type: string
         description: Service offering ID for the VMs in the auto scaling VM profile.
         required: true
-      template-id:
-        type: string
-        description: The ID of the template from which the VMs will be launched.
-        required: true
-      user-data-id:
-        type: string
-        description: The ID of the user data.
-        required: false
-      user-data-details:
-        type: map
-        entry_schema:
-          type: string
-        description: User data details.
-        required: false
-      user-data:
-        type: string
-        description: User data.
-        required: false
       other-deploy-params:
         type: list
         entry_schema:

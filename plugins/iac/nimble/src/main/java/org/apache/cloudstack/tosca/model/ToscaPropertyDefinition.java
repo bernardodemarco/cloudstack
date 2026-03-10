@@ -4,7 +4,7 @@ public class ToscaPropertyDefinition extends ToscaFieldDefinition {
     private boolean required;
     private Object validation;
 
-    public ToscaPropertyDefinition(String name, String description, ToscaPrimitiveType type, boolean required, Object validation) {
+    public ToscaPropertyDefinition(String name, String description, ToscaTypeDefinition type, boolean required, Object validation) {
         super(name, description, type);
         this.required = required;
         this.validation = validation;
