@@ -96,8 +96,8 @@ public class NimbleManagerImplTest {
         Mockito.when(toscaNodeTypesMock.get(0).getName()).thenReturn("First TOSCA node type");
         Mockito.when(toscaNodeTypesMock.get(1).getName()).thenReturn("Second TOSCA node type");
 
-        Mockito.when(toscaParserMock.parseNodeType(Mockito.eq(firstIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(0));
-        Mockito.when(toscaParserMock.parseNodeType(Mockito.eq(secondIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(1));
+        Mockito.when(toscaParserMock.parseNodeTypeDefinitionFile(Mockito.eq(firstIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(0));
+        Mockito.when(toscaParserMock.parseNodeTypeDefinitionFile(Mockito.eq(secondIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(1));
 
         Map<String, ToscaNodeType> profile = nimbleServiceSpy.loadToscaProfile();
         Assert.assertEquals(iacResourceTypesMock.size(), profile.size());

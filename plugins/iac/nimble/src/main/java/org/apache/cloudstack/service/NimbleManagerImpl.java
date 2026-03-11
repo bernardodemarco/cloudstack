@@ -80,7 +80,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         List<IacResourceTypeVO> profileResourceTypes = iacResourceTypeDao.listAll();
 
         return profileResourceTypes.stream()
-                .map(resourceType -> toscaParser.parseNodeType(resourceType.getName(), resourceType.getContent()))
+                .map(resourceType -> toscaParser.parseNodeTypeDefinitionFile(resourceType.getName(), resourceType.getContent()))
                 .collect(Collectors.toMap(ToscaNodeType::getName, nodeType -> nodeType));
     }
 

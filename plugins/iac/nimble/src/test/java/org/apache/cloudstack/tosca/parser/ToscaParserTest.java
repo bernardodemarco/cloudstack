@@ -50,11 +50,11 @@ public class ToscaParserTest {
     }
 
     @Test
-    public void parseNodeTypeTestEnsureToscaNodeTypeIsSuccessfullyParsedAlongWithItsPropertiesAndAttributes() {
+    public void parseNodeTypeTestEnsureToscaNodeTypeDefinitionFileIsSuccessfullyParsedAlongWithItsPropertiesAndAttributes() {
         String nodeTypeName = "toscaNodeType";
         String nodeTypeContentWithMinifiedYaml = "{tosca_definitions_version: tosca_2_0, description: \"Mock node type definition.\\n\", node_types: {MockType: {description: \"Apache CloudStack MockType node type.\\n\", derived_from: Root, attributes: {id: {type: string, description: ID.}, name: {type: string, description: Name.}}, properties: {zone-id: {type: string, description: Zone ID., required: true}, amount: {type: integer, description: Amount.}, disk-offering-id: {type: string, description: Disk offering ID., required: false, validation: {$valid_values: [$value, [1, 2]]}}}}}}\n";
 
-        ToscaNodeType nodeType = toscaParserSpy.parseNodeType(nodeTypeName, nodeTypeContentWithMinifiedYaml);
+        ToscaNodeType nodeType = toscaParserSpy.parseNodeTypeDefinitionFile(nodeTypeName, nodeTypeContentWithMinifiedYaml);
         Map<String, ToscaPropertyDefinition> properties = nodeType.getProperties();
         Map<String, ToscaAttributeDefinition> attributes = nodeType.getAttributes();
         Assert.assertEquals(nodeTypeName, nodeType.getName());
@@ -83,6 +83,6 @@ public class ToscaParserTest {
     @Test
     public void parseNodeTypTestReturnNullWhenThereAreNoNodeTypesDeclaredInTheYamlContent() {
         String nodeTypeContentWithMinifiedYaml = "{tosca_definitions_version: tosca_2_0, description: \"Apache CloudStack TOSCA profile Volume node type definition.\\n\"}\n";
-        Assert.assertNull(toscaParserSpy.parseNodeType("toscaNodeType", nodeTypeContentWithMinifiedYaml));
+        Assert.assertNull(toscaParserSpy.parseNodeTypeDefinitionFile("toscaNodeType", nodeTypeContentWithMinifiedYaml));
     }
 }

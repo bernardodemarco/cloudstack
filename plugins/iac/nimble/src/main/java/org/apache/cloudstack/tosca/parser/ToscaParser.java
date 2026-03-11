@@ -17,17 +17,17 @@
 package org.apache.cloudstack.tosca.parser;
 
 import org.apache.cloudstack.tosca.model.ToscaAttributeDefinition;
+import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaFieldDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.model.ToscaPrimitiveType;
 import org.apache.cloudstack.tosca.model.ToscaPropertyDefinition;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ToscaParser {
@@ -38,25 +38,35 @@ public class ToscaParser {
     }
 
     private static final String NODE_TYPES_KEY = "node_types";
+    private static final String DATA_TYPES_KEY = "data_types";
     private static final String NODE_TYPES_PROPERTIES_KEY = "properties";
     private static final String NODE_TYPES_ATTRIBUTES_KEY = "attributes";
 
     @SuppressWarnings("unchecked")
-    public ToscaNodeType parseNodeType(String nodeTypeName, String nodeTypeContent) {
+    public ToscaNodeType parseNodeTypeDefinitionFile(String nodeTypeName, String nodeTypeContent) {
         Object rawYaml = ToscaYamlHelper.loadYaml(nodeTypeContent);
         Map<String, Object> yamlRoot = ToscaYamlHelper.asMap(rawYaml);
         logger.debug("Trying to extract only one node type from the [{}] YAML definition file, since it is expected for each node type to be declared separately.", nodeTypeName);
-        Optional<Map.Entry<String, Object>> nodeTypeRaw = ToscaYamlHelper.asMap(yamlRoot.get(NODE_TYPES_KEY)).entrySet().stream().findFirst();
-        if (nodeTypeRaw.isEmpty()) {
-            logger.error("No node types are declared in the [{}] YAML definition file.", nodeTypeName);
-            return null;
-        }
-        Map<String, Object> nodeTypeBody = ToscaYamlHelper.asMap(nodeTypeRaw.get().getValue());
+        Object dataTypes = parseDataTypes(yamlRoot);
+        Map.Entry<String, Object> nodeTypeRaw = ToscaYamlHelper.asMap(yamlRoot.get(NODE_TYPES_KEY)).entrySet().iterator().next();
+        Map<String, Object> nodeTypeBody = ToscaYamlHelper.asMap(nodeTypeRaw.getValue());
         Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) parseFieldDefinition(nodeTypeBody.get(NODE_TYPES_PROPERTIES_KEY), FieldDefinitionType.PROPERTY);
         Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) parseFieldDefinition(nodeTypeBody.get(NODE_TYPES_ATTRIBUTES_KEY), FieldDefinitionType.ATTRIBUTE);
         ToscaNodeType nodeType = new ToscaNodeType(nodeTypeName, propertyDefinitions, attributeDefinitions);
         logger.info("Successfully parsed the following node type: [{}].", nodeType::toString);
         return nodeType;
+    }
+
+    private List<ToscaDataTypeDefinition> parseDataTypes(Map<String, Object> yamlRoot) {
+        Map<String, Object> dataTypesRaw = ToscaYamlHelper.asMap(yamlRoot.get(DATA_TYPES_KEY));
+        dataTypesRaw.entrySet().stream().map(dataTypeEntry -> {
+            String dataTypeName = dataTypeEntry.getKey();
+            Map<String, Object> dataTypeBody = ToscaYamlHelper.asMap(dataTypeEntry.getValue());
+            Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) parseFieldDefinition(dataTypeBody.get(NODE_TYPES_PROPERTIES_KEY), FieldDefinitionType.PROPERTY);
+            return new ToscaDataTypeDefinition(dataTypeName, propertyDefinitions);
+        });
+
+        return null;
     }
 
     private Map<String, ? extends ToscaFieldDefinition> parseFieldDefinition(Object rawFields, FieldDefinitionType fieldDefinitionType) {
@@ -82,5 +92,10 @@ public class ToscaParser {
             logger.debug("Successfully parsed the following property: [{}].", propertyDefinition::toString);
             return propertyDefinition;
         }).collect(Collectors.toMap(ToscaFieldDefinition::getName, (field) -> field));
+    }
+
+    private void parseFieldType(Map<String, Object> fieldBody) {
+        Object rawType = fieldBody.get("type");
+
     }
 }
