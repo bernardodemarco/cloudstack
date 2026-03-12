@@ -19,7 +19,7 @@ package org.apache.cloudstack.tosca.model;
 import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
 
 public class ToscaTypeDefinition {
-    private enum Kind {
+    public enum Kind {
         PRIMITIVE, COLLECTION, DATA_TYPE
     }
 
@@ -47,6 +47,26 @@ public class ToscaTypeDefinition {
         this.entrySchema = entrySchema;
         this.dataType = dataType;
         this.kind = kind;
+    }
+
+    public Kind getKind() {
+        return kind;
+    }
+
+    public ToscaPrimitiveType getPrimitiveType() {
+        return primitiveType;
+    }
+
+    public ToscaCollectionType getCollectionType() {
+        return collectionType;
+    }
+
+    public ToscaTypeDefinition getEntrySchema() {
+        return entrySchema;
+    }
+
+    public ToscaDataTypeDefinition getDataType() {
+        return dataType;
     }
 
     @Override

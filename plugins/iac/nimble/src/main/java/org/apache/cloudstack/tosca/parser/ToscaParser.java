@@ -26,6 +26,7 @@ import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.model.ToscaPrimitiveType;
 import org.apache.cloudstack.tosca.model.ToscaPropertyDefinition;
 import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -60,7 +61,7 @@ public class ToscaParser {
         return parseNodeType(yamlRoot, dataTypes);
     }
 
-    private Map<String, ToscaDataTypeDefinition> parseDataTypes(Map<String, Object> yamlRoot) {
+    protected Map<String, ToscaDataTypeDefinition> parseDataTypes(Map<String, Object> yamlRoot) {
         Map<String, Object> dataTypesRaw = ToscaYamlHelper.asMap(yamlRoot.get(DATA_TYPES_KEY));
         logger.info("Parsing the following data types: {}.", dataTypesRaw::keySet);
         return dataTypesRaw.entrySet().stream().map(dataTypeEntry -> {
@@ -108,7 +109,7 @@ public class ToscaParser {
         }).collect(Collectors.toMap(ToscaFieldDefinition::getName, (field) -> field));
     }
 
-    private ToscaTypeDefinition parseFieldType(Map<String, Object> fieldBody, Map<String, ToscaDataTypeDefinition> dataTypes) {
+    protected ToscaTypeDefinition parseFieldType(Map<String, Object> fieldBody, Map<String, ToscaDataTypeDefinition> dataTypes) {
         String rawType = ToscaYamlHelper.asString(fieldBody.get(FIELDS_TYPE_KEY));
         logger.debug("Parsing the following type: [{}].", rawType);
         ToscaPrimitiveType primitiveType = EnumUtils.getEnumIgnoreCase(ToscaPrimitiveType.class, rawType);
@@ -127,7 +128,11 @@ public class ToscaParser {
         return ToscaTypeDefinition.ofDataType(dataTypes.get(rawType));
     }
 
-    private ToscaFunction.ToscaBooleanFunction parseToscaBooleanFunction(Map<String, Object> validationBody) {
+    protected ToscaFunction.ToscaBooleanFunction parseToscaBooleanFunction(Map<String, Object> validationBody) {
+        if (MapUtils.isEmpty(validationBody)) {
+            return null;
+        }
+
         Map.Entry<String, Object> function = validationBody.entrySet().iterator().next();
         String name = function.getKey();
         Object body = function.getValue();

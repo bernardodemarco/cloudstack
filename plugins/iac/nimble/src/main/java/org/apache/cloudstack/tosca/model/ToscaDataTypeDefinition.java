@@ -33,6 +33,10 @@ public class ToscaDataTypeDefinition {
         return name;
     }
 
+    public Map<String, ToscaPropertyDefinition> getProperties() {
+        return properties;
+    }
+
     @Override
     public String toString() {
         return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name");
