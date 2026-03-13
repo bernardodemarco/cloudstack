@@ -30,5 +30,9 @@ public class ToscaBooleanFunctions {
         public boolean evaluate(Object value) {
             return validValues.contains(value);
         }
+
+        public List<Object> getValidValues() {
+            return validValues;
+        }
     }
 }

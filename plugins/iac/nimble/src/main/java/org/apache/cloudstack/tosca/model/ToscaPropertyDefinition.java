@@ -31,4 +31,8 @@ public class ToscaPropertyDefinition extends ToscaFieldDefinition {
     public boolean isRequired() {
         return required;
     }
+
+    public ToscaFunction.ToscaBooleanFunction getValidation() {
+        return validation;
+    }
 }
