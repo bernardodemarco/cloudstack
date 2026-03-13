@@ -20,6 +20,10 @@ import org.apache.cloudstack.api.Identity;
 import org.apache.cloudstack.api.InternalIdentity;
 
 public interface IacResourceType extends Identity, InternalIdentity {
+    enum Category {
+        CLOUD_ACCESS_MANAGEMENT, COMPUTE, SERVICE_OFFERINGS, NETWORK, STORAGE
+    }
+
     String getName();
     String getContent();
 }
