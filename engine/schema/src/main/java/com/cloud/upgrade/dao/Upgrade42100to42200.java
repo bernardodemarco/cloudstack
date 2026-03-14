@@ -16,7 +16,6 @@
 // under the License.
 package com.cloud.upgrade.dao;
 
-import com.cloud.utils.FileUtil;
 import com.cloud.utils.exception.CloudRuntimeException;
 
 import java.io.InputStream;
@@ -27,7 +26,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 
 public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgrade, DbUpgradeSystemVmTemplate {
     private static final Path NIMBLE_RESOURCE_TYPES_DIRECTORY = Paths.get("nimble", "resource-types");

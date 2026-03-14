@@ -38,6 +38,7 @@ public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Lo
         listIacResourceTypesSearchBuilder = createSearchBuilder();
         listIacResourceTypesSearchBuilder.and(ID, listIacResourceTypesSearchBuilder.entity().getId(), SearchCriteria.Op.EQ);
         listIacResourceTypesSearchBuilder.and(NAME, listIacResourceTypesSearchBuilder.entity().getName(), SearchCriteria.Op.EQ);
+        listIacResourceTypesSearchBuilder.and(CATEGORY, listIacResourceTypesSearchBuilder.entity().getCategory(), SearchCriteria.Op.EQ);
         listIacResourceTypesSearchBuilder.and(NAME_LIKE_KEYWORD, listIacResourceTypesSearchBuilder.entity().getName(), SearchCriteria.Op.LIKE);
         listIacResourceTypesSearchBuilder.done();
     }

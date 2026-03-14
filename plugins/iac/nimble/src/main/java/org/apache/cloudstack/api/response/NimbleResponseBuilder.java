@@ -29,6 +29,7 @@ public class NimbleResponseBuilder {
             response.setIacResourceTypeContent(iacResourceType.getContent());
         }
 
+        response.setObjectName("iacresourcetypes");
         return response;
     }
 }
