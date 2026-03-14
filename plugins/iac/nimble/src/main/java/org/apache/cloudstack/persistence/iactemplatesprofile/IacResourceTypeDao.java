@@ -22,5 +22,5 @@ import com.cloud.utils.db.GenericDao;
 import java.util.List;
 
 public interface IacResourceTypeDao extends GenericDao<IacResourceTypeVO, Long> {
-    Pair<List<IacResourceTypeVO>, Integer> listIacResourceTypes(Long id, String name, String keyword, Long pageSizeVal, Long startIndex);
+    Pair<List<IacResourceTypeVO>, Integer> listIacResourceTypes(Long id, String name, IacResourceType.Category category, String keyword, Long pageSizeVal, Long startIndex);
 }

@@ -21,6 +21,7 @@ import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NimbleResponseBuilder;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
@@ -58,50 +59,81 @@ public class NimbleManagerImplTest {
     List<IacResourceTypeVO> iacResourceTypesMock = List.of(Mockito.mock(IacResourceTypeVO.class), Mockito.mock(IacResourceTypeVO.class));
 
     @Test
-    public void listIacResourceTypesTestShouldGenerateAResponseForEachIacResourceType() {
+    public void listIacResourceTypesTestShouldGenerateAResponseForEachIacResourceTypeNotIncludingTheirContentsByDefault() {
         long iacResourceTypeId = 1L;
         String iacResourceTypeName = "Iac Resource Type Name";
+        IacResourceType.Category iacResourceTypeCategory = IacResourceType.Category.CLOUD_ACCESS_MANAGEMENT;
         String iacResourceTypeKeyword = "Iac Resource Type Keyword";
         long pageSize = 5L;
         long startIndex = 1L;
 
         Mockito.when(listIacResourceTypesCmdMock.getId()).thenReturn(iacResourceTypeId);
         Mockito.when(listIacResourceTypesCmdMock.getName()).thenReturn(iacResourceTypeName);
+        Mockito.when(listIacResourceTypesCmdMock.getCategory()).thenReturn(iacResourceTypeCategory);
         Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
         Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
         Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
         Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
-                Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
+                Mockito.eq(iacResourceTypeCategory), Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
                 .thenReturn(new Pair<>(iacResourceTypesMock, iacResourceTypesMock.size()));
 
         List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
-        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)))).thenReturn(iacResourceTypeResponsesMock.get(0));
-        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)))).thenReturn(iacResourceTypeResponsesMock.get(1));
+        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)), Mockito.eq(false))).thenReturn(iacResourceTypeResponsesMock.get(0));
+        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)), Mockito.eq(false))).thenReturn(iacResourceTypeResponsesMock.get(1));
 
         ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
         Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
         Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
     }
-//
-//    @Test
-//    public void loadToscaProfileTestEachIacResourceTypeShouldBeParsed() {
-//        String firstIacResourceTypeName = "First Iac Resource Type Name";
-//        String secondIacResourceTypeName = "Second Iac Resource Type Name";
-//
-//        Mockito.when(iacResourceTypesMock.get(0).getName()).thenReturn(firstIacResourceTypeName);
-//        Mockito.when(iacResourceTypesMock.get(1).getName()).thenReturn(secondIacResourceTypeName);
-//        Mockito.when(iacResourceTypeDaoMock.listAll()).thenReturn(iacResourceTypesMock);
-//
-//        List<ToscaNodeType> toscaNodeTypesMock = List.of(Mockito.mock(ToscaNodeType.class), Mockito.mock(ToscaNodeType.class));
-//        Mockito.when(toscaNodeTypesMock.get(0).getName()).thenReturn("First TOSCA node type");
-//        Mockito.when(toscaNodeTypesMock.get(1).getName()).thenReturn("Second TOSCA node type");
-//
-//        Mockito.when(toscaParserMock.parseNodeTypeDefinitionFile(Mockito.eq(firstIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(0));
-//        Mockito.when(toscaParserMock.parseNodeTypeDefinitionFile(Mockito.eq(secondIacResourceTypeName), Mockito.any())).thenReturn(toscaNodeTypesMock.get(1));
-//
-//        Map<String, ToscaNodeType> profile = nimbleServiceSpy.loadToscaProfile();
-//        Assert.assertEquals(iacResourceTypesMock.size(), profile.size());
-//        Assert.assertTrue(profile.containsKey(toscaNodeTypesMock.get(0).getName()));
-//        Assert.assertTrue(profile.containsKey(toscaNodeTypesMock.get(1).getName()));
-//    }
+
+    @Test
+    public void listIacResourceTypesTestShouldGenerateAResponseForEachIacResourceTypeIncludingTheirContentsWhenAsked() {
+        long iacResourceTypeId = 1L;
+        String iacResourceTypeName = "Iac Resource Type Name";
+        IacResourceType.Category iacResourceTypeCategory = IacResourceType.Category.CLOUD_ACCESS_MANAGEMENT;
+        String iacResourceTypeKeyword = "Iac Resource Type Keyword";
+        boolean showIacResourceTypeContent = true;
+        long pageSize = 5L;
+        long startIndex = 1L;
+
+        Mockito.when(listIacResourceTypesCmdMock.getId()).thenReturn(iacResourceTypeId);
+        Mockito.when(listIacResourceTypesCmdMock.getName()).thenReturn(iacResourceTypeName);
+        Mockito.when(listIacResourceTypesCmdMock.getCategory()).thenReturn(iacResourceTypeCategory);
+        Mockito.when(listIacResourceTypesCmdMock.showIacResourceTypeContent()).thenReturn(showIacResourceTypeContent);
+        Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
+        Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
+        Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
+        Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
+                        Mockito.eq(iacResourceTypeCategory), Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
+                .thenReturn(new Pair<>(iacResourceTypesMock, iacResourceTypesMock.size()));
+
+        List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
+        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)), Mockito.eq(showIacResourceTypeContent))).thenReturn(iacResourceTypeResponsesMock.get(0));
+        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)), Mockito.eq(showIacResourceTypeContent))).thenReturn(iacResourceTypeResponsesMock.get(1));
+
+        ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
+        Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
+        Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
+    }
+
+    @Test
+    public void loadToscaProfileTestEachIacResourceTypeShouldBeParsed() {
+        String firstResourceTypeContent = "{description: First resource type content}";
+        String secondResourceTypeContent = "{description: Second resource type content}";
+        Mockito.when(iacResourceTypesMock.get(0).getContent()).thenReturn(firstResourceTypeContent);
+        Mockito.when(iacResourceTypesMock.get(1).getContent()).thenReturn(secondResourceTypeContent);
+        Mockito.when(iacResourceTypeDaoMock.listAll()).thenReturn(iacResourceTypesMock);
+
+        List<ToscaNodeType> toscaNodeTypesMock = List.of(Mockito.mock(ToscaNodeType.class), Mockito.mock(ToscaNodeType.class));
+        Mockito.when(toscaNodeTypesMock.get(0).getName()).thenReturn("First TOSCA node type");
+        Mockito.when(toscaNodeTypesMock.get(1).getName()).thenReturn("Second TOSCA node type");
+
+        Mockito.when(toscaParserMock.parseNodeTypeDefinitionFile(Mockito.eq(firstResourceTypeContent))).thenReturn(toscaNodeTypesMock.get(0));
+        Mockito.when(toscaParserMock.parseNodeTypeDefinitionFile(Mockito.eq(secondResourceTypeContent))).thenReturn(toscaNodeTypesMock.get(1));
+
+        Map<String, ToscaNodeType> profile = nimbleServiceSpy.loadToscaProfile();
+        Assert.assertEquals(iacResourceTypesMock.size(), profile.size());
+        Assert.assertTrue(profile.containsKey(toscaNodeTypesMock.get(0).getName()));
+        Assert.assertTrue(profile.containsKey(toscaNodeTypesMock.get(1).getName()));
+    }
 }

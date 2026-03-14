@@ -19,11 +19,16 @@ package org.apache.cloudstack.api.response;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 
 public class NimbleResponseBuilder {
-    public IacResourceTypeResponse createIacResourceTypeResponse(IacResourceType iacResourceType) {
+    public IacResourceTypeResponse createIacResourceTypeResponse(IacResourceType iacResourceType, boolean showIacResourceTypeContent) {
         IacResourceTypeResponse response = new IacResourceTypeResponse();
         response.setId(iacResourceType.getUuid());
         response.setName(iacResourceType.getName());
-        response.setIacResourceTypeContent(iacResourceType.getContent());
+        response.setCategory(iacResourceType.getCategory());
+
+        if (showIacResourceTypeContent) {
+            response.setIacResourceTypeContent(iacResourceType.getContent());
+        }
+
         return response;
     }
 }

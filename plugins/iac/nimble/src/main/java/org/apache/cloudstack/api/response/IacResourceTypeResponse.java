@@ -33,6 +33,10 @@ public class IacResourceTypeResponse extends BaseResponse {
     @Param(description = "The name of the IaC resource type.")
     private String name;
 
+    @SerializedName(ApiConstants.CATEGORY)
+    @Param(description = "The category of the IaC resource type.")
+    private IacResourceType.Category category;
+
     @SerializedName(ApiConstants.IAC_RESOURCE_TYPE_CONTENT)
     @Param(description = "The content of the IaC resource type.")
     private String iacResourceTypeContent;
@@ -51,6 +55,14 @@ public class IacResourceTypeResponse extends BaseResponse {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public IacResourceType.Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(IacResourceType.Category category) {
+        this.category = category;
     }
 
     public String getIacResourceTypeContent() {

@@ -16,6 +16,7 @@
 // under the License.
 package org.apache.cloudstack.api.command;
 
+import com.cloud.exception.InvalidParameterValueException;
 import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
@@ -25,6 +26,7 @@ import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.service.NimbleService;
+import org.apache.commons.lang3.EnumUtils;
 
 import javax.inject.Inject;
 
@@ -42,12 +44,37 @@ public class ListIacResourceTypesCmd extends BaseListCmd {
     @Parameter(name = ApiConstants.NAME, type = CommandType.STRING, description = "The name of the IaC resource type.")
     private String name;
 
+    @Parameter(name = ApiConstants.CATEGORY, type = CommandType.STRING, description = "The category of the IaC resource type. " +
+            "Valid values are: compute, storage, network, service_offering and cloud_access_management.")
+    private String category;
+
+    @Parameter(name = ApiConstants.SHOW_IAC_RESOURCE_TYPE_CONTENT, type = CommandType.BOOLEAN, description = "Whether to return the IaC resource type content. Defaults to false.")
+    private boolean showIacResourceTypeContent = false;
+
     public Long getId() {
         return id;
     }
 
     public String getName() {
         return name;
+    }
+
+    public IacResourceType.Category getCategory() {
+        if (category == null) {
+            return null;
+        }
+
+        IacResourceType.Category iacResourceTypeCategory = EnumUtils.getEnumIgnoreCase(IacResourceType.Category.class, category);
+        if (iacResourceTypeCategory == null) {
+            throw new InvalidParameterValueException(
+                    String.format("The IaC resource type category [%s] is invalid. Valid values are: compute, storage, network, service_offering and cloud_access_management.", category));
+        }
+
+        return iacResourceTypeCategory;
+    }
+
+    public boolean showIacResourceTypeContent() {
+        return showIacResourceTypeContent;
     }
 
     @Override

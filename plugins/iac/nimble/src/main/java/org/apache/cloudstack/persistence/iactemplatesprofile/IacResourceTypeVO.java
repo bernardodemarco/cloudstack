@@ -18,6 +18,8 @@ package org.apache.cloudstack.persistence.iactemplatesprofile;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -41,6 +43,10 @@ public class IacResourceTypeVO implements IacResourceType {
     @Column(name = "content", nullable = false, length = 65535)
     private String content;
 
+    @Column(name = "category", nullable = false, length = 100)
+    @Enumerated(value = EnumType.STRING)
+    private IacResourceType.Category category;
+
     @Override
     public long getId() {
         return id;
@@ -59,5 +65,10 @@ public class IacResourceTypeVO implements IacResourceType {
     @Override
     public String getContent() {
         return content;
+    }
+
+    @Override
+    public Category getCategory() {
+        return category;
     }
 }

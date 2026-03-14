@@ -54,9 +54,9 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Override
     public ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd) {
         Pair<List<IacResourceTypeVO>, Integer> iacResourceTypes = iacResourceTypeDao.listIacResourceTypes(cmd.getId(), cmd.getName(),
-                cmd.getKeyword(), cmd.getPageSizeVal(), cmd.getStartIndex());
+                cmd.getCategory(), cmd.getKeyword(), cmd.getPageSizeVal(), cmd.getStartIndex());
         List<IacResourceTypeResponse> iacResourceTypeResponses = iacResourceTypes.first().stream()
-                .map(iacResourceType -> responseBuilder.createIacResourceTypeResponse(iacResourceType))
+                .map(iacResourceType -> responseBuilder.createIacResourceTypeResponse(iacResourceType, cmd.showIacResourceTypeContent()))
                 .collect(Collectors.toList());
 
         ListResponse<IacResourceTypeResponse> response = new ListResponse<>();

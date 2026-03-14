@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `cloud`.`iac_resource_types` (
     `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
     `uuid` VARCHAR(40) UNIQUE,
     `name` VARCHAR(100) NOT NULL COMMENT 'Profile''s element name.',
+    `category` VARCHAR(100) NOT NULL COMMENT 'Profile''s element category.',
     `element_content` TEXT NOT NULL COMMENT 'Profile''s element content.',
     PRIMARY KEY (`id`)
 );

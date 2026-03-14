@@ -29,6 +29,7 @@ import java.util.List;
 public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Long> implements IacResourceTypeDao {
     private static final String ID = "id";
     private static final String NAME = "name";
+    private static final String CATEGORY = "category";
     private static final String NAME_LIKE_KEYWORD = "nameLikeKeyword";
 
     private final SearchBuilder<IacResourceTypeVO> listIacResourceTypesSearchBuilder;
@@ -42,10 +43,11 @@ public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Lo
     }
 
     @Override
-    public Pair<List<IacResourceTypeVO>, Integer> listIacResourceTypes(Long id, String name, String keyword, Long pageSizeVal, Long startIndex) {
+    public Pair<List<IacResourceTypeVO>, Integer> listIacResourceTypes(Long id, String name, IacResourceType.Category category, String keyword, Long pageSizeVal, Long startIndex) {
         SearchCriteria<IacResourceTypeVO> searchCriteria = listIacResourceTypesSearchBuilder.create();
         searchCriteria.setParametersIfNotNull(ID, id);
         searchCriteria.setParametersIfNotNull(NAME, name);
+        searchCriteria.setParametersIfNotNull(CATEGORY, category);
         if (keyword != null) {
             searchCriteria.setParameters(NAME_LIKE_KEYWORD, "%" + keyword + "%");
         }

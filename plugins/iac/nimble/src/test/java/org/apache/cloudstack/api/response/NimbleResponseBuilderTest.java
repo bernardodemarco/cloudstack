@@ -35,23 +35,38 @@ public class NimbleResponseBuilderTest {
     @Mock
     private IacResourceTypeVO iacResourceTypeVOMock;
 
-    private IacResourceTypeResponse getExpectedIacResourceTypeResponse() {
+    private IacResourceTypeResponse getExpectedIacResourceTypeResponse(boolean showIacResourceTypeContent) {
         IacResourceTypeResponse iacResourceTypeResponse = new IacResourceTypeResponse();
         iacResourceTypeResponse.setId("uuid");
         iacResourceTypeResponse.setName("Resource Type Name");
-        iacResourceTypeResponse.setIacResourceTypeContent("node_type: ResourceTypeName");
+        if (showIacResourceTypeContent) {
+            iacResourceTypeResponse.setIacResourceTypeContent("node_type: ResourceTypeName");
+        }
         return iacResourceTypeResponse;
     }
 
     @Test
-    public void createIacResourceTypeResponseTestShouldPopulateAllFieldsOfTheResponse() {
-        IacResourceTypeResponse expected = getExpectedIacResourceTypeResponse();
+    public void createIacResourceTypeResponseTestShouldNotIncludeResourceTypeByDefault() {
+        IacResourceTypeResponse expected = getExpectedIacResourceTypeResponse(false);
+
+        Mockito.when(iacResourceTypeVOMock.getUuid()).thenReturn(expected.getId());
+        Mockito.when(iacResourceTypeVOMock.getName()).thenReturn(expected.getName());
+
+        IacResourceTypeResponse actual = nimbleResponseBuilderSpy.createIacResourceTypeResponse(iacResourceTypeVOMock, false);
+        Assert.assertEquals(expected.getId(), actual.getId());
+        Assert.assertEquals(expected.getName(), actual.getName());
+        Assert.assertNull(actual.getIacResourceTypeContent());
+    }
+
+    @Test
+    public void createIacResourceTypeResponseTestShouldIncludeResourceTypeContentWhenAsked() {
+        IacResourceTypeResponse expected = getExpectedIacResourceTypeResponse(true);
 
         Mockito.when(iacResourceTypeVOMock.getUuid()).thenReturn(expected.getId());
         Mockito.when(iacResourceTypeVOMock.getName()).thenReturn(expected.getName());
         Mockito.when(iacResourceTypeVOMock.getContent()).thenReturn(expected.getIacResourceTypeContent());
 
-        IacResourceTypeResponse actual = nimbleResponseBuilderSpy.createIacResourceTypeResponse(iacResourceTypeVOMock);
+        IacResourceTypeResponse actual = nimbleResponseBuilderSpy.createIacResourceTypeResponse(iacResourceTypeVOMock, true);
         Assert.assertEquals(expected.getId(), actual.getId());
         Assert.assertEquals(expected.getName(), actual.getName());
         Assert.assertEquals(expected.getIacResourceTypeContent(), actual.getIacResourceTypeContent());
