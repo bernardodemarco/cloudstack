@@ -21,39 +21,29 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ToscaParsingErrorsContext {
-    public class Message {
+    public static class Message {
         private final String message;
         private final String context;
-        private final Severity severity;
 
-        public Message(String message, String context, Severity severity) {
+        public Message(String message, String context) {
             this.message = message;
             this.context = context;
-            this.severity = severity;
         }
 
         @Override
         public String toString() {
-            return String.format("[%s]: %s: %s", severity, context, message);
+            return String.format("[ERROR]: %s: %s", context, message);
         }
-    }
-
-    private enum Severity {
-        ERROR, WARNING
     }
 
     private final List<Message> messages = new ArrayList<>();
 
     public void addError(String message, String context) {
-        messages.add(new Message(message, context, Severity.ERROR));
-    }
-
-    public void addWarning(String message, String context) {
-        messages.add(new Message(message, context, Severity.WARNING));
+        messages.add(new Message(message, context));
     }
 
     public boolean hasErrors() {
-        return messages.stream().anyMatch(message -> message.severity == Severity.ERROR);
+        return !messages.isEmpty();
     }
 
     public String buildErrorMessages() {

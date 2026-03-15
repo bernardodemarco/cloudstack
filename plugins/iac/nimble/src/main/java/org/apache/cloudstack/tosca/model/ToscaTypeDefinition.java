@@ -121,6 +121,22 @@ public class ToscaTypeDefinition {
         });
     }
 
+    public boolean isAssignableFrom(ToscaTypeDefinition other) {
+        if (kind != other.kind) return false;
+
+        if (kind == Kind.PRIMITIVE) {
+            return primitiveType == other.primitiveType;
+        }
+
+        if (kind == Kind.DATA_TYPE) {
+            return dataType.getName().equals(other.dataType.getName());
+        }
+
+        if (other.entrySchema == null) return false;
+
+        return entrySchema.isAssignableFrom(other.entrySchema);
+    }
+
     @Override
     public String toString() {
         if (kind == Kind.PRIMITIVE) {

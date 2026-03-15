@@ -22,23 +22,24 @@ import java.util.Map;
 public class ToscaNodeTemplate {
     private final String name;
     private final ToscaNodeType type;
-    private final Map<String, ToscaProperty> properties = new HashMap<>();
+    private final Map<String, ToscaProperty> properties;
     private final Map<String, Object> attributes = new HashMap<>();
 
-    public ToscaNodeTemplate(String name, ToscaNodeType type) {
+    public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
         this.name = name;
         this.type = type;
+        this.properties = properties;
     }
 
     public String getName() {
         return name;
     }
 
-    public void addProperty(String name, ToscaProperty property) {
-        properties.put(name, property);
+    public boolean hasProperty(String name) {
+        return properties.containsKey(name);
     }
 
-    public void addAttribute(String name, Object value) {
-        attributes.put(name, value);
+    public ToscaProperty getProperty(String name) {
+        return properties.get(name);
     }
 }

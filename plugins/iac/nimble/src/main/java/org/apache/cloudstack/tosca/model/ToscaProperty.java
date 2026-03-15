@@ -26,4 +26,12 @@ public class ToscaProperty {
         this.rawValue = rawValue;
         this.evaluatedValue = evaluatedValue;
     }
+
+    public Object getRawValue() {
+        return rawValue;
+    }
+
+    public ToscaPropertyDefinition getDefinition() {
+        return definition;
+    }
 }
