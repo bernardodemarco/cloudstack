@@ -18,6 +18,10 @@ package org.apache.cloudstack.tosca.model;
 
 import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 public class ToscaTypeDefinition {
     public enum Kind {
         PRIMITIVE, COLLECTION, DATA_TYPE
@@ -67,6 +71,54 @@ public class ToscaTypeDefinition {
 
     public ToscaDataTypeDefinition getDataType() {
         return dataType;
+    }
+
+    public boolean isCompatibleWith(Object value) {
+        if (kind == Kind.PRIMITIVE) {
+            return isCompatibleWithPrimitive(value);
+        }
+
+        if (kind == Kind.COLLECTION) {
+            return isCompatibleWithCollection(value);
+        }
+
+        return isCompatibleWithDataType(value);
+    }
+
+    private boolean isCompatibleWithPrimitive(Object value) {
+        switch (primitiveType) {
+            case STRING: return value instanceof String;
+            case INTEGER: return value instanceof Integer;
+            case FLOAT: return value instanceof Double;
+            case BOOLEAN: return value instanceof Boolean;
+            default: return false;
+        }
+    }
+
+    private boolean isCompatibleWithCollection(Object value) {
+        switch (collectionType) {
+            case LIST:
+                if (!(value instanceof List)) return false;
+                return ((List<?>) value).stream().allMatch(entrySchema::isCompatibleWith);
+            case MAP:
+                if (!(value instanceof Map)) return false;
+                return ((Map<?, ?>) value).values().stream().allMatch(entrySchema::isCompatibleWith);
+            default:
+                return false;
+        }
+    }
+
+    private boolean isCompatibleWithDataType(Object value) {
+        if (!(value instanceof Map)) return false;
+        Map<?, ?> valueMap = (Map<?, ?>) value;
+        Set<String> dataTypesFields = dataType.getProperties().keySet();
+        if (!dataTypesFields.containsAll(valueMap.keySet())) return false;
+
+        return dataType.getProperties().values().stream().allMatch(property -> {
+            if (!property.isRequired() && !valueMap.containsKey(property.getName())) return true;
+
+            return property.getType().isCompatibleWith(valueMap.get(property.getName()));
+        });
     }
 
     @Override
