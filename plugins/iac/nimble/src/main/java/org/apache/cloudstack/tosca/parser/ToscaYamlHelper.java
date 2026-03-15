@@ -19,6 +19,7 @@ package org.apache.cloudstack.tosca.parser;
 import org.apache.commons.lang.BooleanUtils;
 import org.yaml.snakeyaml.Yaml;
 
+import java.util.List;
 import java.util.Map;
 
 public class ToscaYamlHelper {
@@ -49,6 +50,14 @@ public class ToscaYamlHelper {
         }
 
         return false;
+    }
+
+    public static List<?> asList(Object rawObject) {
+        if (!(rawObject instanceof List)) {
+            return null;
+        }
+
+        return (List<?>) rawObject;
     }
 
     public static Object loadYaml(String yamlContent) {

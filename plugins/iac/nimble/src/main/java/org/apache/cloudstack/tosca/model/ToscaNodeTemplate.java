@@ -35,6 +35,10 @@ public class ToscaNodeTemplate {
         return name;
     }
 
+    public ToscaNodeType getType() {
+        return type;
+    }
+
     public boolean hasProperty(String name) {
         return properties.containsKey(name);
     }

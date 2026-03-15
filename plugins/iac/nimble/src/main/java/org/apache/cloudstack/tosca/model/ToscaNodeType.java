@@ -43,6 +43,14 @@ public class ToscaNodeType {
         return attributes;
     }
 
+    public ToscaAttributeDefinition getAttributeDefinition(String name) {
+        return attributes.get(name);
+    }
+
+    public boolean hasAttribute(String name) {
+        return attributes.containsKey(name);
+    }
+
     @Override
     public String toString() {
         return String.format("%s: %s", name,
