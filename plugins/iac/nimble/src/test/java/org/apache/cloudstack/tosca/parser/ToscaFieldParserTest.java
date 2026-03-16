@@ -21,64 +21,38 @@ import org.apache.cloudstack.tosca.functions.ToscaFunction;
 import org.apache.cloudstack.tosca.model.ToscaAttributeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaCollectionType;
 import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
-import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.model.ToscaPrimitiveType;
 import org.apache.cloudstack.tosca.model.ToscaPropertyDefinition;
 import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
-
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import org.mockito.Spy;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.List;
 import java.util.Map;
 
 @RunWith(MockitoJUnitRunner.class)
-public class ToscaParserTest {
-    @Spy
-    private ToscaParser toscaParserSpy;
+public class ToscaFieldParserTest {
+    private ToscaFieldParser toscaFieldParserSpy;
 
-    @Test
-    public void parseNodeTypeDefinitionFileTestEnsureNodeTypeIsParsedConsideringTheAvailableDataTypes() {
-        String nodeTypeContent = "{data_types: {NameValueMapping: {properties: {name: {type: string, required: true}, value: {type: string, required: true}}}}, node_types: {MockType: {attributes: {id: {type: string, description: ID.}}, properties: {name-value: {type: NameValueMapping}}}}}";
-        ToscaNodeType nodeType = toscaParserSpy.parseNodeTypeDefinitionFile(nodeTypeContent);
-        Assert.assertEquals("MockType", nodeType.getName());
-        Assert.assertEquals(1, nodeType.getProperties().size());
-        Assert.assertEquals(1, nodeType.getAttributes().size());
-    }
+    private ToscaNodeTypeParser toscaNodeTypeParser;
 
-    @Test
-    public void parseDataTypesTestEnsureDataTypesAreSuccessfullyParsed() {
-        String dataTypeContent = "{data_types: {NameValueMapping: {properties: {name: {type: string, required: true}, value: {type: string, required: true}}}}}";
-        Map<String, ToscaDataTypeDefinition> dataTypes = toscaParserSpy.parseDataTypes(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(dataTypeContent)));
-        Assert.assertEquals(1, dataTypes.size());
-        Assert.assertEquals("NameValueMapping", dataTypes.get("NameValueMapping").getName());
-        Assert.assertEquals(2, dataTypes.get("NameValueMapping").getProperties().size());
-    }
-
-    @Test
-    public void parseNodeTypeTestEnsureToscaNodeTypeDefinitionFileIsSuccessfullyParsedAlongWithItsPropertiesAndAttributes() {
-        String nodeTypeName = "MockType";
-        String nodeTypeContent = "{tosca_definitions_version: tosca_2_0, description: Mock node type definition, node_types: {MockType: {description: Apache CloudStack MockType node type., attributes: {id: {type: string, description: ID.}}, properties: {zone-id: {type: string, description: Zone ID., required: true}}}}}";
-
-        ToscaNodeType nodeType = toscaParserSpy.parseNodeType(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(nodeTypeContent)), null);
-        Map<String, ToscaPropertyDefinition> properties = nodeType.getProperties();
-        Map<String, ToscaAttributeDefinition> attributes = nodeType.getAttributes();
-        Assert.assertEquals(nodeTypeName, nodeType.getName());
-        Assert.assertTrue(attributes.containsKey("id"));
-        Assert.assertTrue(properties.containsKey("zone-id"));
+    @Before
+    public void setUp() {
+        toscaFieldParserSpy = Mockito.spy(new ToscaFieldParser());
+        toscaNodeTypeParser = new ToscaNodeTypeParser(toscaFieldParserSpy);
     }
 
     @Test
     public void parseFieldTestSuccessfullyParseProperties() {
         String properties = "{amount: {type: map, entry_schema: {type: NameValueMapping}, description: Amount.}, disk-offering-id: {type: string, description: Disk offering ID., required: true, validation: {$valid_values: [$value, [1, 2]]}}}";
         Object dataTypeRaw = ToscaYamlHelper.loadYaml("{data_types: {NameValueMapping: {properties: {name: {type: string, required: true}, value: {type: string, required: true}}}}}");
-        Map<String, ToscaDataTypeDefinition> dataTypes = toscaParserSpy.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
+        Map<String, ToscaDataTypeDefinition> dataTypes = toscaNodeTypeParser.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
 
-        Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaParserSpy.parseField(ToscaYamlHelper.loadYaml(properties), ToscaParser.TypeOfToscaField.PROPERTY, dataTypes);
+        Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(properties), ToscaConstants.TypeOfToscaField.PROPERTY, dataTypes);
         Assert.assertEquals(2, propertyDefinitions.size());
         Assert.assertEquals("amount", propertyDefinitions.get("amount").getName());
         Assert.assertEquals("Amount.", propertyDefinitions.get("amount").getDescription());
@@ -96,7 +70,7 @@ public class ToscaParserTest {
     @Test
     public void parseFieldTestSuccessfullyParseAttributes() {
         String attributes = "{id: {type: string, description: ID.}, name: {type: string, description: Name.}}";
-        Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaParserSpy.parseField(ToscaYamlHelper.loadYaml(attributes), ToscaParser.TypeOfToscaField.ATTRIBUTE, null);
+        Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(attributes), ToscaConstants.TypeOfToscaField.ATTRIBUTE, null);
         Assert.assertEquals(2, attributeDefinitions.size());
         Assert.assertTrue(attributeDefinitions.containsKey("id"));
         Assert.assertEquals("id", attributeDefinitions.get("id").getName());
@@ -110,38 +84,30 @@ public class ToscaParserTest {
     }
 
     @Test
-    public void parseToscaBooleanFunctionTestParseValidValuesFunction() {
-        Object validationBody = ToscaYamlHelper.loadYaml("$valid_values: [ $value, [TCP, UDP, ICMP, ALL] ]");
-        ToscaFunction.ToscaBooleanFunction function = toscaParserSpy.parseToscaBooleanFunction(ToscaYamlHelper.asMap(validationBody));
-        ToscaBooleanFunctions.ValidValues validValuesFunction = (ToscaBooleanFunctions.ValidValues) function;
-        Assert.assertEquals(List.of("TCP", "UDP", "ICMP", "ALL"), validValuesFunction.getValidValues());
-    }
-
-    @Test
-    public void parseFieldTypeTestParsePrimitiveTypes() {
+    public void parseTypeTestParsePrimitiveTypes() {
         Object fieldBody = ToscaYamlHelper.loadYaml("{ type: string, description: ID. }");
-        ToscaTypeDefinition type = toscaParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), null);
+        ToscaTypeDefinition type = toscaFieldParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), null);
         Assert.assertEquals(ToscaTypeDefinition.Kind.PRIMITIVE, type.getKind());
         Assert.assertEquals(ToscaPrimitiveType.STRING, type.getPrimitiveType());
     }
 
     @Test
-    public void parseFieldTypeTestParseDataTypes() {
+    public void parseTypeTestParseDataTypes() {
         Object fieldBody = ToscaYamlHelper.loadYaml("{ type: NameValueMapping }");
         Object dataTypeRaw =  ToscaYamlHelper.loadYaml("{data_types: {NameValueMapping: {properties: {name: {type: string, description: The name of the key-value pair., required: true}, value: {type: string, description: The value of the key-value pair., required: true}}}}}");
-        Map<String, ToscaDataTypeDefinition> dataTypes = toscaParserSpy.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
-        ToscaTypeDefinition type = toscaParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), dataTypes);
+        Map<String, ToscaDataTypeDefinition> dataTypes = toscaNodeTypeParser.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
+        ToscaTypeDefinition type = toscaFieldParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), dataTypes);
         Assert.assertEquals(ToscaTypeDefinition.Kind.DATA_TYPE, type.getKind());
         Assert.assertEquals(dataTypes.get("NameValueMapping").getName(), type.getDataType().getName());
         Assert.assertEquals(dataTypes.get("NameValueMapping").getProperties(), type.getDataType().getProperties());
     }
 
     @Test
-    public void parseFieldTypeTestParseCollectionTypes() {
+    public void parseTypeTestParseCollectionTypes() {
         Object fieldBody = ToscaYamlHelper.loadYaml("{ type: list, entry_schema: { type: NameValueMapping } }");
         Object dataTypeRaw =  ToscaYamlHelper.loadYaml("{data_types: {NameValueMapping: {properties: {name: {type: string, description: The name of the key-value pair., required: true}, value: {type: string, description: The value of the key-value pair., required: true}}}}}");
-        Map<String, ToscaDataTypeDefinition> dataTypes = toscaParserSpy.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
-        ToscaTypeDefinition type = toscaParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), dataTypes);
+        Map<String, ToscaDataTypeDefinition> dataTypes = toscaNodeTypeParser.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
+        ToscaTypeDefinition type = toscaFieldParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), dataTypes);
         Assert.assertEquals(ToscaTypeDefinition.Kind.COLLECTION, type.getKind());
         Assert.assertEquals(ToscaCollectionType.LIST, type.getCollectionType());
         Assert.assertEquals(dataTypes.get("NameValueMapping").getName(), type.getEntrySchema().getDataType().getName());
@@ -151,6 +117,14 @@ public class ToscaParserTest {
     @Test
     public void parseTypeTestReturnNullWhenTheTypeIsInvalid() {
         Object fieldBody = ToscaYamlHelper.loadYaml("{ type: invalid }");
-        Assert.assertNull(toscaParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), null));
+        Assert.assertNull(toscaFieldParserSpy.parseType(ToscaYamlHelper.asMap(fieldBody), null));
+    }
+
+    @Test
+    public void parseToscaBooleanFunctionTestParseValidValuesFunction() {
+        Object validationBody = ToscaYamlHelper.loadYaml("$valid_values: [ $value, [TCP, UDP, ICMP, ALL] ]");
+        ToscaFunction.ToscaBooleanFunction function = toscaFieldParserSpy.parseToscaBooleanFunction(ToscaYamlHelper.asMap(validationBody));
+        ToscaBooleanFunctions.ValidValues validValuesFunction = (ToscaBooleanFunctions.ValidValues) function;
+        Assert.assertEquals(List.of("TCP", "UDP", "ICMP", "ALL"), validValuesFunction.getValidValues());
     }
 }
