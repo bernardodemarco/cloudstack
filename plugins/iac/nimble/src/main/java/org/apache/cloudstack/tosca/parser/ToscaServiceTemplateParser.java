@@ -29,6 +29,8 @@ import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import java.util.HashMap;
@@ -39,8 +41,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ToscaServiceTemplateParser {
+    private final Logger logger = LogManager.getLogger(ToscaServiceTemplateParser.class);
+
+    private final ToscaFieldParser toscaFieldParser;
+
     @Inject
-    private ToscaFieldParser toscaFieldParser;
+    public ToscaServiceTemplateParser(ToscaFieldParser toscaFieldParser) {
+        this.toscaFieldParser = toscaFieldParser;
+    }
 
     public ToscaServiceTemplate parseServiceTemplate(String content, Map<String, ToscaNodeType> toscaProfile, Account caller) {
         Map<String, Object> rawToscaTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content));
@@ -60,6 +68,28 @@ public class ToscaServiceTemplateParser {
         }
 
         return new ToscaServiceTemplate();
+    }
+
+    /**
+     * Checks whether all the YAML keys present in the root and service_template levels of
+     * TOSCA service templates are known and whether all the required ones were provided.
+     * @param template The TOSCA service template to be validated.
+     * @param context The service template parsing context ({@link ToscaServiceTemplateParsingContext}) for error handling purposes.
+     * @throws InvalidParameterValueException When unknown keys are present or required keys are missing.
+     */
+    private void checkRootServiceTemplateYamlKeys(Map<String, Object> template, ToscaServiceTemplateParsingContext context) {
+        validateKnownToscaKeys(template, Set.of(ToscaConstants.SERVICE_TEMPLATE_TOSCA_VERSION_KEY, ToscaConstants.SERVICE_TEMPLATE_DESCRIPTION_KEY, ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY), "Root level", context);
+        validateRequiredToscaKeys(template, Set.of(ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY), "Root level", context);
+        if (context.hasErrors()) {
+            throw new InvalidParameterValueException(context.buildErrorMessages());
+        }
+
+        Map<String, Object> serviceTemplateSection = ToscaYamlHelper.asMap(template.get(ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY));
+        validateKnownToscaKeys(serviceTemplateSection, Set.of(ToscaConstants.SERVICE_TEMPLATE_NODE_TEMPLATES_KEY, ToscaConstants.SERVICE_TEMPLATE_INPUTS_KEY, ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY), "Service template level", context);
+        validateRequiredToscaKeys(serviceTemplateSection, Set.of(ToscaConstants.SERVICE_TEMPLATE_NODE_TEMPLATES_KEY), "Service template level", context);
+        if (context.hasErrors()) {
+            throw new InvalidParameterValueException(context.buildErrorMessages());
+        }
     }
 
     private void checkUnresolvedProperties(Map<String, ToscaNodeTemplate> nodeTemplates, String function, ToscaServiceTemplateParsingContext context) {
@@ -127,20 +157,6 @@ public class ToscaServiceTemplateParser {
             });
         }
         return serviceTemplateDependencies;
-    }
-
-    private void checkRootServiceTemplateYamlKeys(Map<String, Object> serviceTemplate, ToscaServiceTemplateParsingContext context) {
-        validateKnownToscaKeys(serviceTemplate, Set.of(ToscaConstants.SERVICE_TEMPLATE_TOSCA_VERSION_KEY, ToscaConstants.SERVICE_TEMPLATE_DESCRIPTION_KEY, ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY), "YAML's root level", context);
-        validateRequiredToscaKeys(serviceTemplate, Set.of(ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY), "YAML's root level", context);
-        if (context.hasErrors()) {
-            throw new InvalidParameterValueException(context.buildErrorMessages());
-        }
-
-        validateKnownToscaKeys(serviceTemplate, Set.of(ToscaConstants.SERVICE_TEMPLATE_TOSCA_VERSION_KEY, ToscaConstants.SERVICE_TEMPLATE_DESCRIPTION_KEY, ToscaConstants.SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY), "YAML's root level", context);
-        validateRequiredToscaKeys(serviceTemplate, Set.of(ToscaConstants.SERVICE_TEMPLATE_NODE_TEMPLATES_KEY, ToscaConstants.SERVICE_TEMPLATE_INPUTS_KEY), "Service template level", context);
-        if (context.hasErrors()) {
-            throw new InvalidParameterValueException(context.buildErrorMessages());
-        }
     }
 
     private Map<String, ToscaNodeTemplate> parseNodeTemplates(Map<String, Object> nodeTemplates, ToscaServiceTemplateParsingContext context) {
@@ -317,15 +333,29 @@ public class ToscaServiceTemplateParser {
         return new ToscaInputDefinition(name, description, type, defaultValue, validation);
     }
 
-    private void validateRequiredToscaKeys(Map<String, Object> content, Set<String> requiredKeys, String templateSection, ToscaServiceTemplateParsingContext context) {
+    /**
+     * Validate whether all the required TOSCA keys are present in {@param content}.
+     * @param content The YAML content to be validated.
+     * @param requiredKeys The TOSCA keys that must be present in {@param content}.
+     * @param templateSection The section of the service template being validated. Only used for building the error message.
+     * @param context The service template parsing context ({@link ToscaServiceTemplateParsingContext}) to which error messages might be added.
+     */
+    protected void validateRequiredToscaKeys(Map<String, Object> content, Set<String> requiredKeys, String templateSection, ToscaServiceTemplateParsingContext context) {
         requiredKeys.stream()
                 .filter(key -> !content.containsKey(key))
-                .forEach(key -> context.addError(String.format("The key [%s] is required in the [%s] section.", key, templateSection), templateSection));
+                .forEach(key -> context.addError(String.format("The key [%s] is required.", key), templateSection));
     }
 
-    private void validateKnownToscaKeys(Map<String, Object> content, Set<String> validKeys, String templateSection, ToscaServiceTemplateParsingContext context) {
+    /**
+     * Validate whether all the YAML keys present in {@param content} are known TOSCA keys.
+     * @param content The YAML content to be validated.
+     * @param knownToscaKeys The known TOSCA keys that can be present in{@param content} .
+     * @param templateSection The section of the service template being validated. Only used for building the error message.
+     * @param context The service template parsing context ({@link ToscaServiceTemplateParsingContext}) to which error messages might be added.
+     */
+    protected void validateKnownToscaKeys(Map<String, Object> content, Set<String> knownToscaKeys, String templateSection, ToscaServiceTemplateParsingContext context) {
         content.keySet().stream()
-                .filter(key -> !validKeys.contains(key))
-                .forEach(key -> context.addError(String.format("Unknown key [%s] in the [%s] section.", key, templateSection), templateSection));
+                .filter(key -> !knownToscaKeys.contains(key))
+                .forEach(key -> context.addError(String.format("Unknown key [%s].", key), templateSection));
     }
 }

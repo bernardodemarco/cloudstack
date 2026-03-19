@@ -47,6 +47,6 @@ public class ToscaParsingErrorsContext {
     }
 
     public String buildErrorMessages() {
-        return messages.stream().map(Message::toString).collect(Collectors.joining("; "));
+        return messages.stream().map(Message::toString).collect(Collectors.joining("\n"));
     }
 }
