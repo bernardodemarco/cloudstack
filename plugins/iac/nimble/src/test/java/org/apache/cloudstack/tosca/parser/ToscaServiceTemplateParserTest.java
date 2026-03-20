@@ -17,6 +17,11 @@
 package org.apache.cloudstack.tosca.parser;
 
 import com.cloud.exception.InvalidParameterValueException;
+import org.apache.cloudstack.tosca.functions.ToscaBooleanFunctions;
+import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
+import org.apache.cloudstack.tosca.model.ToscaPrimitiveType;
+import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,6 +67,58 @@ public class ToscaServiceTemplateParserTest {
     public void parseServiceTemplateTestThrowExceptionWhenUnknownKeysOfTheServiceTemplateSectionArePresent() {
         String content = "{tosca_definitions_version: tosca_2_0, description: null, service_template: {inputs: null, node_templates: null, unknown-key: null}}";
         toscaServiceTemplateParserSpy.parseServiceTemplate(content, null, null);
+    }
+
+    @Test
+    public void parseInputsTestAllInputsAreParsedSuccessfullyAndAddedToTheParsingContext() {
+        String content = "{type: {type: string, validation: {$valid_values: [$value, [validvalue1, validvalue2]]}}, enabled: {description: Enabled input description, type: boolean, default_value: false}}";
+        Map<String, ToscaInputDefinition> inputs = toscaServiceTemplateParserSpy.parseInputs(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content)), parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(0)).addError(Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(parsingContextMock).setInputs(inputs);
+        Assert.assertEquals(2, inputs.size());
+
+        Assert.assertEquals("type", inputs.get("type").getName());
+        Assert.assertNull(inputs.get("type").getDescription());
+        Assert.assertNull(inputs.get("type").getDefaultValue());
+        Assert.assertEquals(ToscaPrimitiveType.STRING, inputs.get("type").getType().getPrimitiveType());
+        Assert.assertTrue(inputs.get("type").getValidation() instanceof ToscaBooleanFunctions.ValidValues);
+
+        Assert.assertEquals("enabled", inputs.get("enabled").getName());
+        Assert.assertEquals("Enabled input description", inputs.get("enabled").getDescription());
+        Assert.assertFalse((Boolean) inputs.get("enabled").getDefaultValue());
+        Assert.assertEquals(ToscaPrimitiveType.BOOLEAN, inputs.get("enabled").getType().getPrimitiveType());
+        Assert.assertNull(inputs.get("enabled").getValidation());
+    }
+
+    @Test
+    public void parseInputsTestAllCorrectInputDeclarationAreParsedAndErrorsOfUnknownKeysAndMissingInputTypeAreAddedToTheParsingContext() {
+        String content = "{type: {unknownfield: string, validation: {$valid_values: [$value, [validvalue1, validvalue2]]}}, enabled: {description: Enabled input description, type: boolean, default_value: false}}";
+        Map<String, ToscaInputDefinition> inputs = toscaServiceTemplateParserSpy.parseInputs(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content)), parsingContextMock);
+        Mockito.verify(parsingContextMock).addError(Mockito.eq("Unknown key [unknownfield]."), Mockito.anyString());
+        Mockito.verify(parsingContextMock).addError(Mockito.eq("The type of the input [type] was not specified or it is not supported."), Mockito.anyString());
+        Assert.assertFalse(inputs.containsKey("type"));
+        Assert.assertTrue(inputs.containsKey("enabled"));
+    }
+
+    @Test
+    public void parseInputsTestAllCorrectInputDeclarationAreParsedAndErrorsOfDefaultValueTypeIncompatibilityAreAddedToTheParsingContext() {
+        String content = "{type: {type: string, validation: {$valid_values: [$value, [validvalue1, validvalue2]]}}, enabled: {description: Enabled input description, type: boolean, default_value: nonbooleanvalue}}";
+        Map<String, ToscaInputDefinition> inputs = toscaServiceTemplateParserSpy.parseInputs(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content)), parsingContextMock);
+
+        String expectedErrorMessage = String.format("The provided default value [nonbooleanvalue] for the input [enabled] is not compatible with the input type [%s].", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.BOOLEAN));
+        Mockito.verify(parsingContextMock).addError(Mockito.eq(expectedErrorMessage), Mockito.anyString());
+        Assert.assertTrue(inputs.containsKey("type"));
+        Assert.assertFalse(inputs.containsKey("enabled"));
+    }
+
+    @Test
+    public void parseInputsTestAllCorrectInputDeclarationAreParsedAndErrorsOfInvalidValidationFunctionAreAddedToTheParsingContext() {
+        String content = "{type: {type: string, validation: {$notvalidfunction: [$value, [validvalue1, validvalue2]]}}, enabled: {description: Enabled input description, type: boolean, default_value: false}}";
+        Map<String, ToscaInputDefinition> inputs = toscaServiceTemplateParserSpy.parseInputs(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content)), parsingContextMock);
+
+        Mockito.verify(parsingContextMock).addError(Mockito.eq("The validation function of the input [type] is not valid."), Mockito.anyString());
+        Assert.assertFalse(inputs.containsKey("type"));
+        Assert.assertTrue(inputs.containsKey("enabled"));
     }
 
     @Test

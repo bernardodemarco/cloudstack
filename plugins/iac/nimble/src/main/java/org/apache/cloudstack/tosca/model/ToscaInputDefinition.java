@@ -27,4 +27,12 @@ public class ToscaInputDefinition extends ToscaFieldDefinition {
         this.defaultValue = defaultValue;
         this.validation = validation;
     }
+
+    public Object getDefaultValue() {
+        return defaultValue;
+    }
+
+    public ToscaFunction.ToscaBooleanFunction getValidation() {
+        return validation;
+    }
 }

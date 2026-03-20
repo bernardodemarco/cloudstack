@@ -292,7 +292,7 @@ public class ToscaServiceTemplateParser {
         return new ToscaProperty(propertyDefinition, propertyBody, propertyBody);
     }
 
-    private Map<String, ToscaInputDefinition> parseInputs(Map<String, Object> inputs, ToscaServiceTemplateParsingContext context) {
+    protected Map<String, ToscaInputDefinition> parseInputs(Map<String, Object> inputs, ToscaServiceTemplateParsingContext context) {
         Map<String, ToscaInputDefinition> inputDefinitions = new HashMap<>();
         for (Map.Entry<String, Object> input : inputs.entrySet()) {
             ToscaInputDefinition inputDefinition = parseInput(input.getKey(), ToscaYamlHelper.asMap(input.getValue()), context);
@@ -312,7 +312,7 @@ public class ToscaServiceTemplateParser {
 
         ToscaTypeDefinition type = toscaFieldParser.parseType(body, null);
         if (type == null) {
-            context.addError(String.format("The type of the input [%s] is not valid.", name), "inputs section");
+            context.addError(String.format("The type of the input [%s] was not specified or it is not supported.", name), "inputs section");
             return null;
         }
 
