@@ -16,12 +16,37 @@
 // under the License.
 package org.apache.cloudstack.tosca.model;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 public class ToscaServiceTemplate {
-    private final Map<String, ToscaNodeTemplate> nodeTemplates = new HashMap<>();
-    private final Map<String, ToscaInputDefinition> inputs = new HashMap<>();
-    private final Map<String, Set<ToscaNodeTemplate>> dependencies = new HashMap<>();
+    private final Map<String, ToscaNodeTemplate> nodeTemplates;
+    private final Map<String, ToscaInputDefinition> inputs;
+    private final Map<String, Set<ToscaNodeTemplate>> dependencyGraph;
+    private final Map<String, Set<ToscaProperty>> unresolvedPropertiesByGetInput;
+
+    public ToscaServiceTemplate(Map<String, ToscaNodeTemplate> nodeTemplates, Map<String, Set<ToscaNodeTemplate>> dependencyGraph, Map<String, ToscaInputDefinition> inputs, Map<String, Set<ToscaProperty>> unresolvedPropertiesByGetInput) {
+        this.nodeTemplates = nodeTemplates;
+        this.dependencyGraph = dependencyGraph;
+        this.inputs = inputs;
+        this.unresolvedPropertiesByGetInput = unresolvedPropertiesByGetInput;
+    }
+
+    public Map<String, ToscaNodeTemplate> getNodeTemplates() {
+        return Collections.unmodifiableMap(nodeTemplates);
+    }
+
+    public Map<String, ToscaInputDefinition> getInputs() {
+        return Collections.unmodifiableMap(inputs);
+    }
+
+    public Map<String, Set<ToscaNodeTemplate>> getDependencyGraph() {
+        return Collections.unmodifiableMap(dependencyGraph);
+    }
+
+    public Map<String, Set<ToscaProperty>> getUnresolvedPropertiesByGetInput() {
+        return Collections.unmodifiableMap(unresolvedPropertiesByGetInput);
+    }
 }

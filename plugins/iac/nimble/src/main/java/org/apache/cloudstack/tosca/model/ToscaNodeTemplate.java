@@ -18,11 +18,14 @@ package org.apache.cloudstack.tosca.model;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class ToscaNodeTemplate {
     private final String name;
     private final ToscaNodeType type;
     private final Map<String, ToscaProperty> properties;
+    private Set<ToscaProperty> unresolvedPropertiesByGetProperty;
+    private Set<ToscaProperty> unresolvedPropertiesByGetAttribute;
     private final Map<String, Object> attributes = new HashMap<>();
 
     public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
@@ -45,5 +48,17 @@ public class ToscaNodeTemplate {
 
     public ToscaProperty getProperty(String name) {
         return properties.get(name);
+    }
+
+    public Map<String, ToscaProperty> getProperties() {
+        return properties;
+    }
+
+    public void setUnresolvedPropertiesByGetProperty(Set<ToscaProperty> unresolvedPropertiesByGetProperty) {
+        this.unresolvedPropertiesByGetProperty = unresolvedPropertiesByGetProperty;
+    }
+
+    public void setUnresolvedPropertiesByGetAttribute(Set<ToscaProperty> unresolvedPropertiesByGetAttribute) {
+        this.unresolvedPropertiesByGetAttribute = unresolvedPropertiesByGetAttribute;
     }
 }

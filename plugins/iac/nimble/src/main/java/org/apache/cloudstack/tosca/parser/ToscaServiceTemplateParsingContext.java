@@ -23,6 +23,7 @@ import org.apache.cloudstack.tosca.model.ToscaProperty;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,6 +60,10 @@ public class ToscaServiceTemplateParsingContext {
         nodeDependencies.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).add(dependency);
     }
 
+    public boolean checkExistingDependency(String nodeTemplateName, String dependency) {
+        return nodeDependencies.containsKey(nodeTemplateName) && nodeDependencies.get(nodeTemplateName).contains(dependency);
+    }
+
     public Map<String, ToscaNodeType> getProfile() {
         return Collections.unmodifiableMap(profile);
     }
@@ -93,5 +98,9 @@ public class ToscaServiceTemplateParsingContext {
 
     public void addError(String message, String context) {
         errorsContext.addError(message, context);
+    }
+
+    public void addErrors(List<String> messages, String context) {
+        messages.forEach(message -> addError(message, context));
     }
 }

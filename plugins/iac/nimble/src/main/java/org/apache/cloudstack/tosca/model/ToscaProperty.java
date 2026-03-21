@@ -31,6 +31,10 @@ public class ToscaProperty {
         return rawValue;
     }
 
+    public Object getEvaluatedValue() {
+        return evaluatedValue;
+    }
+
     public ToscaPropertyDefinition getDefinition() {
         return definition;
     }
