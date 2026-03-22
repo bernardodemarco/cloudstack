@@ -16,11 +16,11 @@
 // under the License.
 package org.apache.cloudstack.tosca.parser;
 
-import bsh.StringUtil;
 import com.cloud.exception.InvalidParameterValueException;
 import org.apache.cloudstack.tosca.functions.ToscaBooleanFunctions;
 import org.apache.cloudstack.tosca.functions.ToscaFunction;
 import org.apache.cloudstack.tosca.model.ToscaAttributeDefinition;
+import org.apache.cloudstack.tosca.model.ToscaCollectionType;
 import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
@@ -71,16 +71,18 @@ public class ToscaServiceTemplateParserTest {
         ToscaPropertyDefinition sshKeyPairName = new ToscaPropertyDefinition("ssh-key-pair-name", "SSH key pair name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null);
 
         ToscaPropertyDefinition nameDataTypeProperty = new ToscaPropertyDefinition("name", "Name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null);
-        ToscaPropertyDefinition valueDataTypeProperty = new ToscaPropertyDefinition("value", "Value.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null);
-        ToscaDataTypeDefinition detailsDataTypeDefinition = new ToscaDataTypeDefinition("NameValueMapping", Map.of(nameDataTypeProperty.getName(), nameDataTypeProperty, valueDataTypeProperty.getName(), valueDataTypeProperty));
-        ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofDataType(detailsDataTypeDefinition), false, null);
+        ToscaPropertyDefinition valueDataTypeProperty = new ToscaPropertyDefinition("value", "Value.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null);
+        ToscaDataTypeDefinition nameValueMappingDataType = new ToscaDataTypeDefinition("NameValueMapping", Map.of(nameDataTypeProperty.getName(), nameDataTypeProperty, valueDataTypeProperty.getName(), valueDataTypeProperty));
+        ToscaPropertyDefinition nameValueMappingList = new ToscaPropertyDefinition("name-value-mapping", "Name value mapping.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofDataType(nameValueMappingDataType)), false, null);
 
+        ToscaPropertyDefinition ipAddresses = new ToscaPropertyDefinition("ip-addresses", "IPs.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null);
+        ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.MAP, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null);
         ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
 
         return new ToscaNodeType("Vm",
                 Map.of(type.getName(), type, vcpus.getName(), vcpus, startVm.getName(), startVm,
                         maxUsage.getName(), maxUsage, sshKeyPairId.getName(), sshKeyPairId, sshKeyPairName.getName(), sshKeyPairName,
-                        details.getName(), details),
+                        nameValueMappingList.getName(), nameValueMappingList, ipAddresses.getName(), ipAddresses, details.getName(), details),
                 Map.of(uuid.getName(), uuid));
     }
 
@@ -247,23 +249,6 @@ public class ToscaServiceTemplateParserTest {
         Mockito.verify(parsingContextMock, Mockito.times(1)).addErrors(Mockito.anyList(), Mockito.anyString());
     }
 
-//
-//    instance:
-//        type: Vm
-//        properties:
-//            type: SSVM
-//            vcpus: 2
-//            start-vm: false
-//            max-usage: 10.572
-//            ssh-key-pair-id: { $get_attribute: [pair, uuid] }
-//            ssh-key-pair-name: { $get_property: [pair, name] }
-//    pair:
-//        type: SshPair
-//        properties:
-//            name: Pair
-//            public-key: { $get_input: key }
-
-
     @Test
     public void parseNodeTemplatesTestEnsureAllPropertyTypesAreParsedCorrectly() {
         String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, start-vm: false, max-usage: 10.572, ssh-key-pair-id: {$get_attribute: [pair, uuid]}, ssh-key-pair-name: {$get_property: [pair, name]}}}, pair: {type: SshPair, properties: {name: Pair, public-key: {$get_input: public-key}}}}";
@@ -358,22 +343,113 @@ public class ToscaServiceTemplateParserTest {
         Mockito.verify(parsingContextMock, Mockito.never()).addUnresolvedByGetAttribute(Mockito.any(), Mockito.any());
     }
 
-//    instance:
-//        type: Vm
-//        properties:
-//            type: SSVM
-//            vcpus: 2
-//            start-vm: false
-//            max-usage: 10.572
-//            ssh-key-pair-id: { $get_attribute: [pair, uuid] }
-//            ssh-key-pair-name: { $get_property: [pair, name] }
-//        requirements:
-//            - dependency: pair
-//    pair:
-//        type: SshPair
-//        properties:
-//            name: Pair
-//            public-key: { $get_input: key }
+    @Test
+    public void parseNodeTemplatesTestEnsureCollectionTypesAreParsedCorrectly() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, offering-details: {memory: '1024', speed: '1000'}, ip-addresses: [10.0.0.2, 172.16.30.2]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.never()).addError(Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(parsingContextMock, Mockito.never()).addErrors(Mockito.anyList(), Mockito.anyString());
+
+        Map<String, Object> details = ToscaYamlHelper.asMap(nodeTemplates.get("instance").getProperty("offering-details").getRawValue());
+        Assert.assertEquals(2, details.size());
+        Assert.assertTrue(details.containsKey("memory"));
+        Assert.assertTrue(details.containsKey("speed"));
+
+        List<?> ipAddresses = ToscaYamlHelper.asList(nodeTemplates.get("instance").getProperty("ip-addresses").getRawValue());
+        Assert.assertEquals(2, ipAddresses.size());
+        Assert.assertTrue(ipAddresses.contains("10.0.0.2"));
+        Assert.assertTrue(ipAddresses.contains("172.16.30.2"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestHandleIncorrectCollectionTypesValues() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, offering-details: [10.0.0.2, 172.16.30.2], ip-addresses: {memory: '1024', speed: '1000'}}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(2)).addError(Mockito.anyString(), Mockito.anyString());
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("offering-details"));
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("ip-addresses"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestHandleIncorrectEntrySchemaValues() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, offering-details: {memory: 1024, speed: false}, ip-addresses: [{name: name, value: value}]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(2)).addError(Mockito.anyString(), Mockito.anyString());
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("offering-details"));
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("ip-addresses"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestEnsureDataTypesAreParsedCorrectly() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, name-value-mapping: [{name: name1, value: value1}, {name: name2}]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(0)).addError(Mockito.anyString(), Mockito.anyString());
+        List<?> nameValues = ToscaYamlHelper.asList(nodeTemplates.get("instance").getProperty("name-value-mapping").getRawValue());
+        Map<String, Object> firstNameValue = ToscaYamlHelper.asMap(nameValues.get(0));
+        Map<String, Object> secondNameValue = ToscaYamlHelper.asMap(nameValues.get(1));
+        Assert.assertEquals(2, nameValues.size());
+        Assert.assertEquals(2, firstNameValue.size());
+        Assert.assertTrue(firstNameValue.containsKey("name"));
+        Assert.assertTrue(firstNameValue.containsKey("value"));
+        Assert.assertEquals(1, secondNameValue.size());
+        Assert.assertTrue(secondNameValue.containsKey("name"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestHandleUnknownKeyInDataType() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, name-value-mapping: [{name: name1, unknown-key: value1}]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(1)).addError(Mockito.anyString(), Mockito.anyString());
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("name-value-mapping"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestHandleMissingRequiredKeyInDataType() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, name-value-mapping: [{value: value2}]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(1)).addError(Mockito.anyString(), Mockito.anyString());
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("name-value-mapping"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestHandleMismatchingPropertyTypesInDataType() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, name-value-mapping: [{name: 100, value: false}]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(1)).addError(Mockito.anyString(), Mockito.anyString());
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("name-value-mapping"));
+    }
+
+    @Test
+    public void parseNodeTemplatesTestHandleMismatchingTypesInDataType() {
+        String serviceTemplateYaml = "{instance: {type: Vm, properties: {type: SSVM, vcpus: 2, name-value-mapping: [[firstitem]]}}}";
+        Map<String, Object> serviceTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(serviceTemplateYaml));
+        Mockito.when(parsingContextMock.getProfile()).thenReturn(getToscaProfileForTests());
+
+        Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
+        Mockito.verify(parsingContextMock, Mockito.times(1)).addError(Mockito.anyString(), Mockito.anyString());
+        Assert.assertNull(nodeTemplates.get("instance").getProperty("name-value-mapping"));
+    }
 
     @Test
     public void parseNodeTemplatesTestEnsureRequirementsDependenciesAreAddedToTheParsingContext() {
