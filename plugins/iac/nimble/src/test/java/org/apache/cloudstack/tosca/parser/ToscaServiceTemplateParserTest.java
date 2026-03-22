@@ -508,7 +508,7 @@ public class ToscaServiceTemplateParserTest {
         InvalidParameterValueException exception = Assert.assertThrows(InvalidParameterValueException.class, () -> {
             toscaServiceTemplateParserSpy.parseServiceTemplate(serviceTemplateYaml, getToscaProfileForTests(), null);
         });
-        Assert.assertEquals(6, StringUtils.countMatches(exception.getMessage(), "[ERROR]"));
+        Assert.assertEquals(6, StringUtils.countMatches(exception.getMessage(), "ERROR"));
     }
 
     @Test
@@ -517,7 +517,7 @@ public class ToscaServiceTemplateParserTest {
         InvalidParameterValueException exception = Assert.assertThrows(InvalidParameterValueException.class, () -> {
             toscaServiceTemplateParserSpy.parseServiceTemplate(serviceTemplateYaml, getToscaProfileForTests(), null);
         });
-        Assert.assertEquals(1, StringUtils.countMatches(exception.getMessage(), "[ERROR]"));
+        Assert.assertEquals(1, StringUtils.countMatches(exception.getMessage(), "ERROR"));
     }
 
     @Test
@@ -526,7 +526,7 @@ public class ToscaServiceTemplateParserTest {
         InvalidParameterValueException exception = Assert.assertThrows(InvalidParameterValueException.class, () -> {
             toscaServiceTemplateParserSpy.parseServiceTemplate(serviceTemplateYaml, getToscaProfileForTests(), null);
         });
-        Assert.assertEquals(5, StringUtils.countMatches(exception.getMessage(), "[ERROR]"));
+        Assert.assertEquals(5, StringUtils.countMatches(exception.getMessage(), "ERROR"));
     }
 
     @Test
@@ -535,7 +535,7 @@ public class ToscaServiceTemplateParserTest {
         InvalidParameterValueException exception = Assert.assertThrows(InvalidParameterValueException.class, () -> {
             toscaServiceTemplateParserSpy.parseServiceTemplate(serviceTemplateYaml, getToscaProfileForTests(), null);
         });
-        Assert.assertEquals(2, StringUtils.countMatches(exception.getMessage(), "[ERROR]"));
+        Assert.assertEquals(2, StringUtils.countMatches(exception.getMessage(), "ERROR"));
     }
 
     @Test
@@ -544,6 +544,6 @@ public class ToscaServiceTemplateParserTest {
         InvalidParameterValueException exception = Assert.assertThrows(InvalidParameterValueException.class, () -> {
             toscaServiceTemplateParserSpy.parseServiceTemplate(serviceTemplateYaml, getToscaProfileForTests(), null);
         });
-        Assert.assertEquals(2, StringUtils.countMatches(exception.getMessage(), "[ERROR]"));
+        Assert.assertEquals(2, StringUtils.countMatches(exception.getMessage(), "ERROR"));
     }
 }

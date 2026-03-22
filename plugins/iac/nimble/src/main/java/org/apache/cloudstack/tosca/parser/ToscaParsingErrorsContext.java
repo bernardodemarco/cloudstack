@@ -32,7 +32,7 @@ public class ToscaParsingErrorsContext {
 
         @Override
         public String toString() {
-            return String.format("[ERROR]: %s: %s", context, message);
+            return String.format("[ERROR - %s]: %s", context, message);
         }
     }
 
