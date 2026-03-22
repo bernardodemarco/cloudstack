@@ -55,12 +55,12 @@ public class ToscaNodeTypeParser {
      * @return a map of {@link ToscaDataTypeDefinition} representing the data types, whose key is the name of the data type and whose value is the data type itself.
      */
     protected Map<String, ToscaDataTypeDefinition> parseDataTypes(Map<String, Object> yamlRoot) {
-        Map<String, Object> dataTypesRaw = ToscaYamlHelper.asMap(yamlRoot.get(ToscaConstants.DATA_TYPES_KEY));
+        Map<String, Object> dataTypesRaw = ToscaYamlHelper.asMap(yamlRoot.get(ToscaConstants.DATA_TYPES));
         logger.info("Parsing the following data types: {}.", dataTypesRaw::keySet);
         return dataTypesRaw.entrySet().stream().map(dataTypeEntry -> {
             String dataTypeName = dataTypeEntry.getKey();
             Map<String, Object> dataTypeBody = ToscaYamlHelper.asMap(dataTypeEntry.getValue());
-            Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParser.parseField(dataTypeBody.get(ToscaConstants.PROPERTIES_KEY), ToscaConstants.TypeOfToscaField.PROPERTY, null);
+            Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParser.parseField(dataTypeBody.get(ToscaConstants.PROPERTIES), ToscaFieldParser.TypeOfToscaField.PROPERTY, null);
             return new ToscaDataTypeDefinition(dataTypeName, propertyDefinitions);
         }).collect(Collectors.toMap(ToscaDataTypeDefinition::getName, (dataType) -> dataType));
     }
@@ -72,12 +72,12 @@ public class ToscaNodeTypeParser {
      * @return a {@link ToscaNodeType} representing the node type.
      */
     protected ToscaNodeType parseNodeType(Map<String, Object> yamlRoot, Map<String, ToscaDataTypeDefinition> dataTypes) {
-        Map.Entry<String, Object> nodeTypeRaw = ToscaYamlHelper.asMap(yamlRoot.get(ToscaConstants.NODE_TYPES_KEY)).entrySet().iterator().next();
+        Map.Entry<String, Object> nodeTypeRaw = ToscaYamlHelper.asMap(yamlRoot.get(ToscaConstants.NODE_TYPES)).entrySet().iterator().next();
         String nodeTypeName = nodeTypeRaw.getKey();
         logger.info("Parsing the following node type: [{}].", nodeTypeName);
         Map<String, Object> nodeTypeBody = ToscaYamlHelper.asMap(nodeTypeRaw.getValue());
-        Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParser.parseField(nodeTypeBody.get(ToscaConstants.PROPERTIES_KEY), ToscaConstants.TypeOfToscaField.PROPERTY, dataTypes);
-        Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParser.parseField(nodeTypeBody.get(ToscaConstants.NODE_TYPES_ATTRIBUTES_KEY), ToscaConstants.TypeOfToscaField.ATTRIBUTE, dataTypes);
+        Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParser.parseField(nodeTypeBody.get(ToscaConstants.PROPERTIES), ToscaFieldParser.TypeOfToscaField.PROPERTY, dataTypes);
+        Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParser.parseField(nodeTypeBody.get(ToscaConstants.ATTRIBUTES), ToscaFieldParser.TypeOfToscaField.ATTRIBUTE, dataTypes);
         ToscaNodeType nodeType = new ToscaNodeType(nodeTypeName, propertyDefinitions, attributeDefinitions);
         logger.info("Successfully parsed the following node type: [{}].", nodeType::toString);
         return nodeType;

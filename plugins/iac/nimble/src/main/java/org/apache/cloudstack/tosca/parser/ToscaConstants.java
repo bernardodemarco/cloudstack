@@ -17,28 +17,26 @@
 package org.apache.cloudstack.tosca.parser;
 
 public class ToscaConstants {
-    public enum TypeOfToscaField {
-        ATTRIBUTE, PROPERTY
-    }
+    public static final String ATTRIBUTES = "attributes";
+    public static final String DATA_TYPES = "data_types";
+    public static final String DEFAULT_VALUE = "default_value";
+    public static final String DEPENDENCY = "dependency";
+    public static final String DESCRIPTION = "description";
+    public static final String ENTRY_SCHEMA = "entry_schema";
+    public static final String INPUTS = "inputs";
+    public static final String NODE_TEMPLATES = "node_templates";
+    public static final String NODE_TYPES = "node_types";
+    public static final String PROPERTIES = "properties";
+    public static final String REQUIRED = "required";
+    public static final String REQUIREMENTS = "requirements";
+    public static final String SERVICE_TEMPLATE = "service_template";
+    public static final String TOSCA_DEFINITIONS_VERSION = "tosca_definitions_version";
+    public static final String TYPE = "type";
+    public static final String VALIDATION = "validation";
 
-    public static final String DATA_TYPES_KEY = "data_types";
-    public static final String NODE_TYPES_KEY = "node_types";
-
-    public static final String NODE_TYPES_ATTRIBUTES_KEY = "attributes";
-    public static final String PROPERTIES_KEY = "properties";
-    public static final String DEPENDENCY_KEY = "dependency";
-    public static final String NODE_TEMPLATES_REQUIREMENTS_KEY = "requirements";
-
-    public static final String FIELDS_TYPE_KEY = "type";
-    public static final String FIELDS_REQUIRED_KEY = "required";
-    public static final String FIELDS_VALIDATION_KEY = "validation";
-    public static final String FIELDS_DESCRIPTION_KEY = "description";
-    public static final String FIELDS_ENTRY_SCHEMA_KEY = "entry_schema";
-    public static final String FIELDS_ENTRY_DEFAULT_VALUE_KEY = "default_value";
-
-    public static final String SERVICE_TEMPLATE_TOSCA_VERSION_KEY = "tosca_definitions_version";
-    public static final String SERVICE_TEMPLATE_DESCRIPTION_KEY = "description";
-    public static final String SERVICE_TEMPLATE_SERVICE_TEMPLATE_KEY = "service_template";
-    public static final String SERVICE_TEMPLATE_INPUTS_KEY = "inputs";
-    public static final String SERVICE_TEMPLATE_NODE_TEMPLATES_KEY = "node_templates";
+    public static final String FUNCTION_PREFIX = "$";
+    public static final String GET_ATTRIBUTE_FUNCTION = "$get_attribute";
+    public static final String GET_INPUT_FUNCTION = "$get_input";
+    public static final String GET_PROPERTY_FUNCTION = "$get_property";
+    public static final String VALID_VALUES_FUNCTION = "$valid_values";
 }

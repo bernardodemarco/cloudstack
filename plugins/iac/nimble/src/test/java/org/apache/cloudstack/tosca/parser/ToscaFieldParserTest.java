@@ -52,7 +52,7 @@ public class ToscaFieldParserTest {
         Object dataTypeRaw = ToscaYamlHelper.loadYaml("{data_types: {NameValueMapping: {properties: {name: {type: string, required: true}, value: {type: string, required: true}}}}}");
         Map<String, ToscaDataTypeDefinition> dataTypes = toscaNodeTypeParser.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
 
-        Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(properties), ToscaConstants.TypeOfToscaField.PROPERTY, dataTypes);
+        Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(properties), ToscaFieldParser.TypeOfToscaField.PROPERTY, dataTypes);
         Assert.assertEquals(2, propertyDefinitions.size());
         Assert.assertEquals("amount", propertyDefinitions.get("amount").getName());
         Assert.assertEquals("Amount.", propertyDefinitions.get("amount").getDescription());
@@ -70,7 +70,7 @@ public class ToscaFieldParserTest {
     @Test
     public void parseFieldTestSuccessfullyParseAttributes() {
         String attributes = "{id: {type: string, description: ID.}, name: {type: string, description: Name.}}";
-        Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(attributes), ToscaConstants.TypeOfToscaField.ATTRIBUTE, null);
+        Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(attributes), ToscaFieldParser.TypeOfToscaField.ATTRIBUTE, null);
         Assert.assertEquals(2, attributeDefinitions.size());
         Assert.assertTrue(attributeDefinitions.containsKey("id"));
         Assert.assertEquals("id", attributeDefinitions.get("id").getName());

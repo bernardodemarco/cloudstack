@@ -37,6 +37,10 @@ import java.util.stream.Collectors;
 public class ToscaFieldParser {
     private final Logger logger = LogManager.getLogger(ToscaFieldParser.class);
 
+    public enum TypeOfToscaField {
+        ATTRIBUTE, PROPERTY
+    }
+
     /**
      * Parses a field (property or attribute) of a TOSCA resource.
      * @param rawFields The body of the field. Example: "{ name: { type: string, description: Name } }"
@@ -44,25 +48,25 @@ public class ToscaFieldParser {
      * @param dataTypes Available data types. If null, then the type of the fields must be a primitive or a collection.
      * @return a map of {@link ToscaFieldDefinition} representing the fields, whose key is the name of the field and whose value is the field itself.
      */
-    protected Map<String, ? extends ToscaFieldDefinition> parseField(Object rawFields, ToscaConstants.TypeOfToscaField typeOfToscaField, Map<String, ToscaDataTypeDefinition> dataTypes) {
+    protected Map<String, ? extends ToscaFieldDefinition> parseField(Object rawFields, TypeOfToscaField typeOfToscaField, Map<String, ToscaDataTypeDefinition> dataTypes) {
         Map<String, Object> fields = ToscaYamlHelper.asMap(rawFields);
         logger.debug("Parsing the following {}: {}.",
-                () -> typeOfToscaField == ToscaConstants.TypeOfToscaField.ATTRIBUTE ? "attributes" : "properties", fields::keySet);
+                () -> typeOfToscaField == TypeOfToscaField.ATTRIBUTE ? "attributes" : "properties", fields::keySet);
 
         return fields.entrySet().stream().map((field) -> {
             String name = field.getKey();
             Map<String, Object> fieldBody = ToscaYamlHelper.asMap(field.getValue());
-            String description = ToscaYamlHelper.asString(fieldBody.get(ToscaConstants.FIELDS_DESCRIPTION_KEY));
+            String description = ToscaYamlHelper.asString(fieldBody.get(ToscaConstants.DESCRIPTION));
             ToscaTypeDefinition type = parseType(fieldBody, dataTypes);
 
-            if (typeOfToscaField == ToscaConstants.TypeOfToscaField.ATTRIBUTE) {
+            if (typeOfToscaField == TypeOfToscaField.ATTRIBUTE) {
                 ToscaAttributeDefinition attributeDefinition = new ToscaAttributeDefinition(name, description, type);
                 logger.debug("Successfully parsed the following attribute: [{}].", attributeDefinition::toString);
                 return attributeDefinition;
             }
 
-            boolean required = ToscaYamlHelper.asBoolean(fieldBody.get(ToscaConstants.FIELDS_REQUIRED_KEY));
-            ToscaFunction.ToscaBooleanFunction validation = parseToscaBooleanFunction(ToscaYamlHelper.asMap(fieldBody.get(ToscaConstants.FIELDS_VALIDATION_KEY)));
+            boolean required = ToscaYamlHelper.asBoolean(fieldBody.get(ToscaConstants.REQUIRED));
+            ToscaFunction.ToscaBooleanFunction validation = parseToscaBooleanFunction(ToscaYamlHelper.asMap(fieldBody.get(ToscaConstants.VALIDATION)));
             ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(name, description, type, required, validation);
             logger.debug("Successfully parsed the following property: [{}].", propertyDefinition::toString);
             return propertyDefinition;
@@ -76,7 +80,7 @@ public class ToscaFieldParser {
      * @return a {@link ToscaTypeDefinition} representing the type of the field. Null if the type is not recognized.
      */
     protected ToscaTypeDefinition parseType(Map<String, Object> typeBody, Map<String, ToscaDataTypeDefinition> dataTypes) {
-        String rawType = ToscaYamlHelper.asString(typeBody.get(ToscaConstants.FIELDS_TYPE_KEY));
+        String rawType = ToscaYamlHelper.asString(typeBody.get(ToscaConstants.TYPE));
         logger.debug("Parsing the following type: [{}].", rawType);
         ToscaPrimitiveType primitiveType = EnumUtils.getEnumIgnoreCase(ToscaPrimitiveType.class, rawType);
         if (primitiveType != null) {
@@ -87,7 +91,7 @@ public class ToscaFieldParser {
         ToscaCollectionType collectionType = EnumUtils.getEnumIgnoreCase(ToscaCollectionType.class, rawType);
         if (collectionType != null) {
             logger.debug("The type is a collection, returning its corresponding ToscaTypeDefinition.");
-            return ToscaTypeDefinition.ofCollection(collectionType, parseType(ToscaYamlHelper.asMap(typeBody.get(ToscaConstants.FIELDS_ENTRY_SCHEMA_KEY)), dataTypes));
+            return ToscaTypeDefinition.ofCollection(collectionType, parseType(ToscaYamlHelper.asMap(typeBody.get(ToscaConstants.ENTRY_SCHEMA)), dataTypes));
         }
 
         if (MapUtils.isEmpty(dataTypes) || !dataTypes.containsKey(rawType)) {
@@ -114,7 +118,7 @@ public class ToscaFieldParser {
         Object arguments = function.getValue();
         logger.debug("Parsing the following TOSCA boolean function: [{}].", name);
         switch (name) {
-            case "$valid_values":
+            case ToscaConstants.VALID_VALUES_FUNCTION:
                 return parseValidValuesFunction(arguments);
         }
         return null;
