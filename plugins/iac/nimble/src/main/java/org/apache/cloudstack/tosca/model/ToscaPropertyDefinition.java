@@ -28,6 +28,17 @@ public class ToscaPropertyDefinition extends ToscaFieldDefinition {
         this.validation = validation;
     }
 
+    /**
+     * Creates an anonymous {@link ToscaPropertyDefinition} wrapping the given type, intended for
+     * temporary use during collection parsing ({@link ToscaCollectionType}).
+     * @param type the entry schema type to wrap.
+     * @return an anonymous {@link ToscaPropertyDefinition} with no name, no description,
+     *         not required, and no validation function.
+     */
+    public static ToscaPropertyDefinition ofAnonymous(ToscaTypeDefinition type) {
+        return new ToscaPropertyDefinition(null, null, type, false, null);
+    }
+
     public boolean isRequired() {
         return required;
     }

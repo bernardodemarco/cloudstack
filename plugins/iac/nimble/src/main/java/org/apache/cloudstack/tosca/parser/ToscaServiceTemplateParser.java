@@ -19,6 +19,7 @@ package org.apache.cloudstack.tosca.parser;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.user.Account;
 import org.apache.cloudstack.tosca.functions.ToscaFunction;
+import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaFieldDefinition;
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
@@ -208,11 +209,12 @@ public class ToscaServiceTemplateParser {
 
 //    data types are missing here
     private ToscaProperty parseProperty(String propertyName, Object propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
-        if (!(propertyBody instanceof Map)) {
+        Map<String, Object> body = ToscaYamlHelper.asMap(propertyBody);
+        boolean isFunctionCall = body.size() == 1 && body.keySet().iterator().next().startsWith("$");
+        if (!isFunctionCall) {
             return parsePropertyValue(propertyName, propertyBody, propertyDefinition, nodeTemplateName, context);
         }
 
-        Map<String, Object> body = ToscaYamlHelper.asMap(propertyBody);
         if (body.containsKey("$get_input")) {
             return parseGetInputPropertyValue(propertyName, body, propertyDefinition, nodeTemplateName, context);
         }
@@ -221,9 +223,18 @@ public class ToscaServiceTemplateParser {
     }
 
     private ToscaProperty parsePropertyValue(String propertyName, Object propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
-        if (!propertyDefinition.getType().isCompatibleWith(propertyBody)) {
+        ToscaTypeDefinition type = propertyDefinition.getType();
+        if (!type.isCompatibleWith(propertyBody)) {
             context.addError(String.format("The provided value [%s] for the property [%s] of the [%s] node template is not compatible with the property type [%s].", propertyBody, propertyName, nodeTemplateName, propertyDefinition.getType()), nodeTemplateName + " declaration");
             return null;
+        }
+
+        if (type.getKind() == ToscaTypeDefinition.Kind.COLLECTION) {
+            return parseCollectionPropertyValue(propertyName, propertyBody, propertyDefinition, nodeTemplateName, context);
+        }
+
+        if (type.getKind() == ToscaTypeDefinition.Kind.DATA_TYPE) {
+            return parseDataTypePropertyValue(propertyName, propertyBody, propertyDefinition, nodeTemplateName, context);
         }
 
         ToscaFunction.ToscaBooleanFunction validationFunction = propertyDefinition.getValidation();
@@ -233,6 +244,64 @@ public class ToscaServiceTemplateParser {
         }
 
         return new ToscaProperty(propertyDefinition, propertyBody, propertyBody);
+    }
+
+    private ToscaProperty parseCollectionPropertyValue(String propertyName, Object propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
+        ToscaPropertyDefinition entryDefinition = ToscaPropertyDefinition.ofAnonymous(propertyDefinition.getType().getEntrySchema());
+        boolean hasErrors = false;
+
+        List<?> propertyBodyAsList = ToscaYamlHelper.asList(propertyBody);
+        if (propertyBodyAsList != null) {
+            for (int i = 0; i < propertyBodyAsList.size(); i++) {
+                if (parseProperty(String.format("%s[%d]", propertyName, i), propertyBodyAsList.get(i), entryDefinition, nodeTemplateName, context) == null) {
+                    hasErrors = true;
+                }
+            }
+        } else {
+            for (Map.Entry<String, Object> entry : ToscaYamlHelper.asMap(propertyBody).entrySet()) {
+                if (parseProperty(String.format("%s[%s]", propertyName, entry.getKey()), entry.getValue(), entryDefinition, nodeTemplateName, context) == null) {
+                    hasErrors = true;
+                }
+            }
+        }
+
+        return hasErrors ? null : new ToscaProperty(propertyDefinition, propertyBody, propertyBody);
+    }
+
+    private ToscaProperty parseDataTypePropertyValue(String propertyName, Object propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
+        ToscaDataTypeDefinition dataTypeDefinition = propertyDefinition.getType().getDataType();
+        Map<String, Object> dataType = ToscaYamlHelper.asMap(propertyBody);
+
+        validateKnownToscaKeys(dataType, dataTypeDefinition.getProperties().keySet(), nodeTemplateName + " declaration", context);
+        Set<String> dataTypeRequiredProperties = dataTypeDefinition.getRequiredPropertyNames();
+        boolean missingRequiredProperties = checkMissingRequiredToscaKeys(dataType, dataTypeRequiredProperties, nodeTemplateName + " declaration", context);
+        if (missingRequiredProperties) {
+            return null;
+        }
+
+        boolean hasErrors = false;
+        for (Map.Entry<String, ToscaPropertyDefinition> entry : dataTypeDefinition.getProperties().entrySet()) {
+            String fieldName = entry.getKey();
+            String fieldPropertyName = String.format("%s.%s", propertyName, fieldName);
+            ToscaPropertyDefinition fieldDefinition = entry.getValue();
+            Object fieldValue = dataType.get(fieldName);
+            hasErrors = hasErrors || checkErrorsInDataTypeFieldValue(fieldValue, fieldDefinition, fieldPropertyName, nodeTemplateName, context);
+        }
+
+        return hasErrors ? null : new ToscaProperty(propertyDefinition, dataType, dataType);
+    }
+
+    private boolean checkErrorsInDataTypeFieldValue(Object fieldValue, ToscaPropertyDefinition fieldDefinition, String fieldPropertyName, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
+        if (fieldValue == null && !fieldDefinition.isRequired()) {
+            return false;
+        }
+
+        if (fieldValue == null && fieldDefinition.isRequired()) {
+            context.addError(String.format("Required field [%s] of property [%s] is missing.", fieldDefinition.getName(), fieldPropertyName), nodeTemplateName + " declaration");
+            return true;
+        }
+
+        return parseProperty(fieldPropertyName, fieldValue, fieldDefinition, nodeTemplateName, context) == null;
     }
 
     private ToscaProperty parseGetInputPropertyValue(String propertyName, Map<String, Object> propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {

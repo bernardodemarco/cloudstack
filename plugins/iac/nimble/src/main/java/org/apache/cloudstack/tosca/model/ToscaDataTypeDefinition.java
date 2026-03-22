@@ -19,6 +19,8 @@ package org.apache.cloudstack.tosca.model;
 import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ToscaDataTypeDefinition {
     private final String name;
@@ -35,6 +37,13 @@ public class ToscaDataTypeDefinition {
 
     public Map<String, ToscaPropertyDefinition> getProperties() {
         return properties;
+    }
+
+    public Set<String> getRequiredPropertyNames() {
+        return properties.values().stream()
+                .filter(ToscaPropertyDefinition::isRequired)
+                .map(ToscaPropertyDefinition::getName)
+                .collect(Collectors.toSet());
     }
 
     @Override
