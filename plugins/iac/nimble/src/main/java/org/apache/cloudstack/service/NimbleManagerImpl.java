@@ -25,31 +25,24 @@ import org.apache.cloudstack.api.response.NimbleResponseBuilder;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
-import org.apache.cloudstack.tosca.model.ToscaNodeType;
-import org.apache.cloudstack.tosca.parser.ToscaParser;
+import org.apache.cloudstack.tosca.ToscaOrchestrator;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Inject
-    private ToscaParser toscaParser;
+    private ToscaOrchestrator toscaOrchestrator;
 
     @Inject
     private IacResourceTypeDao iacResourceTypeDao;
 
     @Inject
     private NimbleResponseBuilder responseBuilder;
-
-    private ExecutorService nimbleExecutorPool;
-
-    private Map<String, ToscaNodeType> toscaProfile;
 
     @Override
     public ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd) {
@@ -65,34 +58,24 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
+    public void deployIacTemplate(String iacTemplateContent) {
+        toscaOrchestrator.deployIacTemplate(iacTemplateContent);
+    }
+
+    @Override
     public boolean configure(String name, Map<String, Object> params) throws ConfigurationException {
         super.configure(name, params);
 
         int nimbleServicePoolSize = NimbleService.NimbleServicePoolSize.value();
-        logger.debug("Configuring NIMBLE's fixed thread pool with [{}] threads.", nimbleServicePoolSize);
-        nimbleExecutorPool = Executors.newFixedThreadPool(nimbleServicePoolSize);
-        toscaProfile = loadToscaProfile();
+        toscaOrchestrator.configureExecutorPool(nimbleServicePoolSize);
+        toscaOrchestrator.loadToscaProfile(iacResourceTypeDao.listAll());
         return true;
-    }
-
-    protected Map<String, ToscaNodeType> loadToscaProfile() {
-        logger.info("Loading NIMBLE's TOSCA profile.");
-        List<IacResourceTypeVO> profileResourceTypes = iacResourceTypeDao.listAll();
-
-        return profileResourceTypes.stream()
-                .map(resourceType -> toscaParser.parseNodeTypeDefinitionFile(resourceType.getContent()))
-                .collect(Collectors.toMap(ToscaNodeType::getName, nodeType -> nodeType));
     }
 
     @Override
     public boolean stop() {
         logger.info("Stopping NIMBLE's manager.");
-
-        if (nimbleExecutorPool != null) {
-            logger.debug("Shutting down NIMBLE's fixed thread pool.");
-            nimbleExecutorPool.shutdown();
-        }
-
+        toscaOrchestrator.shutdownExecutorPool();
         return true;
     }
 

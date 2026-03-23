@@ -35,4 +35,5 @@ public interface NimbleService extends PluggableService, Configurable {
             true, NimbleServiceEnabled.key());
 
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
+    void deployIacTemplate(String iacTemplateContent);
 }
