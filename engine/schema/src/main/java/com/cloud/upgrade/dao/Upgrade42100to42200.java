@@ -151,7 +151,7 @@ public class Upgrade42100to42200 extends DbUpgradeAbstractImpl implements DbUpgr
     }
 
     private void insertIacResourceType(Connection conn, String fileName, String resourceName, String resourceCategory) {
-        String insertResourceTypeQuery = "INSERT INTO iac_resource_types (uuid, name, category, element_content) VALUES (UUID(), ?, ?, ?)";
+        String insertResourceTypeQuery = "INSERT INTO iac_resource_types (uuid, name, category, content) VALUES (UUID(), ?, ?, ?)";
         String filePath = NIMBLE_RESOURCE_TYPES_DIRECTORY.resolve(fileName).toString();
         logger.debug("Inserting resource type [name: {}] in the database.", filePath);
         try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(filePath);

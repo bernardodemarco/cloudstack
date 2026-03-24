@@ -26,10 +26,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,53 +52,41 @@ public class ToscaOrchestrator {
     public void deployIacTemplate(String iacTemplateContent) {
         logger.debug("Parsing service template");
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
-        Map<ToscaNodeTemplate, CompletableFuture<String>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
+        Map<String, CompletableFuture<String>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
         serviceTemplateFeature.join();
     }
 
-    private Map<ToscaNodeTemplate, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
+    private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
         logger.debug("Creating provisioning tasks futures");
-        Map<ToscaNodeTemplate, CompletableFuture<String>> futures = new HashMap<>();
-        Map<String, Set<ToscaNodeTemplate>> dependencyGraph = serviceTemplate.getDependencyGraph();
-
-        List<String> nodesWithoutDependencies = dependencyGraph.keySet().stream().filter(node -> dependencyGraph.get(node).isEmpty()).collect(Collectors.toList());
-        logger.debug("Nodes without dependencies: " + nodesWithoutDependencies);
-        nodesWithoutDependencies.forEach(node -> {
+        Map<String, CompletableFuture<String>> futures = new HashMap<>();
+        getServiceTemplateTopologicalSort(serviceTemplate).forEach((node, dependencies) -> {
             ToscaNodeTemplate nodeTemplate = serviceTemplate.getNodeTemplates().get(node);
-            CompletableFuture<String> taskFuture = buildNodeProvisioningTask(nodeTemplate);
-            futures.put(nodeTemplate, taskFuture);
-        });
-        logger.debug("Built all the features for the nodes without dependencies.");
-
-        logger.debug("Service template size: " + serviceTemplate.getNodeTemplates().size());
-        while (futures.size() < serviceTemplate.getNodeTemplates().size()) {
-            logger.debug("Futures size: " + futures.size());
-            List<ToscaNodeTemplate> nodesWhoseDependenciesAlreadyHaveFutures = dependencyGraph.keySet().stream()
-                    .filter(node -> !dependencyGraph.get(node).isEmpty() && dependencyGraph.get(node).stream().allMatch(futures::containsKey))
-                    .map(node -> serviceTemplate.getNodeTemplates().get(node))
-                    .collect(Collectors.toList());
-
-            for (ToscaNodeTemplate node : nodesWhoseDependenciesAlreadyHaveFutures) {
-                CompletableFuture<?>[] dependencies = dependencyGraph.get(node.getName()).stream().map(futures::get).toArray(CompletableFuture[]::new);
-                CompletableFuture<String> taskFuture = CompletableFuture.allOf(dependencies).thenCompose(v -> {
-                    logger.debug("All dependencies of the node [" + node.getName() + "] are ready.");
+            CompletableFuture<String> taskFuture;
+            if (dependencies.isEmpty()) {
+                logger.debug("Node [{}] has no dependencies. Building its provisioning task.", node);
+                taskFuture = buildNodeProvisioningTask(nodeTemplate);
+            } else {
+                CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
+                        .map((dep) -> futures.get(dep.getName())).toArray(CompletableFuture[]::new);
+                taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
+                    logger.debug("All dependencies of the node [{}] are ready.", node);
                     logger.debug("Here you'll be able to resolve the unresolved properties by get property and get attribute");
-                    return buildNodeProvisioningTask(node);
+                    return buildNodeProvisioningTask(nodeTemplate);
                 });
-
-                futures.put(node, taskFuture);
             }
-        }
+
+            futures.put(node, taskFuture);
+        });
 
         return futures;
     }
 
     // O(|V|+|E|)
-    private List<String> getServiceTemplateTopologicalSort(ToscaServiceTemplate serviceTemplate) {
+    private LinkedHashMap<String, Set<ToscaNodeTemplate>> getServiceTemplateTopologicalSort(ToscaServiceTemplate serviceTemplate) {
+        LinkedHashMap<String, Set<ToscaNodeTemplate>> topologicalSort = new LinkedHashMap<>();
         Set<String> visitedNodes = new HashSet<>();
         Set<String> branchAncestors = new HashSet<>();
-        List<String> topologicalSort = new ArrayList<>();
         for (ToscaNodeTemplate node : serviceTemplate.getNodeTemplates().values()) {
             if (!visitedNodes.contains(node.getName())) {
                 depthFirstSearch(topologicalSort, node.getName(), serviceTemplate.getDependencyGraph(), branchAncestors, visitedNodes);
@@ -107,7 +95,7 @@ public class ToscaOrchestrator {
         return topologicalSort;
     }
 
-    private void depthFirstSearch(List<String> topologicalSort, String node, Map<String, Set<ToscaNodeTemplate>> graph, Set<String> branchAncestors, Set<String> visitedNodes) {
+    private void depthFirstSearch(LinkedHashMap<String, Set<ToscaNodeTemplate>> topologicalSort, String node, Map<String, Set<ToscaNodeTemplate>> graph, Set<String> branchAncestors, Set<String> visitedNodes) {
         visitedNodes.add(node);
         branchAncestors.add(node);
         for (ToscaNodeTemplate dependency : graph.getOrDefault(node, Collections.emptySet())) {
@@ -121,7 +109,7 @@ public class ToscaOrchestrator {
         }
 
         branchAncestors.remove(node);
-        topologicalSort.add(node);
+        topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
     private CompletableFuture<String> buildNodeProvisioningTask(ToscaNodeTemplate nodeTemplate) {

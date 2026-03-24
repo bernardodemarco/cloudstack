@@ -32,7 +32,7 @@ public interface NimbleService extends PluggableService, Configurable {
             "Number of threads in the global pool used to execute NIMBLE node template provisioning tasks. " +
                     "This pool is initialized during NIMBLE startup using the configured value. Administrators should " +
                     "tune this setting based on service utilization to optimize provisioning performance.",
-            true, NimbleServiceEnabled.key());
+            false, NimbleServiceEnabled.key());
 
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
     void deployIacTemplate(String iacTemplateContent);

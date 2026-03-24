@@ -16,13 +16,18 @@
 // under the License.
 package org.apache.cloudstack.api.command;
 
+import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseAsyncCmd;
 import org.apache.cloudstack.api.Parameter;
+import org.apache.cloudstack.api.response.SuccessResponse;
+import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.service.NimbleService;
 
 import javax.inject.Inject;
 
+@APICommand(name = "deployIacTemplate", description = "", responseObject = SuccessResponse.class, entityType = {IacResourceType.class},
+        requestHasSensitiveInfo = false, responseHasSensitiveInfo = false)
 public class DeployIacTemplateCmd extends BaseAsyncCmd {
     @Inject
     private NimbleService nimbleService;

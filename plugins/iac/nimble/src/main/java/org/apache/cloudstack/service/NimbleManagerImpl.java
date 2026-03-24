@@ -18,6 +18,7 @@ package org.apache.cloudstack.service;
 
 import com.cloud.utils.Pair;
 import com.cloud.utils.component.ManagerBase;
+import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.ListResponse;
@@ -85,7 +86,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         if (!NimbleServiceEnabled.value()) {
             return commands;
         }
-        return List.of(ListIacResourceTypesCmd.class);
+        return List.of(ListIacResourceTypesCmd.class, DeployIacTemplateCmd.class);
     }
 
     @Override

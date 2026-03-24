@@ -67,7 +67,7 @@ public class ToscaServiceTemplateParser {
             throw new InvalidParameterValueException(context.buildErrorMessages());
         }
 
-        logger.info("The TOSCA service template has been successfully parsed and validated..");
+        logger.info("The TOSCA service template has been successfully parsed and validated.");
         return new ToscaServiceTemplate(nodeTemplates, dependencyGraph, inputs, context.getUnresolvedByGetInput());
     }
 
@@ -441,7 +441,7 @@ public class ToscaServiceTemplateParser {
             });
         }
 
-        logger.info("Dependency graph of the TOSCA service template has been successfully built with [{}] nodes and [{}] arcs/dependencies.", graph.keySet(), graph.values().stream().mapToLong(Set::size).sum());
+        logger.info("Dependency graph of the TOSCA service template has been successfully built with [{}] arcs/dependencies.", graph.values().stream().mapToLong(Set::size).sum());
         return graph;
     }
 
