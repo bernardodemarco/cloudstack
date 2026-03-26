@@ -26,7 +26,7 @@ import org.apache.cloudstack.api.response.NimbleResponseBuilder;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
-import org.apache.cloudstack.tosca.ToscaOrchestrator;
+import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;

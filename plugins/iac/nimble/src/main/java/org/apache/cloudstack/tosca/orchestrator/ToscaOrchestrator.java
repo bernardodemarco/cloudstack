@@ -14,9 +14,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package org.apache.cloudstack.tosca;
+package org.apache.cloudstack.tosca.orchestrator;
 
 import com.cloud.exception.InvalidParameterValueException;
+import com.cloud.utils.UuidUtils;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
@@ -24,6 +25,7 @@ import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 
 import javax.inject.Inject;
 import java.util.Collections;
@@ -32,7 +34,9 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -55,6 +59,7 @@ public class ToscaOrchestrator {
         Map<String, CompletableFuture<String>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
         serviceTemplateFeature.join();
+        logger.debug("After serviceTemplateFeature.join()");
     }
 
     private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
@@ -70,6 +75,7 @@ public class ToscaOrchestrator {
                 CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
                         .map((dep) -> futures.get(dep.getName())).toArray(CompletableFuture[]::new);
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
+                    logger.debug("Thread: [{}]", Thread.currentThread().getName());
                     logger.debug("All dependencies of the node [{}] are ready.", node);
                     logger.debug("Here you'll be able to resolve the unresolved properties by get property and get attribute");
                     return buildNodeProvisioningTask(nodeTemplate);
@@ -79,6 +85,7 @@ public class ToscaOrchestrator {
             futures.put(node, taskFuture);
         });
 
+        logger.debug("All provisioning tasks futures have been built successfully.");
         return futures;
     }
 
@@ -117,28 +124,34 @@ public class ToscaOrchestrator {
         return provisionNode(nodeTemplate)
 //                .orTimeout(5, TimeUnit.SECONDS)
                 .thenApply(result -> {
-                    System.out.println("✔ SUCCESS " + nodeTemplate.getName());
+                    logger.debug("SUCCESS [{}] [{}]", nodeTemplate.getName(), Thread.currentThread().getName());
                     return result;
                 }).exceptionally(ex -> {
-                    System.out.println("✖ FAILURE " + nodeTemplate.getName() + " → " + ex);
+                    logger.debug("FAILURE [{}] [{}]", nodeTemplate.getName(), ex);
                     throw new CompletionException(ex);
                 });
     }
 
     private CompletableFuture<String> provisionNode(ToscaNodeTemplate nodeTemplate) {
+        String currentLogContextId = ThreadContext.get("logcontextid");
+        String newTaskLogContextId = UuidUtils.first(UUID.randomUUID().toString());
+        logger.info("Submitting new task with [logcontextid] equal to [{}] for handling the provisioning of the following node: [{}].", newTaskLogContextId, nodeTemplate.getName());
         return CompletableFuture.supplyAsync(() -> {
+            ThreadContext.put("logcontextid", newTaskLogContextId);
+            logger.debug("Executing thread {} for {}", Thread.currentThread().getName(), nodeTemplate.getName());
 
-            logger.debug("Submitting async job for " + nodeTemplate.getName() + " on " + Thread.currentThread().getName());
-
+            Random random = new Random();
+            int randomInt = random.nextInt((4000 - 500) + 1) + 500;
+            logger.debug("sleeping for randomInt: [{}] ms", randomInt);
             try {
-                Thread.sleep(1500);
+                Thread.sleep(randomInt);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
 
             logger.debug("Here you'll be able to populate the attributes");
+//            ThreadContext.put("logcontextid", currentLogContextId);
             return "res-" + nodeTemplate.getName();
-
         }, executorPool);
     }
 

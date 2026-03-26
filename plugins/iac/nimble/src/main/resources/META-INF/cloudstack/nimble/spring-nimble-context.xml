@@ -27,5 +27,5 @@
     <bean id="toscaFieldParser" class="org.apache.cloudstack.tosca.parser.ToscaFieldParser" />
     <bean id="toscaNodeTypeParser" class="org.apache.cloudstack.tosca.parser.ToscaNodeTypeParser" />
     <bean id="toscaServiceTemplateParser" class="org.apache.cloudstack.tosca.parser.ToscaServiceTemplateParser" />
-    <bean id="toscaOrchestrator" class="org.apache.cloudstack.tosca.ToscaOrchestrator" />
+    <bean id="toscaOrchestrator" class="org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator" />
 </beans>
