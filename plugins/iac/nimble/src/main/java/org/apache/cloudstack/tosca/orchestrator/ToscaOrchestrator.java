@@ -16,8 +16,12 @@
 // under the License.
 package org.apache.cloudstack.tosca.orchestrator;
 
+import com.cloud.api.ApiDispatcher;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.utils.UuidUtils;
+import com.cloud.utils.component.ComponentContext;
+import org.apache.cloudstack.api.command.user.vmgroup.CreateVMGroupCmd;
+import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
@@ -48,6 +52,9 @@ public class ToscaOrchestrator {
 
     @Inject
     private ToscaParser toscaParser;
+
+    @Inject
+    private ApiDispatcher apiDispatcher;
 
     private Map<String, ToscaNodeType> toscaProfile;
 
@@ -133,6 +140,7 @@ public class ToscaOrchestrator {
     }
 
     private CompletableFuture<String> provisionNode(ToscaNodeTemplate nodeTemplate) {
+        CallContext callerContext = CallContext.current();
         String currentLogContextId = ThreadContext.get("logcontextid");
         String newTaskLogContextId = UuidUtils.first(UUID.randomUUID().toString());
         logger.info("Submitting new task with [logcontextid] equal to [{}] for handling the provisioning of the following node: [{}].", newTaskLogContextId, nodeTemplate.getName());
@@ -144,6 +152,7 @@ public class ToscaOrchestrator {
             int randomInt = random.nextInt((4000 - 500) + 1) + 500;
             logger.debug("sleeping for randomInt: [{}] ms", randomInt);
             try {
+                dispatchProvisioningCommand(callerContext, randomInt);
                 Thread.sleep(randomInt);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -153,6 +162,26 @@ public class ToscaOrchestrator {
 //            ThreadContext.put("logcontextid", currentLogContextId);
             return "res-" + nodeTemplate.getName();
         }, executorPool);
+    }
+
+    private void dispatchProvisioningCommand(CallContext ctx, int randomInt) {
+        logger.debug("Constructing provisioning command");
+        CallContext.register(ctx, null);
+        CreateVMGroupCmd cmd = new CreateVMGroupCmd();
+        cmd = ComponentContext.inject(cmd);
+        Map<String, String> params = Map.of(
+                "domainid", "1",
+                "account", "admin",
+                "name", "instance-group-" + randomInt
+        );
+        try {
+            apiDispatcher.dispatch(cmd, params, false);
+            logger.info(cmd.getResponseObject());
+        } catch (Exception e) {
+
+        } finally {
+            CallContext.unregister();
+        }
     }
 
     public void configureExecutorPool(int poolSize) {
