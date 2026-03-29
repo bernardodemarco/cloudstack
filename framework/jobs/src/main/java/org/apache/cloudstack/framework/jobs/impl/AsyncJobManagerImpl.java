@@ -1013,8 +1013,9 @@ public class AsyncJobManagerImpl extends ManagerBase implements AsyncJobManager,
         };
     }
 
+    @Override
     @DB
-    protected void expungeAsyncJob(final AsyncJobVO job) {
+    public void expungeAsyncJob(final AsyncJobVO job) {
         Transaction.execute(new TransactionCallbackNoReturn() {
             @Override
             public void doInTransactionWithoutResult(TransactionStatus status) {

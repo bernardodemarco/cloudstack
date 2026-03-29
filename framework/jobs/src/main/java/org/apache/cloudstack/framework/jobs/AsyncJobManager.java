@@ -143,4 +143,6 @@ public interface AsyncJobManager extends Manager {
     void disableAsyncJobs();
 
     boolean isAsyncJobsEnabled();
+
+    void expungeAsyncJob(AsyncJobVO job);
 }

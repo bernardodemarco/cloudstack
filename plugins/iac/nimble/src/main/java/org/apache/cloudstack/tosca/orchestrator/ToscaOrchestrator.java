@@ -22,12 +22,19 @@ import com.cloud.api.ApiServer;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.utils.UuidUtils;
 import com.cloud.utils.component.ComponentContext;
+import com.cloud.utils.db.EntityManager;
+import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.api.command.user.vmgroup.CreateVMGroupCmd;
 import org.apache.cloudstack.api.command.user.vpc.CreateVPCCmd;
 import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.framework.jobs.AsyncJob;
 import org.apache.cloudstack.framework.jobs.AsyncJobDispatcher;
+import org.apache.cloudstack.framework.jobs.AsyncJobExecutionContext;
 import org.apache.cloudstack.framework.jobs.AsyncJobManager;
+import org.apache.cloudstack.framework.jobs.Outcome;
 import org.apache.cloudstack.framework.jobs.impl.AsyncJobVO;
+import org.apache.cloudstack.framework.jobs.impl.OutcomeImpl;
+import org.apache.cloudstack.jobs.JobInfo;
 import org.apache.cloudstack.managed.context.ManagedContextExecutor;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
@@ -74,6 +81,9 @@ public class ToscaOrchestrator {
 
     @Inject
     private ApiServer apiServer;
+
+    @Inject
+    private EntityManager entityManager;
 
     private Map<String, ToscaNodeType> toscaProfile;
 
@@ -204,6 +214,7 @@ public class ToscaOrchestrator {
         CreateVPCCmd cmd = new CreateVPCCmd();
         cmd = ComponentContext.inject(cmd);
         try {
+            CallContext.register(ctx, null);
             apiDispatcher.dispatchCreateCmd(cmd, params);
             params.put("ctxStartEventId", "1");
             Long objectId = ObjectUtils.defaultIfNull(cmd.getEntityId(), cmd.getApiResourceId());
@@ -215,6 +226,14 @@ public class ToscaOrchestrator {
             job.setDispatcher(asyncJobDispatcher.getName());
             long jobId = asyncJobManager.submitAsyncJob(job);
             logger.info("Submitted async job with id: {}", jobId);
+            logger.debug("Trying to call joinJob();");
+            AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
+            executionContext.joinJob(jobId);
+            logger.debug("Calling joinJob() finished successfully. Was the job completed? {}.");
+            Outcome<String> outcome = new NodeTemplateProvisioningOutcome(job);
+            String jobResult = outcome.get();
+            logger.info("Provisioning outcome: {}", jobResult);
+            asyncJobManager.expungeAsyncJob((AsyncJobVO) executionContext.getJob());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -237,6 +256,32 @@ public class ToscaOrchestrator {
 
         } finally {
             CallContext.unregister();
+        }
+    }
+
+    private class NodeTemplateProvisioningOutcome extends OutcomeImpl<String> {
+        private final long jobId;
+
+        private NodeTemplateProvisioningOutcome(AsyncJob job) {
+            super(String.class, job, 1000, () -> {
+                AsyncJobVO jobVo = entityManager.findById(AsyncJobVO.class, job.getId());
+                return jobVo == null || jobVo.getStatus() != JobInfo.Status.IN_PROGRESS;
+            }, AsyncJob.Topics.JOB_STATE);
+
+            jobId = job.getId();
+        }
+
+        @Override
+        protected String retrieve() {
+            AsyncJob job = getJob();
+            if (job == null) {
+                throw new CloudRuntimeException(String.format(
+                        "Provisioning job [%d] not found.", jobId));
+            }
+            if (job.getStatus() == JobInfo.Status.FAILED) {
+                throw new CloudRuntimeException(String.format("Failure in job [%d]", jobId));
+            }
+            return job.getResult();
         }
     }
 

@@ -173,7 +173,7 @@ public class AsyncJobExecutionContext  {
             // TODO, this has security implications, operations carried from API layer should always
             // set its context, otherwise, the fall-back here will use system security context
             //
-            LOGGER.warn("Job is executed without a context, setup psudo job for the executing thread");
+            LOGGER.info("Job is executed without a context. Setting up a pseudo job for the executing thread.");
             if (CallContext.current() != null)
                 context = registerPseudoExecutionContext(CallContext.current().getCallingAccountId(),
                         CallContext.current().getCallingUserId());
