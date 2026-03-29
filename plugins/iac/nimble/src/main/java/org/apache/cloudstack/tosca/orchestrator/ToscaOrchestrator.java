@@ -24,6 +24,8 @@ import com.cloud.utils.UuidUtils;
 import com.cloud.utils.component.ComponentContext;
 import com.cloud.utils.db.EntityManager;
 import com.cloud.utils.exception.CloudRuntimeException;
+import org.apache.cloudstack.api.BaseAsyncCmd;
+import org.apache.cloudstack.api.BaseCmd;
 import org.apache.cloudstack.api.command.user.vmgroup.CreateVMGroupCmd;
 import org.apache.cloudstack.api.command.user.vpc.CreateVPCCmd;
 import org.apache.cloudstack.context.CallContext;
@@ -90,30 +92,29 @@ public class ToscaOrchestrator {
     private ExecutorService executorPool;
 
     public void deployIacTemplate(String iacTemplateContent) {
-        logger.debug("Parsing service template");
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
         Map<String, CompletableFuture<String>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
+        logger.debug("Awaiting for all the provisioning tasks of the node template to complete.");
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
         serviceTemplateFeature.join();
-        logger.debug("After serviceTemplateFeature.join()");
+        logger.info("All provisioning tasks have completed successfully.");
     }
 
     private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
-        logger.debug("Creating provisioning tasks futures");
+        logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<String>> futures = new HashMap<>();
         getServiceTemplateTopologicalSort(serviceTemplate).forEach((node, dependencies) -> {
             ToscaNodeTemplate nodeTemplate = serviceTemplate.getNodeTemplates().get(node);
             CompletableFuture<String> taskFuture;
             if (dependencies.isEmpty()) {
-                logger.debug("Node [{}] has no dependencies. Building its provisioning task.", node);
+                logger.debug("Node [{}] has no dependencies. Building its provisioning task, which will be ready to be allocated for execution.", node);
                 taskFuture = buildNodeProvisioningTask(nodeTemplate);
             } else {
+                logger.debug("Node [{}] has [{}] dependencies. Building its provisioning task, which will only be allocated for execution when all dependencies are ready.", node, dependencies.size());
                 CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
                         .map((dep) -> futures.get(dep.getName())).toArray(CompletableFuture[]::new);
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
-                    logger.debug("Thread: [{}]", Thread.currentThread().getName());
-                    logger.debug("All dependencies of the node [{}] are ready.", node);
-                    logger.debug("Here you'll be able to resolve the unresolved properties by get property and get attribute");
+                    logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
                     return buildNodeProvisioningTask(nodeTemplate);
                 });
             }
@@ -121,7 +122,7 @@ public class ToscaOrchestrator {
             futures.put(node, taskFuture);
         });
 
-        logger.debug("All provisioning tasks futures have been built successfully.");
+        logger.debug("All provisioning tasks for the service template have been built successfully.");
         return futures;
     }
 
@@ -143,7 +144,8 @@ public class ToscaOrchestrator {
         branchAncestors.add(node);
         for (ToscaNodeTemplate dependency : graph.getOrDefault(node, Collections.emptySet())) {
             if (branchAncestors.contains(dependency.getName())) {
-                throw new InvalidParameterValueException("Cycle detected in node dependency graph - this should have been caught during template validation");
+                logger.error("A cycle was detected in the service template graph. Aborting IaC template deployment.");
+                throw new InvalidParameterValueException("A cycle was detected in the service template graph. Please, ensure that the service template graph is acyclic.");
             }
 
             if (!visitedNodes.contains(dependency.getName())) {
@@ -152,11 +154,11 @@ public class ToscaOrchestrator {
         }
 
         branchAncestors.remove(node);
+        logger.debug("Node [{}] has been added to the topological sort.", node);
         topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
     private CompletableFuture<String> buildNodeProvisioningTask(ToscaNodeTemplate nodeTemplate) {
-        logger.debug("Inside build node provisioning task for node: " + nodeTemplate.getName());
         return provisionNode(nodeTemplate)
 //                .orTimeout(5, TimeUnit.SECONDS)
                 .thenApply(result -> {
@@ -170,66 +172,59 @@ public class ToscaOrchestrator {
 
     private CompletableFuture<String> provisionNode(ToscaNodeTemplate nodeTemplate) {
         CallContext callerContext = CallContext.current();
-        String currentLogContextId = ThreadContext.get("logcontextid");
         String newTaskLogContextId = UuidUtils.first(UUID.randomUUID().toString());
         logger.info("Submitting new task with [logcontextid] equal to [{}] for handling the provisioning of the following node: [{}].", newTaskLogContextId, nodeTemplate.getName());
         return CompletableFuture.supplyAsync(() -> {
             ThreadContext.put("logcontextid", newTaskLogContextId);
-            logger.debug("Executing thread {} for {}", Thread.currentThread().getName(), nodeTemplate.getName());
-
-            Random random = new Random();
-            int randomInt = random.nextInt((4000 - 500) + 1) + 500;
-
-            logger.info("Getting API Class: [{}]", apiServer.getCmdClass("listAnnotations").getName());
-
             ManagedContextExecutor.execute(() -> {
-                dispatchProvisioningSynchronousCommand(callerContext, randomInt);
-                try {
-                    logger.debug("sleeping for randomInt: [{}] ms", randomInt);
-                    Thread.sleep(randomInt);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+                dispatchProvisioningCommand(nodeTemplate, callerContext);
             });
-
-            ManagedContextExecutor.execute(() -> {
-                dispatchProvisioningAsynchronousCommand(callerContext, randomInt);
-            });
-
-            logger.debug("Here you'll be able to populate the attributes");
-//            ThreadContext.put("logcontextid", currentLogContextId);
             return "res-" + nodeTemplate.getName();
         }, executorPool);
     }
 
-    private void dispatchProvisioningAsynchronousCommand(CallContext ctx, int randomInt) {
+    private void dispatchProvisioningCommand(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
+        Class<?> apiClass = apiServer.getCmdClass(nodeTemplate.getApiName());
+        try {
+            Object cmd = apiClass.getDeclaredConstructor().newInstance();
+            if (cmd instanceof BaseAsyncCmd) {
+                dispatchProvisioningAsynchronousCommand((BaseAsyncCmd) cmd, callContext);
+            } else if (cmd instanceof BaseCmd) {
+                dispatchProvisioningSynchronousCommand((BaseCmd) cmd, callContext);
+            } else {
+                throw new Exception();
+            }
+        } catch (Exception e) {
+            logger.error("Could not instantiate the API class [{}].", apiClass.getName());
+            throw new InvalidParameterValueException(String.format("Could not dispatch the provisioning task of [%s]. Please, check the availability of the API associated with it.", nodeTemplate.getName()));
+        }
+    }
+
+    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCmd asyncCmd, CallContext callContext) {
         Map<String, String> params = new HashMap<>(Map.of(
                 "zoneid", "309ea14d-ce26-44eb-ac05-53106b0ccb17",
-                "name", "vpc-" + randomInt,
+                "name", "vpc-" + new Random().nextInt(100000),
                 "vpcofferingid", "3e70fd9b-bc5a-4d4b-89f1-40dc756e8058",
                 "cidr", "10.0.0.0/16",
-                "ctxUserId", String.valueOf(ctx.getCallingUserId()),
-                "ctxAccountId", String.valueOf(ctx.getCallingAccountId())
+                "ctxUserId", String.valueOf(callContext.getCallingUserId()),
+                "ctxAccountId", String.valueOf(callContext.getCallingAccountId())
         ));
         CreateVPCCmd cmd = new CreateVPCCmd();
         cmd = ComponentContext.inject(cmd);
         try {
-            CallContext.register(ctx, null);
+            CallContext.register(callContext, null);
             apiDispatcher.dispatchCreateCmd(cmd, params);
             params.put("ctxStartEventId", "1");
             Long objectId = ObjectUtils.defaultIfNull(cmd.getEntityId(), cmd.getApiResourceId());
             params.put("id", objectId.toString());
-            AsyncJobVO job = new AsyncJobVO("", ctx.getCallingUserId(), ctx.getCallingAccountId(), CreateVPCCmd.class.getName(),
+            AsyncJobVO job = new AsyncJobVO("", callContext.getCallingUserId(), callContext.getCallingAccountId(), CreateVPCCmd.class.getName(),
                     ApiGsonHelper.getBuilder().create().toJson(params), objectId,
                     cmd.getApiResourceType() != null ? cmd.getApiResourceType().toString() : null,
                     null);
             job.setDispatcher(asyncJobDispatcher.getName());
             long jobId = asyncJobManager.submitAsyncJob(job);
-            logger.info("Submitted async job with id: {}", jobId);
-            logger.debug("Trying to call joinJob();");
             AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
             executionContext.joinJob(jobId);
-            logger.debug("Calling joinJob() finished successfully. Was the job completed? {}.");
             Outcome<String> outcome = new NodeTemplateProvisioningOutcome(job);
             String jobResult = outcome.get();
             logger.info("Provisioning outcome: {}", jobResult);
@@ -239,15 +234,15 @@ public class ToscaOrchestrator {
         }
     }
 
-    private void dispatchProvisioningSynchronousCommand(CallContext ctx, int randomInt) {
+    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, CallContext callContext) {
         logger.debug("Constructing provisioning command");
-        CallContext.register(ctx, null);
+        CallContext.register(callContext, null);
         CreateVMGroupCmd cmd = new CreateVMGroupCmd();
         cmd = ComponentContext.inject(cmd);
         Map<String, String> params = Map.of(
                 "domainid", "1",
                 "account", "admin",
-                "name", "instance-group-" + randomInt
+                "name", "instance-group-" + new Random().nextInt(100000)
         );
         try {
             apiDispatcher.dispatch(cmd, params, false);

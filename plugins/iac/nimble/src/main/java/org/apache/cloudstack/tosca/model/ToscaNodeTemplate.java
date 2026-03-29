@@ -61,4 +61,8 @@ public class ToscaNodeTemplate {
     public void setUnresolvedPropertiesByGetAttribute(Set<ToscaProperty> unresolvedPropertiesByGetAttribute) {
         this.unresolvedPropertiesByGetAttribute = unresolvedPropertiesByGetAttribute;
     }
+
+    public String getApiName() {
+        return "createVPC";
+    }
 }

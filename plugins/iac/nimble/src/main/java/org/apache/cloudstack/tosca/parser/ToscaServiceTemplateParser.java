@@ -52,6 +52,7 @@ public class ToscaServiceTemplateParser {
 
     public ToscaServiceTemplate parseServiceTemplate(String content, Map<String, ToscaNodeType> toscaProfile, Account caller) {
         Map<String, Object> rawToscaTemplate = ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content));
+        logger.info("Parsing TOSCA service template.");
         ToscaServiceTemplateParsingContext context = new ToscaServiceTemplateParsingContext(toscaProfile);
 
         checkRootServiceTemplateYamlKeys(rawToscaTemplate, context);
