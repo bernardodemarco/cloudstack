@@ -17,21 +17,30 @@
 package org.apache.cloudstack.tosca.orchestrator;
 
 import com.cloud.api.ApiDispatcher;
+import com.cloud.api.ApiGsonHelper;
+import com.cloud.api.ApiServer;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.utils.UuidUtils;
 import com.cloud.utils.component.ComponentContext;
 import org.apache.cloudstack.api.command.user.vmgroup.CreateVMGroupCmd;
+import org.apache.cloudstack.api.command.user.vpc.CreateVPCCmd;
 import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.framework.jobs.AsyncJobDispatcher;
+import org.apache.cloudstack.framework.jobs.AsyncJobManager;
+import org.apache.cloudstack.framework.jobs.impl.AsyncJobVO;
+import org.apache.cloudstack.managed.context.ManagedContextExecutor;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,6 +64,16 @@ public class ToscaOrchestrator {
 
     @Inject
     private ApiDispatcher apiDispatcher;
+
+    @Inject
+    private AsyncJobManager asyncJobManager;
+
+    @Inject
+    @Named("ApiAsyncJobDispatcher")
+    private AsyncJobDispatcher asyncJobDispatcher;
+
+    @Inject
+    private ApiServer apiServer;
 
     private Map<String, ToscaNodeType> toscaProfile;
 
@@ -150,13 +169,22 @@ public class ToscaOrchestrator {
 
             Random random = new Random();
             int randomInt = random.nextInt((4000 - 500) + 1) + 500;
-            logger.debug("sleeping for randomInt: [{}] ms", randomInt);
-            try {
-                dispatchProvisioningCommand(callerContext, randomInt);
-                Thread.sleep(randomInt);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+
+            logger.info("Getting API Class: [{}]", apiServer.getCmdClass("listAnnotations").getName());
+
+            ManagedContextExecutor.execute(() -> {
+                dispatchProvisioningSynchronousCommand(callerContext, randomInt);
+                try {
+                    logger.debug("sleeping for randomInt: [{}] ms", randomInt);
+                    Thread.sleep(randomInt);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            ManagedContextExecutor.execute(() -> {
+                dispatchProvisioningAsynchronousCommand(callerContext, randomInt);
+            });
 
             logger.debug("Here you'll be able to populate the attributes");
 //            ThreadContext.put("logcontextid", currentLogContextId);
@@ -164,7 +192,35 @@ public class ToscaOrchestrator {
         }, executorPool);
     }
 
-    private void dispatchProvisioningCommand(CallContext ctx, int randomInt) {
+    private void dispatchProvisioningAsynchronousCommand(CallContext ctx, int randomInt) {
+        Map<String, String> params = new HashMap<>(Map.of(
+                "zoneid", "309ea14d-ce26-44eb-ac05-53106b0ccb17",
+                "name", "vpc-" + randomInt,
+                "vpcofferingid", "3e70fd9b-bc5a-4d4b-89f1-40dc756e8058",
+                "cidr", "10.0.0.0/16",
+                "ctxUserId", String.valueOf(ctx.getCallingUserId()),
+                "ctxAccountId", String.valueOf(ctx.getCallingAccountId())
+        ));
+        CreateVPCCmd cmd = new CreateVPCCmd();
+        cmd = ComponentContext.inject(cmd);
+        try {
+            apiDispatcher.dispatchCreateCmd(cmd, params);
+            params.put("ctxStartEventId", "1");
+            Long objectId = ObjectUtils.defaultIfNull(cmd.getEntityId(), cmd.getApiResourceId());
+            params.put("id", objectId.toString());
+            AsyncJobVO job = new AsyncJobVO("", ctx.getCallingUserId(), ctx.getCallingAccountId(), CreateVPCCmd.class.getName(),
+                    ApiGsonHelper.getBuilder().create().toJson(params), objectId,
+                    cmd.getApiResourceType() != null ? cmd.getApiResourceType().toString() : null,
+                    null);
+            job.setDispatcher(asyncJobDispatcher.getName());
+            long jobId = asyncJobManager.submitAsyncJob(job);
+            logger.info("Submitted async job with id: {}", jobId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void dispatchProvisioningSynchronousCommand(CallContext ctx, int randomInt) {
         logger.debug("Constructing provisioning command");
         CallContext.register(ctx, null);
         CreateVMGroupCmd cmd = new CreateVMGroupCmd();
