@@ -16,6 +16,7 @@
 // under the License.
 package org.apache.cloudstack.tosca.parser;
 
+import com.cloud.utils.Pair;
 import org.apache.cloudstack.tosca.model.ToscaAttributeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
@@ -76,10 +77,23 @@ public class ToscaNodeTypeParser {
         String nodeTypeName = nodeTypeRaw.getKey();
         logger.info("Parsing the following node type: [{}].", nodeTypeName);
         Map<String, Object> nodeTypeBody = ToscaYamlHelper.asMap(nodeTypeRaw.getValue());
+        Pair<String, String> nodeTypeApis = parseNodeTypeMetadata(nodeTypeBody.get(ToscaConstants.METADATA));
         Map<String, ToscaPropertyDefinition> propertyDefinitions = (Map<String, ToscaPropertyDefinition>) toscaFieldParser.parseField(nodeTypeBody.get(ToscaConstants.PROPERTIES), ToscaFieldParser.TypeOfToscaField.PROPERTY, dataTypes);
         Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParser.parseField(nodeTypeBody.get(ToscaConstants.ATTRIBUTES), ToscaFieldParser.TypeOfToscaField.ATTRIBUTE, dataTypes);
-        ToscaNodeType nodeType = new ToscaNodeType(nodeTypeName, propertyDefinitions, attributeDefinitions);
+        ToscaNodeType nodeType = new ToscaNodeType(nodeTypeName, propertyDefinitions, attributeDefinitions, nodeTypeApis.first(), nodeTypeApis.second());
         logger.info("Successfully parsed the following node type: [{}].", nodeType::toString);
         return nodeType;
+    }
+
+    /**
+     * Parses the metadata of a node type.
+     * @param metadataBody The metadata body of the node type. Current supported fields are "provisioning_api" and "rollback_api".
+     * @return A pair of the provisioning API name and the rollback API name.
+     */
+    private Pair<String, String> parseNodeTypeMetadata(Object metadataBody) {
+        Map<String, Object> metadata = ToscaYamlHelper.asMap(metadataBody);
+        String provisioningApiName = ToscaYamlHelper.asString(metadata.get(ToscaConstants.PROVISIONING_API));
+        String rollBackApiName = ToscaYamlHelper.asString(metadata.get(ToscaConstants.ROLLBACK_API));
+        return new Pair<>(provisioningApiName, rollBackApiName);
     }
 }

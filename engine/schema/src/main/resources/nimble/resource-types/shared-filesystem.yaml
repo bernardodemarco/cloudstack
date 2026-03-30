@@ -26,6 +26,8 @@ node_types:
         type: string
         description: The ID of the availability zone.
         required: true
+        metadata:
+          api-parameter: zoneid
       name:
         type: string
         description: The name of the shared filesystem.
@@ -42,10 +44,14 @@ node_types:
         type: string
         description: The domain ID associated with the shared filesystem.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the shared filesystem.
         required: false
+        metadata:
+          api-parameter: projectid
       filesystem:
         type: string
         description: >
@@ -57,10 +63,14 @@ node_types:
         type: string
         description: The ID of the network in which the shared filesystem will be attached to.
         required: true
+        metadata:
+          api-parameter: kubernetesversionid
       service-offering-id:
         type: string
         description: Service offering ID for the shared filesystem VM hosting the data.
         required: true
+        metadata:
+          api-parameter: serviceofferingid
       disk-offering-id:
         type: string
         description: Disk offering ID to use for the underlying storage.

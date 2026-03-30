@@ -21,22 +21,13 @@ import org.apache.cloudstack.tosca.functions.ToscaFunction;
 public class ToscaPropertyDefinition extends ToscaFieldDefinition {
     private final boolean required;
     private final ToscaFunction.ToscaBooleanFunction validation;
+    private final String apiParameter;
 
-    public ToscaPropertyDefinition(String name, String description, ToscaTypeDefinition type, boolean required, ToscaFunction.ToscaBooleanFunction validation) {
+    public ToscaPropertyDefinition(String name, String description, ToscaTypeDefinition type, boolean required, ToscaFunction.ToscaBooleanFunction validation, String apiParameter) {
         super(name, description, type);
         this.required = required;
         this.validation = validation;
-    }
-
-    /**
-     * Creates an anonymous {@link ToscaPropertyDefinition} wrapping the given type, intended for
-     * temporary use during collection parsing ({@link ToscaCollectionType}).
-     * @param type the entry schema type to wrap.
-     * @return an anonymous {@link ToscaPropertyDefinition} with no name, no description,
-     *         not required, and no validation function.
-     */
-    public static ToscaPropertyDefinition ofAnonymous(ToscaTypeDefinition type) {
-        return new ToscaPropertyDefinition(null, null, type, false, null);
+        this.apiParameter = apiParameter;
     }
 
     public boolean isRequired() {
@@ -45,5 +36,9 @@ public class ToscaPropertyDefinition extends ToscaFieldDefinition {
 
     public ToscaFunction.ToscaBooleanFunction getValidation() {
         return validation;
+    }
+
+    public String getApiParameter() {
+        return apiParameter;
     }
 }

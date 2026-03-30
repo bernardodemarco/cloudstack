@@ -34,10 +34,14 @@ node_types:
         type: string
         description: The ID of the availability zone. If not specified, the disk offering will be public.
         required: false
+        metadata:
+          api-parameter: zoneid
       domain-id:
         type: string
         description: The ID of the domain for which the disk offering will be available. If not specified, the disk offering will be public.
         required: false
+        metadata:
+          api-parameter: domainid
       storage-type:
         type: string
         description: "The type of storage used by the disk offering. Valid values are 'local' and 'shared'."

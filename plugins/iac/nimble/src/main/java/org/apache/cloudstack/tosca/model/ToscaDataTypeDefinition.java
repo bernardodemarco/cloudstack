@@ -39,13 +39,6 @@ public class ToscaDataTypeDefinition {
         return properties;
     }
 
-    public Set<String> getRequiredPropertyNames() {
-        return properties.values().stream()
-                .filter(ToscaPropertyDefinition::isRequired)
-                .map(ToscaPropertyDefinition::getName)
-                .collect(Collectors.toSet());
-    }
-
     @Override
     public String toString() {
         return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "name");

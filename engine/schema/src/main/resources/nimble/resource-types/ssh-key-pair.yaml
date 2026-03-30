@@ -38,10 +38,14 @@ node_types:
         type: string
         description: The domain ID associated with the SSH key pair.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the SSH key pair.
         required: false
+        metadata:
+          api-parameter: projectid
     attributes:
       id:
         type: string

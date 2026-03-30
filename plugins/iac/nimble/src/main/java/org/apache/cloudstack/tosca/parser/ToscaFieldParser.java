@@ -27,6 +27,7 @@ import org.apache.cloudstack.tosca.model.ToscaPropertyDefinition;
 import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -67,7 +68,8 @@ public class ToscaFieldParser {
 
             boolean required = ToscaYamlHelper.asBoolean(fieldBody.get(ToscaConstants.REQUIRED));
             ToscaFunction.ToscaBooleanFunction validation = parseToscaBooleanFunction(ToscaYamlHelper.asMap(fieldBody.get(ToscaConstants.VALIDATION)));
-            ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(name, description, type, required, validation);
+            String apiParameter = ObjectUtils.defaultIfNull(parseMetadata(fieldBody.get(ToscaConstants.METADATA)), name);
+            ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(name, description, type, required, validation, apiParameter);
             logger.debug("Successfully parsed the following property: [{}].", propertyDefinition::toString);
             return propertyDefinition;
         }).collect(Collectors.toMap(ToscaFieldDefinition::getName, (field) -> field));
@@ -133,5 +135,10 @@ public class ToscaFieldParser {
         List<Object> args = (List<Object>) arguments;
         List<Object> validValues = (List<Object>) args.get(1);
         return new ToscaBooleanFunctions.ValidValues(validValues);
+    }
+
+    private String parseMetadata(Object metadataBody) {
+        Map<String, Object> metadata = ToscaYamlHelper.asMap(metadataBody);
+        return ToscaYamlHelper.asString(metadata.get(ToscaConstants.API_PARAMETER));
     }
 }

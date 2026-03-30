@@ -19,9 +19,9 @@ package org.apache.cloudstack.tosca.model;
 public class ToscaProperty {
     private final ToscaPropertyDefinition definition;
     private final Object rawValue;
-    private volatile Object evaluatedValue;
+    private volatile String evaluatedValue;
 
-    public ToscaProperty(ToscaPropertyDefinition definition, Object rawValue, Object evaluatedValue) {
+    public ToscaProperty(ToscaPropertyDefinition definition, Object rawValue, String evaluatedValue) {
         this.definition = definition;
         this.rawValue = rawValue;
         this.evaluatedValue = evaluatedValue;
@@ -31,11 +31,11 @@ public class ToscaProperty {
         return rawValue;
     }
 
-    public Object getEvaluatedValue() {
+    public String getEvaluatedValue() {
         return evaluatedValue;
     }
 
-    public void setEvaluatedValue(Object evaluatedValue) {
+    public void setEvaluatedValue(String evaluatedValue) {
         this.evaluatedValue = evaluatedValue;
     }
 

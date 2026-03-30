@@ -61,6 +61,8 @@ node_types:
           The network for which the port forwarding rule will be applied. 
           Required for when the public IP address is not associated with any guest network.
         required: false
+        metadata:
+          api-parameter: kubernetesversionid
       cidr-list:
         type: list
         entry_schema:

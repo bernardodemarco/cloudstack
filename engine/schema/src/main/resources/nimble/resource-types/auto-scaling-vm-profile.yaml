@@ -38,10 +38,14 @@ node_types:
         type: string
         description: The ID of the availability zone.
         required: true
+        metadata:
+          api-parameter: zoneid
       service-offering-id:
         type: string
         description: Service offering ID for the VMs in the auto scaling VM profile.
         required: true
+        metadata:
+          api-parameter: serviceofferingid
       other-deploy-params:
         type: list
         entry_schema:
@@ -68,10 +72,14 @@ node_types:
         type: string
         description: The domain ID associated with the auto scaling VM profile.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the auto scaling VM profile.
         required: false
+        metadata:
+          api-parameter: projectid
       auto-scale-user-id:
         type: string
         description: The ID of the user used to launch and destroy the VMs.
@@ -80,6 +88,8 @@ node_types:
         type: string
         description: The ID of the network in which the auto scaling VM profile will be launched.
         required: false
+        metadata:
+          api-parameter: kubernetesversionid
       counter-parameters:
         type: list
         entry_schema:

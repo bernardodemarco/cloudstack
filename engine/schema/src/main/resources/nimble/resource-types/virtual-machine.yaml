@@ -26,6 +26,8 @@ data_types:
         type: string
         description: The ID of the network.
         required: true
+        metadata:
+          api-parameter: kubernetesversionid
       ip:
         type: string
         description: The IP address of the network.
@@ -38,6 +40,8 @@ node_types:
         type: string
         description: The ID of the availability zone.
         required: true
+        metadata:
+          api-parameter: zoneid
       name:
         type: string
         description: The name of the VM.
@@ -54,10 +58,14 @@ node_types:
         type: string
         description: The domain ID associated with the VM.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the VM.
         required: false
+        metadata:
+          api-parameter: projectid
       host-id:
         type: string
         description: The ID of the host in which the VM will be launched.
@@ -74,6 +82,8 @@ node_types:
         type: string
         description: Service offering ID for the VM.
         required: true
+        metadata:
+          api-parameter: serviceofferingid
       template-id:
         type: string
         description: The ID of the template from which the VM will be launched.

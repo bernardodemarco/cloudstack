@@ -18,17 +18,21 @@ package org.apache.cloudstack.tosca.parser;
 
 public class ToscaConstants {
     public static final String ATTRIBUTES = "attributes";
+    public static final String API_PARAMETER = "api-parameter";
     public static final String DATA_TYPES = "data_types";
     public static final String DEFAULT_VALUE = "default_value";
     public static final String DEPENDENCY = "dependency";
     public static final String DESCRIPTION = "description";
     public static final String ENTRY_SCHEMA = "entry_schema";
     public static final String INPUTS = "inputs";
+    public static final String METADATA = "metadata";
     public static final String NODE_TEMPLATES = "node_templates";
     public static final String NODE_TYPES = "node_types";
     public static final String PROPERTIES = "properties";
+    public static final String PROVISIONING_API = "provisioning-api";
     public static final String REQUIRED = "required";
     public static final String REQUIREMENTS = "requirements";
+    public static final String ROLLBACK_API = "rollback-api";
     public static final String SERVICE_TEMPLATE = "service_template";
     public static final String TOSCA_DEFINITIONS_VERSION = "tosca_definitions_version";
     public static final String TYPE = "type";

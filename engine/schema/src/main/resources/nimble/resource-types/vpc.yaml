@@ -21,15 +21,22 @@ description: >
 
 node_types:
   Vpc:
+    metadata:
+      provisioning-api: createVPC
+      rollback-api: deleteVPC
     properties:
       zone-id:
         type: string
         description: The ID of the availability zone.
         required: true
+        metadata:
+          api-parameter: zoneid
       vpc-offering-id:
         type: string
         description: The ID of the VPC offering.
         required: true
+        metadata:
+          api-parameter: vpcofferingid
       name:
         type: string
         description: The name of the VPC.
@@ -38,6 +45,8 @@ node_types:
         type: string
         description: Display text of the VPC.
         required: false
+        metadata:
+          api-parameter: displaytext
       cidr:
         type: string
         description: The CIDR of the VPC.
@@ -46,6 +55,8 @@ node_types:
         type: string
         description: The source NAT IPv4 address for the VPC.
         required: false
+        metadata:
+          api-parameter: sourcenatipaddress
       start:
         type: boolean
         description: Whether the VPC should start immediately.
@@ -58,18 +69,26 @@ node_types:
         type: string
         description: The domain ID associated with the VPC.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The ID of the project associated with the VPC.
         required: false
+        metadata:
+          api-parameter: projectid
       first-dns:
         type: string
         description: The first IPv4 DNS of the VPC.
         required: false
+        metadata:
+          api-parameter: dns1
       second-dns:
         type: string
         description: The second IPv4 DNS of the VPC.
         required: false
+        metadata:
+          api-parameter: dns2
     attributes:
       id:
         type: string

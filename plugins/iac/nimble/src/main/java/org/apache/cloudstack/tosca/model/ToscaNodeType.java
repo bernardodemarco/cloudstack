@@ -26,11 +26,15 @@ public class ToscaNodeType {
     private final String name;
     private final Map<String, ToscaPropertyDefinition> properties;
     private final Map<String, ToscaAttributeDefinition> attributes;
+    private final String provisioningApi;
+    private final String rollbackApi;
 
-    public ToscaNodeType(String name, Map<String, ToscaPropertyDefinition> properties, Map<String, ToscaAttributeDefinition> attributes) {
+    public ToscaNodeType(String name, Map<String, ToscaPropertyDefinition> properties, Map<String, ToscaAttributeDefinition> attributes, String provisioningApi, String rollbackApi) {
         this.name = name;
         this.properties = properties;
         this.attributes = attributes;
+        this.provisioningApi = provisioningApi;
+        this.rollbackApi = rollbackApi;
     }
 
     public String getName() {
@@ -58,6 +62,14 @@ public class ToscaNodeType {
 
     public boolean hasAttribute(String name) {
         return attributes.containsKey(name);
+    }
+
+    public String getProvisioningApi() {
+        return provisioningApi;
+    }
+
+    public String getRollbackApi() {
+        return rollbackApi;
     }
 
     @Override

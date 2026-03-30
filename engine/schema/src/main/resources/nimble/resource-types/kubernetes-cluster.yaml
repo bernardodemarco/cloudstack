@@ -43,11 +43,16 @@ data_types:
 
 node_types:
   KubernetesCluster:
+    metadata:
+      provisioning-api: createKubernetesCluster
+      rollback-api: deleteKubernetesCluster
     properties:
       zone-id:
         type: string
         description: The ID of the availability zone.
         required: true
+        metadata:
+          api-parameter: zoneid
       name:
         type: string
         description: The name of the Kubernetes cluster.
@@ -64,26 +69,38 @@ node_types:
         type: string
         description: The domain ID associated with the cluster.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the cluster.
         required: false
+        metadata:
+          api-parameter: projectid
       kubernetes-version-id:
         type: string
         description: Kubernetes version ID used to launch the cluster.
         required: false
+        metadata:
+          api-parameter: kubernetesversionid
       network-id:
         type: string
         description: The ID of the network in which the cluster will be launched.
         required: false
+        metadata:
+          api-parameter: kubernetesversionid
       node-root-disk-size:
         type: integer
         description: Root disk size (GB) for each node.
         required: false
+        metadata:
+          api-parameter: noderootdisksize
       service-offering-id:
         type: string
         description: Service offering ID for the VMs in the cluster.
         required: false
+        metadata:
+          api-parameter: serviceofferingid
       size:
         type: integer
         description: Number of worker nodes in the cluster.
@@ -92,31 +109,45 @@ node_types:
         type: integer
         description: Number of control nodes in the cluster.
         required: false
+        metadata:
+          api-parameter: controlnodes
       ssh-key-pair:
         type: string
         description: The name of the SSH key pair for logging into the VMs.
         required: false
+        metadata:
+          api-parameter: keypair
       cluster-type:
         type: string
         description: Kubernetes cluster type (CloudManaged or ExternalManaged).
         required: false
         validation: { $valid_values: [ $value, [ CloudManaged, ExternalManaged ] ] }
+        metadata:
+          api-parameter: clustertype
       docker-registry-password:
         type: string
         description: Password for the Docker image private registry.
         required: false
+        metadata:
+          api-parameter: dockerregistrypassword
       docker-registry-url:
         type: string
         description: URL for the Docker image private registry.
         required: false
+        metadata:
+          api-parameter: dockerregistryurl
       docker-registry-username:
         type: string
         description: Username for the Docker image private registry.
         required: false
+        metadata:
+          api-parameter: dockerregistryusername
       external-load-balancer-ip-address:
         type: string
         description: External load balancer IP address for HA clusters.
         required: false
+        metadata:
+          api-parameter: externalloadbalanceripaddress
       hypervisor:
         type: string
         description: Hypervisor on which the cluster VMs will be launched.
@@ -125,18 +156,24 @@ node_types:
         type: integer
         description: Number of etcd nodes in the cluster.
         required: false
+        metadata:
+          api-parameter: etcdnodes
       node-offerings:
         type: list
         entry_schema:
           type: NodeOffering
         description: "Compute offerings for each node type. If used, overrides the 'service-offering-id' property."
         required: false
+        metadata:
+          api-parameter: nodeofferings
       node-templates:
         type: list
         entry_schema:
           type: NodeTemplate
         description: Templates for each node type. If not specified, the system VM templates will be used.
         required: false
+        metadata:
+          api-parameter: nodetemplates
     attributes:
       id:
         type: string

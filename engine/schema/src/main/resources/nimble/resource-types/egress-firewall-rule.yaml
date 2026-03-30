@@ -26,6 +26,8 @@ node_types:
         type: string
         description: The ID of the network this rule belongs to.
         required: true
+        metadata:
+          api-parameter: kubernetesversionid
       protocol:
         type: string
         description: The protocol of the egress rule.

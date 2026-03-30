@@ -30,6 +30,8 @@ node_types:
         type: string
         description: The ID of the zone in which the volume will be created.
         required: true
+        metadata:
+          api-parameter: zoneid
       disk-offering-id:
         type: string
         description: The ID of the disk offering for the volume.
@@ -54,6 +56,8 @@ node_types:
         type: string
         description: The domain ID associated with the volume.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the volume.

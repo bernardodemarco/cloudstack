@@ -21,6 +21,9 @@ description: >
 
 node_types:
   InstanceGroup:
+    metadata:
+      provisioning-api: createInstanceGroup
+      rollback-api: deleteInstanceGroup
     properties:
       name:
         type: string
@@ -34,10 +37,14 @@ node_types:
         type: string
         description: The domain ID associated with the instance group.
         required: false
+        metadata:
+          api-parameter: domainid
       project-id:
         type: string
         description: The project ID associated with the instance group.
         required: false
+        metadata:
+          api-parameter: projectid
     attributes:
       id:
         type: string

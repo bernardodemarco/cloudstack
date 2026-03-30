@@ -63,35 +63,35 @@ public class ToscaServiceTemplateParserTest {
 
     private ToscaNodeType getVmNodeTypeForTests() {
         ToscaFunction.ToscaBooleanFunction validTypes = new ToscaBooleanFunctions.ValidValues(List.of("SSVM", "VR", "CPVM"));
-        ToscaPropertyDefinition type = new ToscaPropertyDefinition("type", "Type of system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, validTypes);
-        ToscaPropertyDefinition vcpus = new ToscaPropertyDefinition("vcpus", "Number of vCPUs.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.INTEGER), true, null);
-        ToscaPropertyDefinition startVm = new ToscaPropertyDefinition("start-vm", "Start VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.BOOLEAN), false, null);
-        ToscaPropertyDefinition maxUsage = new ToscaPropertyDefinition("max-usage", "Maximum usage.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.FLOAT), false, null);
-        ToscaPropertyDefinition sshKeyPairId = new ToscaPropertyDefinition("ssh-key-pair-id", "SSH key pair ID.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null);
-        ToscaPropertyDefinition sshKeyPairName = new ToscaPropertyDefinition("ssh-key-pair-name", "SSH key pair name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null);
+        ToscaPropertyDefinition type = new ToscaPropertyDefinition("type", "Type of system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, validTypes, null);
+        ToscaPropertyDefinition vcpus = new ToscaPropertyDefinition("vcpus", "Number of vCPUs.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.INTEGER), true, null, null);
+        ToscaPropertyDefinition startVm = new ToscaPropertyDefinition("start-vm", "Start VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.BOOLEAN), false, null, null);
+        ToscaPropertyDefinition maxUsage = new ToscaPropertyDefinition("max-usage", "Maximum usage.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.FLOAT), false, null, null);
+        ToscaPropertyDefinition sshKeyPairId = new ToscaPropertyDefinition("ssh-key-pair-id", "SSH key pair ID.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, null);
+        ToscaPropertyDefinition sshKeyPairName = new ToscaPropertyDefinition("ssh-key-pair-name", "SSH key pair name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, null);
 
-        ToscaPropertyDefinition nameDataTypeProperty = new ToscaPropertyDefinition("name", "Name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null);
-        ToscaPropertyDefinition valueDataTypeProperty = new ToscaPropertyDefinition("value", "Value.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null);
+        ToscaPropertyDefinition nameDataTypeProperty = new ToscaPropertyDefinition("name", "Name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, null);
+        ToscaPropertyDefinition valueDataTypeProperty = new ToscaPropertyDefinition("value", "Value.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, null);
         ToscaDataTypeDefinition nameValueMappingDataType = new ToscaDataTypeDefinition("NameValueMapping", Map.of(nameDataTypeProperty.getName(), nameDataTypeProperty, valueDataTypeProperty.getName(), valueDataTypeProperty));
-        ToscaPropertyDefinition nameValueMappingList = new ToscaPropertyDefinition("name-value-mapping", "Name value mapping.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofDataType(nameValueMappingDataType)), false, null);
+        ToscaPropertyDefinition nameValueMappingList = new ToscaPropertyDefinition("name-value-mapping", "Name value mapping.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofDataType(nameValueMappingDataType)), false, null, null);
 
-        ToscaPropertyDefinition ipAddresses = new ToscaPropertyDefinition("ip-addresses", "IPs.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null);
-        ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.MAP, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null);
+        ToscaPropertyDefinition ipAddresses = new ToscaPropertyDefinition("ip-addresses", "IPs.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, null);
+        ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.MAP, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, null);
         ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
 
         return new ToscaNodeType("Vm",
                 Map.of(type.getName(), type, vcpus.getName(), vcpus, startVm.getName(), startVm,
                         maxUsage.getName(), maxUsage, sshKeyPairId.getName(), sshKeyPairId, sshKeyPairName.getName(), sshKeyPairName,
                         nameValueMappingList.getName(), nameValueMappingList, ipAddresses.getName(), ipAddresses, details.getName(), details),
-                Map.of(uuid.getName(), uuid));
+                Map.of(uuid.getName(), uuid), "createApi", "deleteApi");
     }
 
     private ToscaNodeType getSshKeyPairTypeForTests() {
-        ToscaPropertyDefinition name = new ToscaPropertyDefinition("name", "Name of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null);
-        ToscaPropertyDefinition publicKey = new ToscaPropertyDefinition("public-key", "Public key of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null);
+        ToscaPropertyDefinition name = new ToscaPropertyDefinition("name", "Name of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, null);
+        ToscaPropertyDefinition publicKey = new ToscaPropertyDefinition("public-key", "Public key of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, null);
 
         ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
-        return new ToscaNodeType("SshPair", Map.of(name.getName(), name, publicKey.getName(), publicKey), Map.of(uuid.getName(), uuid));
+        return new ToscaNodeType("SshPair", Map.of(name.getName(), name, publicKey.getName(), publicKey), Map.of(uuid.getName(), uuid), "registerSSHKeyPair", "deleteSSHKeyPair");
     }
 
     private Map<String, ToscaInputDefinition> getToscaInputsForTests() {

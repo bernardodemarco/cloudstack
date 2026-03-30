@@ -48,7 +48,7 @@ public class ToscaFieldParserTest {
 
     @Test
     public void parseFieldTestSuccessfullyParseProperties() {
-        String properties = "{amount: {type: map, entry_schema: {type: NameValueMapping}, description: Amount.}, disk-offering-id: {type: string, description: Disk offering ID., required: true, validation: {$valid_values: [$value, [1, 2]]}}}";
+        String properties = "{amount: {type: map, entry_schema: {type: NameValueMapping}, description: Amount.}, disk-offering-id: {type: string, description: Disk offering ID., required: true, validation: {$valid_values: [$value, [1, 2]]}, metadata: {api-parameter: diskofferingid}}}";
         Object dataTypeRaw = ToscaYamlHelper.loadYaml("{data_types: {NameValueMapping: {properties: {name: {type: string, required: true}, value: {type: string, required: true}}}}}");
         Map<String, ToscaDataTypeDefinition> dataTypes = toscaNodeTypeParser.parseDataTypes(ToscaYamlHelper.asMap(dataTypeRaw));
 
@@ -65,6 +65,7 @@ public class ToscaFieldParserTest {
         Assert.assertTrue(propertyDefinitions.get("disk-offering-id").isRequired());
         Assert.assertEquals(ToscaPrimitiveType.STRING, propertyDefinitions.get("disk-offering-id").getType().getPrimitiveType());
         Assert.assertTrue(propertyDefinitions.get("disk-offering-id").getValidation() instanceof ToscaBooleanFunctions.ValidValues);
+        Assert.assertEquals("diskofferingid", propertyDefinitions.get("disk-offering-id").getApiParameter());
     }
 
     @Test

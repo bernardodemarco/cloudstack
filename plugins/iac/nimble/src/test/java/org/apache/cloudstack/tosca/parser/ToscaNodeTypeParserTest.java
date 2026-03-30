@@ -60,7 +60,7 @@ public class ToscaNodeTypeParserTest {
     @Test
     public void parseNodeTypeTestEnsureToscaNodeTypeDefinitionFileIsSuccessfullyParsedAlongWithItsPropertiesAndAttributes() {
         String nodeTypeName = "MockType";
-        String nodeTypeContent = "{tosca_definitions_version: tosca_2_0, description: Mock node type definition, node_types: {MockType: {description: Apache CloudStack MockType node type., attributes: {id: {type: string, description: ID.}}, properties: {zone-id: {type: string, description: Zone ID., required: true}}}}}";
+        String nodeTypeContent = "{tosca_definitions_version: tosca_2_0, description: Mock node type definition, node_types: {MockType: {metadata: {provisioning-api: createApi, rollback-api: deleteApi}, description: Apache CloudStack MockType node type., attributes: {id: {type: string, description: ID.}}, properties: {zone-id: {type: string, description: Zone ID., required: true}}}}}";
 
         ToscaNodeType nodeType = toscaNodeTypeParserSpy.parseNodeType(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(nodeTypeContent)), null);
         Map<String, ToscaPropertyDefinition> properties = nodeType.getProperties();
@@ -68,5 +68,7 @@ public class ToscaNodeTypeParserTest {
         Assert.assertEquals(nodeTypeName, nodeType.getName());
         Assert.assertTrue(attributes.containsKey("id"));
         Assert.assertTrue(properties.containsKey("zone-id"));
+        Assert.assertEquals("createApi", nodeType.getProvisioningApi());
+        Assert.assertEquals("deleteApi", nodeType.getRollbackApi());
     }
 }

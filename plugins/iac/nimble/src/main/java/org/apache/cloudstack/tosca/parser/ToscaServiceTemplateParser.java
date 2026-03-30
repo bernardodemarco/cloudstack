@@ -19,6 +19,8 @@ package org.apache.cloudstack.tosca.parser;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.user.Account;
 import org.apache.cloudstack.tosca.functions.ToscaFunction;
+import org.apache.cloudstack.tosca.model.ToscaCollectionType;
+import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaFieldDefinition;
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
@@ -39,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ToscaServiceTemplateParser {
     private final Logger logger = LogManager.getLogger(ToscaServiceTemplateParser.class);
@@ -261,7 +264,38 @@ public class ToscaServiceTemplateParser {
             return null;
         }
 
-        return new ToscaProperty(propertyDefinition, propertyBody, propertyBody);
+        String propertyValue = getPropertyValueAsString(propertyBody, type);
+        return new ToscaProperty(propertyDefinition, propertyBody, propertyValue);
+    }
+
+    private String getPropertyValueAsString(Object propertyBody, ToscaTypeDefinition type) {
+        if (type.getKind() == ToscaTypeDefinition.Kind.PRIMITIVE) {
+            return String.valueOf(propertyBody);
+        }
+
+        if (type.getKind() == ToscaTypeDefinition.Kind.DATA_TYPE) {
+            StringBuilder builder = new StringBuilder();
+            ToscaDataTypeDefinition dataTypeDefinition = type.getEntrySchema().getDataType();
+            for (ToscaPropertyDefinition propertyDefinition : dataTypeDefinition.getProperties().values()) {
+
+            }
+
+        }
+
+        if (type.getKind() == ToscaTypeDefinition.Kind.COLLECTION) {
+            if (type.getCollectionType() == ToscaCollectionType.LIST && type.getEntrySchema().getKind() == ToscaTypeDefinition.Kind.PRIMITIVE) {
+                List<String> items = (List<String>) ToscaYamlHelper.asList(propertyBody);
+                return String.join(",", items);
+            }
+
+//            provavelmente, vai ser melhor jogar esse metodo
+//            para o getparams do nodetemplate, pq la tu vai conseguir identificar
+//            que é um mapa e vai conseguir colocar varias chaves no formato <paramname>[<int>].<key> com os seus respectivos valores
+//            [0].key1=value
+//            [0].key2=value
+//            [1].key1=value
+//            [1].key2=value
+        }
     }
 
     private ToscaProperty parseGetInputPropertyValue(String propertyName, Map<String, Object> propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {

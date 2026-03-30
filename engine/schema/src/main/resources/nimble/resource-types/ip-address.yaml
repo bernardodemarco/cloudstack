@@ -26,10 +26,14 @@ node_types:
         type: string
         description: The ID of the zone from which an IP address will be acquired.
         required: true
+        metadata:
+          api-parameter: zoneid
       network-id:
         type: string
         description: "The ID of the network for which the IP address will be associated. Mutually exclusive with the 'vpc-id' property."
         required: false
+        metadata:
+          api-parameter: kubernetesversionid
       vpc-id:
         type: string
         description: "The ID of the VPC for which the IP address will associated. Mutually exclusive with the 'network-id' property."

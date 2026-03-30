@@ -46,10 +46,14 @@ node_types:
         type: string
         description: The ID of the availability zone. If not specified, the VPC offering will be public.
         required: false
+        metadata:
+          api-parameter: zoneid
       domain-id:
         type: string
         description: The ID of the domain for which the VPC offering will be available. If not specified, the compute offering will be public.
         required: false
+        metadata:
+          api-parameter: domainid
       enable:
         type: boolean
         description: Whether the VPC offering will be enabled during creation.
@@ -75,6 +79,8 @@ node_types:
         type: string
         description: The ID of the network service offering for the VPC router.
         required: false
+        metadata:
+          api-parameter: serviceofferingid
     attributes:
       id:
         type: string

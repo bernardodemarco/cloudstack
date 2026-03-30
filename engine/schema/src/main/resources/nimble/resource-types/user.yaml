@@ -30,6 +30,8 @@ node_types:
         type: string
         description: The ID of the domain associated with the user's account.
         required: true
+        metadata:
+          api-parameter: domainid
       username:
         type: string
         description: The username of the user.
