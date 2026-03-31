@@ -20,11 +20,13 @@ import com.cloud.api.ApiDispatcher;
 import com.cloud.api.ApiGsonHelper;
 import com.cloud.api.ApiServer;
 import com.cloud.exception.InvalidParameterValueException;
+import com.cloud.utils.Pair;
 import com.cloud.utils.UuidUtils;
 import com.cloud.utils.component.ComponentContext;
 import com.cloud.utils.db.EntityManager;
 import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.api.BaseAsyncCmd;
+import org.apache.cloudstack.api.BaseAsyncCreateCmd;
 import org.apache.cloudstack.api.BaseCmd;
 import org.apache.cloudstack.api.command.user.vmgroup.CreateVMGroupCmd;
 import org.apache.cloudstack.api.command.user.vpc.CreateVPCCmd;
@@ -187,12 +189,12 @@ public class ToscaOrchestrator {
         Class<?> apiClass = apiServer.getCmdClass(nodeTemplate.getType().getProvisioningApi());
         try {
             Object cmd = apiClass.getDeclaredConstructor().newInstance();
-            if (cmd instanceof BaseAsyncCmd) {
-                dispatchProvisioningAsynchronousCommand((BaseAsyncCmd) cmd, nodeTemplate.getApiParams(), callContext);
-            } else if (cmd instanceof BaseCmd) {
+            if (cmd instanceof BaseAsyncCreateCmd) {
+                dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, nodeTemplate.getApiParams(), callContext);
+            } else if (cmd instanceof BaseCmd && !(cmd instanceof BaseAsyncCmd)) {
                 dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams(), callContext);
             } else {
-                throw new Exception();
+                throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
             }
         } catch (Exception e) {
             logger.error("Could not instantiate the API class [{}].", apiClass.getName());
@@ -200,45 +202,49 @@ public class ToscaOrchestrator {
         }
     }
 
-    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
-        CreateVPCCmd cmd = new CreateVPCCmd();
-        cmd = ComponentContext.inject(cmd);
+    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams, CallContext callContext) {
+        CallContext.register(callContext, null);
+        syncCmd = ComponentContext.inject(syncCmd);
+        try {
+            apiDispatcher.dispatch(syncCmd, apiParams, false);
+            logger.info(syncCmd.getResponseObject());
+        } catch (Exception e) {
+            throw new CloudRuntimeException(String.format("Unable to dispatch the API command [%s].", syncCmd.getCommandName()));
+        } finally {
+            CallContext.unregister();
+        }
+    }
+
+    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
+        asyncCmd = ComponentContext.inject(asyncCmd);
         try {
             CallContext.register(callContext, null);
-            apiDispatcher.dispatchCreateCmd(cmd, apiParams);
+            apiDispatcher.dispatchCreateCmd(asyncCmd, apiParams);
             apiParams.put("ctxStartEventId", "1");
-            Long objectId = ObjectUtils.defaultIfNull(cmd.getEntityId(), cmd.getApiResourceId());
+            Long objectId = ObjectUtils.defaultIfNull(asyncCmd.getEntityId(), asyncCmd.getApiResourceId());
             apiParams.put("id", objectId.toString());
-            AsyncJobVO job = new AsyncJobVO("", callContext.getCallingUserId(), callContext.getCallingAccountId(), CreateVPCCmd.class.getName(),
-                    ApiGsonHelper.getBuilder().create().toJson(apiParams), objectId,
-                    cmd.getApiResourceType() != null ? cmd.getApiResourceType().toString() : null,
-                    null);
-            job.setDispatcher(asyncJobDispatcher.getName());
-            long jobId = asyncJobManager.submitAsyncJob(job);
+            AsyncJobVO job = dispatchAsyncJob(asyncCmd, apiParams, callContext);
             AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
-            executionContext.joinJob(jobId);
+            executionContext.joinJob(job.getId());
             Outcome<String> outcome = new NodeTemplateProvisioningOutcome(job);
             String jobResult = outcome.get();
             logger.info("Provisioning outcome: {}", jobResult);
             asyncJobManager.expungeAsyncJob((AsyncJobVO) executionContext.getJob());
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams, CallContext callContext) {
-        logger.debug("Constructing provisioning command");
-        CallContext.register(callContext, null);
-        CreateVMGroupCmd cmd = new CreateVMGroupCmd();
-        cmd = ComponentContext.inject(cmd);
-        try {
-            apiDispatcher.dispatch(cmd, apiParams, false);
-            logger.info(cmd.getResponseObject());
-        } catch (Exception e) {
-
         } finally {
             CallContext.unregister();
         }
+    }
+
+    private AsyncJobVO dispatchAsyncJob(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
+        AsyncJobVO job = new AsyncJobVO("", callContext.getCallingUserId(), callContext.getCallingAccountId(), CreateVPCCmd.class.getName(),
+                ApiGsonHelper.getBuilder().create().toJson(apiParams), objectId,
+                asyncCmd.getApiResourceType() != null ? asyncCmd.getApiResourceType().toString() : null,
+                null);
+        job.setDispatcher(asyncJobDispatcher.getName());
+        asyncJobManager.submitAsyncJob(job);
+        return job;
     }
 
     private class NodeTemplateProvisioningOutcome extends OutcomeImpl<String> {
