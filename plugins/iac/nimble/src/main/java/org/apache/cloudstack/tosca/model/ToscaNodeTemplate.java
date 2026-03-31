@@ -62,7 +62,13 @@ public class ToscaNodeTemplate {
         this.unresolvedPropertiesByGetAttribute = unresolvedPropertiesByGetAttribute;
     }
 
-    public String getApiName() {
-        return "createVPC";
+    public Map<String, String> getApiParams() {
+        Map<String, String> params = new HashMap<>();
+
+        for (ToscaProperty property : properties.values()) {
+            params.putAll(property.getApiRepresentationOfProperty());
+        }
+
+        return params;
     }
 }

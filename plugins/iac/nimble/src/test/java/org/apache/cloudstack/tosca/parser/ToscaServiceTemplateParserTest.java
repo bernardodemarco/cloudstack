@@ -63,32 +63,34 @@ public class ToscaServiceTemplateParserTest {
 
     private ToscaNodeType getVmNodeTypeForTests() {
         ToscaFunction.ToscaBooleanFunction validTypes = new ToscaBooleanFunctions.ValidValues(List.of("SSVM", "VR", "CPVM"));
-        ToscaPropertyDefinition type = new ToscaPropertyDefinition("type", "Type of system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, validTypes, null);
-        ToscaPropertyDefinition vcpus = new ToscaPropertyDefinition("vcpus", "Number of vCPUs.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.INTEGER), true, null, null);
-        ToscaPropertyDefinition startVm = new ToscaPropertyDefinition("start-vm", "Start VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.BOOLEAN), false, null, null);
-        ToscaPropertyDefinition maxUsage = new ToscaPropertyDefinition("max-usage", "Maximum usage.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.FLOAT), false, null, null);
-        ToscaPropertyDefinition sshKeyPairId = new ToscaPropertyDefinition("ssh-key-pair-id", "SSH key pair ID.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, null);
-        ToscaPropertyDefinition sshKeyPairName = new ToscaPropertyDefinition("ssh-key-pair-name", "SSH key pair name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, null);
+        ToscaPropertyDefinition type = new ToscaPropertyDefinition("type", "Type of system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, validTypes, "type");
+        ToscaPropertyDefinition vcpus = new ToscaPropertyDefinition("vcpus", "Number of vCPUs.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.INTEGER), true, null, "vcpus");
+        ToscaPropertyDefinition startVm = new ToscaPropertyDefinition("start-vm", "Start VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.BOOLEAN), false, null, "startvm");
+        ToscaPropertyDefinition maxUsage = new ToscaPropertyDefinition("max-usage", "Maximum usage.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.FLOAT), false, null, "maxusage");
+        ToscaPropertyDefinition sshKeyPairId = new ToscaPropertyDefinition("ssh-key-pair-id", "SSH key pair ID.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, "sshkeypairid");
+        ToscaPropertyDefinition sshKeyPairName = new ToscaPropertyDefinition("ssh-key-pair-name", "SSH key pair name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, "sshkeypairname");
 
-        ToscaPropertyDefinition nameDataTypeProperty = new ToscaPropertyDefinition("name", "Name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, null);
-        ToscaPropertyDefinition valueDataTypeProperty = new ToscaPropertyDefinition("value", "Value.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, null);
+        ToscaPropertyDefinition nameDataTypeProperty = new ToscaPropertyDefinition("name", "Name.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, "name");
+        ToscaPropertyDefinition valueDataTypeProperty = new ToscaPropertyDefinition("value", "Value.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), false, null, "value");
         ToscaDataTypeDefinition nameValueMappingDataType = new ToscaDataTypeDefinition("NameValueMapping", Map.of(nameDataTypeProperty.getName(), nameDataTypeProperty, valueDataTypeProperty.getName(), valueDataTypeProperty));
-        ToscaPropertyDefinition nameValueMappingList = new ToscaPropertyDefinition("name-value-mapping", "Name value mapping.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofDataType(nameValueMappingDataType)), false, null, null);
+        ToscaPropertyDefinition nameValueMappingList = new ToscaPropertyDefinition("name-value-mapping", "Name value mapping.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofDataType(nameValueMappingDataType)), false, null, "namevaluemapping");
+        ToscaPropertyDefinition nameValueSingleMap = new ToscaPropertyDefinition("name-value-single-map", "Name value single map.", ToscaTypeDefinition.ofDataType(nameValueMappingDataType), false, null, "namevaluesinglemap");
 
-        ToscaPropertyDefinition ipAddresses = new ToscaPropertyDefinition("ip-addresses", "IPs.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, null);
-        ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.MAP, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, null);
+        ToscaPropertyDefinition ipAddresses = new ToscaPropertyDefinition("ip-addresses", "IPs.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, "apiaddresses");
+        ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.MAP, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, "offeringdetails");
         ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
 
         return new ToscaNodeType("Vm",
                 Map.of(type.getName(), type, vcpus.getName(), vcpus, startVm.getName(), startVm,
                         maxUsage.getName(), maxUsage, sshKeyPairId.getName(), sshKeyPairId, sshKeyPairName.getName(), sshKeyPairName,
-                        nameValueMappingList.getName(), nameValueMappingList, ipAddresses.getName(), ipAddresses, details.getName(), details),
+                        nameValueMappingList.getName(), nameValueMappingList, nameValueSingleMap.getName(), nameValueSingleMap,
+                        ipAddresses.getName(), ipAddresses, details.getName(), details),
                 Map.of(uuid.getName(), uuid), "createApi", "deleteApi");
     }
 
     private ToscaNodeType getSshKeyPairTypeForTests() {
-        ToscaPropertyDefinition name = new ToscaPropertyDefinition("name", "Name of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, null);
-        ToscaPropertyDefinition publicKey = new ToscaPropertyDefinition("public-key", "Public key of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, null);
+        ToscaPropertyDefinition name = new ToscaPropertyDefinition("name", "Name of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, "name");
+        ToscaPropertyDefinition publicKey = new ToscaPropertyDefinition("public-key", "Public key of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, "publickey");
 
         ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
         return new ToscaNodeType("SshPair", Map.of(name.getName(), name, publicKey.getName(), publicKey), Map.of(uuid.getName(), uuid), "registerSSHKeyPair", "deleteSSHKeyPair");
@@ -546,4 +548,34 @@ public class ToscaServiceTemplateParserTest {
         });
         Assert.assertEquals(2, StringUtils.countMatches(exception.getMessage(), "ERROR"));
     }
+
+    @Test
+    public void getApiParamsTestEnsureNodePropertiesAreCorrectlyConvertedToTheExpectedApiParamsFormat() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, ssh-key-pair-name: keypairname, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2], offering-details: {detail1: value1, detail2: value2}, name-value-mapping: [{name: name1, value: value1}, {name: name2, value: value2}], name-value-single-map: {name: namevaluesingmapname, value: namevaluesingmapvalue}}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaServiceTemplateParserSpy.parseServiceTemplate(serviceTemplateYaml, getToscaProfileForTests(), null);
+
+        ToscaNodeTemplate vm = serviceTemplate.getNodeTemplates().get("instance");
+        Map<String, String> vmPairApiParams = vm.getApiParams();
+        Assert.assertEquals("VR", vmPairApiParams.get(vm.getProperty("type").getDefinition().getApiParameter()));
+        Assert.assertEquals("keypairname", vmPairApiParams.get(vm.getProperty("ssh-key-pair-name").getDefinition().getApiParameter()));
+        Assert.assertEquals("2", vmPairApiParams.get(vm.getProperty("vcpus").getDefinition().getApiParameter()));
+        Assert.assertEquals("10.0.0.1,10.0.0.2", vmPairApiParams.get(vm.getProperty("ip-addresses").getDefinition().getApiParameter()));
+        String offeringDetailsBaseName = vm.getProperty("offering-details").getDefinition().getApiParameter();
+        Assert.assertEquals("value1", vmPairApiParams.get(offeringDetailsBaseName + "[0].detail1"));
+        Assert.assertEquals("value2", vmPairApiParams.get(offeringDetailsBaseName + "[0].detail2"));
+        String nameValueMappingBaseName = vm.getProperty("name-value-mapping").getDefinition().getApiParameter();
+        Assert.assertEquals("name1", vmPairApiParams.get(nameValueMappingBaseName + "[0].name"));
+        Assert.assertEquals("value1", vmPairApiParams.get(nameValueMappingBaseName + "[0].value"));
+        Assert.assertEquals("name2", vmPairApiParams.get(nameValueMappingBaseName + "[1].name"));
+        Assert.assertEquals("value2", vmPairApiParams.get(nameValueMappingBaseName + "[1].value"));
+        String nameValueSingleMap = vm.getProperty("name-value-single-map").getDefinition().getApiParameter();
+        Assert.assertEquals("namevaluesingmapname", vmPairApiParams.get(nameValueSingleMap + "[0].name"));
+        Assert.assertEquals("namevaluesingmapvalue", vmPairApiParams.get(nameValueSingleMap + "[0].value"));
+
+        ToscaNodeTemplate sshPair = serviceTemplate.getNodeTemplates().get("pair");
+        Map<String, String> sshPairApiParams = sshPair.getApiParams();
+        Assert.assertEquals("Pair", sshPairApiParams.get(sshPair.getProperty("name").getDefinition().getApiParameter()));
+        Assert.assertEquals("Public Key", sshPairApiParams.get(sshPair.getProperty("public-key").getDefinition().getApiParameter()));
+    }
+
 }

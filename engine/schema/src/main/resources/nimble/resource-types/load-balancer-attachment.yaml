@@ -26,6 +26,8 @@ data_types:
         type: string
         description: The ID of the virtual machine.
         required: true
+        metadata:
+          api-parameter: virtualmachineid
       ip:
         type: string
         description: The internal IP address of the virtual machine.

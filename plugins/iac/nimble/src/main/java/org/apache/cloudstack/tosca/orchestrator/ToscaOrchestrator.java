@@ -184,13 +184,13 @@ public class ToscaOrchestrator {
     }
 
     private void dispatchProvisioningCommand(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
-        Class<?> apiClass = apiServer.getCmdClass(nodeTemplate.getApiName());
+        Class<?> apiClass = apiServer.getCmdClass(nodeTemplate.getType().getProvisioningApi());
         try {
             Object cmd = apiClass.getDeclaredConstructor().newInstance();
             if (cmd instanceof BaseAsyncCmd) {
-                dispatchProvisioningAsynchronousCommand((BaseAsyncCmd) cmd, callContext);
+                dispatchProvisioningAsynchronousCommand((BaseAsyncCmd) cmd, nodeTemplate.getApiParams(), callContext);
             } else if (cmd instanceof BaseCmd) {
-                dispatchProvisioningSynchronousCommand((BaseCmd) cmd, callContext);
+                dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams(), callContext);
             } else {
                 throw new Exception();
             }
@@ -200,25 +200,17 @@ public class ToscaOrchestrator {
         }
     }
 
-    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCmd asyncCmd, CallContext callContext) {
-        Map<String, String> params = new HashMap<>(Map.of(
-                "zoneid", "309ea14d-ce26-44eb-ac05-53106b0ccb17",
-                "name", "vpc-" + new Random().nextInt(100000),
-                "vpcofferingid", "3e70fd9b-bc5a-4d4b-89f1-40dc756e8058",
-                "cidr", "10.0.0.0/16",
-                "ctxUserId", String.valueOf(callContext.getCallingUserId()),
-                "ctxAccountId", String.valueOf(callContext.getCallingAccountId())
-        ));
+    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
         CreateVPCCmd cmd = new CreateVPCCmd();
         cmd = ComponentContext.inject(cmd);
         try {
             CallContext.register(callContext, null);
-            apiDispatcher.dispatchCreateCmd(cmd, params);
-            params.put("ctxStartEventId", "1");
+            apiDispatcher.dispatchCreateCmd(cmd, apiParams);
+            apiParams.put("ctxStartEventId", "1");
             Long objectId = ObjectUtils.defaultIfNull(cmd.getEntityId(), cmd.getApiResourceId());
-            params.put("id", objectId.toString());
+            apiParams.put("id", objectId.toString());
             AsyncJobVO job = new AsyncJobVO("", callContext.getCallingUserId(), callContext.getCallingAccountId(), CreateVPCCmd.class.getName(),
-                    ApiGsonHelper.getBuilder().create().toJson(params), objectId,
+                    ApiGsonHelper.getBuilder().create().toJson(apiParams), objectId,
                     cmd.getApiResourceType() != null ? cmd.getApiResourceType().toString() : null,
                     null);
             job.setDispatcher(asyncJobDispatcher.getName());
@@ -234,18 +226,13 @@ public class ToscaOrchestrator {
         }
     }
 
-    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, CallContext callContext) {
+    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams, CallContext callContext) {
         logger.debug("Constructing provisioning command");
         CallContext.register(callContext, null);
         CreateVMGroupCmd cmd = new CreateVMGroupCmd();
         cmd = ComponentContext.inject(cmd);
-        Map<String, String> params = Map.of(
-                "domainid", "1",
-                "account", "admin",
-                "name", "instance-group-" + new Random().nextInt(100000)
-        );
         try {
-            apiDispatcher.dispatch(cmd, params, false);
+            apiDispatcher.dispatch(cmd, apiParams, false);
             logger.info(cmd.getResponseObject());
         } catch (Exception e) {
 

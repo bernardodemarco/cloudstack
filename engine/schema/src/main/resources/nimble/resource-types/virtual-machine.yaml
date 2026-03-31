@@ -27,7 +27,7 @@ data_types:
         description: The ID of the network.
         required: true
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       ip:
         type: string
         description: The IP address of the network.

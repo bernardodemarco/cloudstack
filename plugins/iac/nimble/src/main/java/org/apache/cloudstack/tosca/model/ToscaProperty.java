@@ -16,12 +16,19 @@
 // under the License.
 package org.apache.cloudstack.tosca.model;
 
+import org.apache.cloudstack.tosca.parser.ToscaYamlHelper;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public class ToscaProperty {
     private final ToscaPropertyDefinition definition;
     private final Object rawValue;
-    private volatile String evaluatedValue;
+    private volatile Object evaluatedValue;
 
-    public ToscaProperty(ToscaPropertyDefinition definition, Object rawValue, String evaluatedValue) {
+    public ToscaProperty(ToscaPropertyDefinition definition, Object rawValue, Object evaluatedValue) {
         this.definition = definition;
         this.rawValue = rawValue;
         this.evaluatedValue = evaluatedValue;
@@ -31,15 +38,58 @@ public class ToscaProperty {
         return rawValue;
     }
 
-    public String getEvaluatedValue() {
+    public Object getEvaluatedValue() {
         return evaluatedValue;
     }
 
-    public void setEvaluatedValue(String evaluatedValue) {
+    public void setEvaluatedValue(Object evaluatedValue) {
         this.evaluatedValue = evaluatedValue;
     }
 
     public ToscaPropertyDefinition getDefinition() {
         return definition;
+    }
+
+    protected Map<String, String> getApiRepresentationOfProperty() {
+        ToscaTypeDefinition.Kind kind = definition.getType().getKind();
+        if (kind == ToscaTypeDefinition.Kind.PRIMITIVE) {
+            return Map.of(definition.getApiParameter(), String.valueOf(evaluatedValue));
+        }
+
+        if (kind == ToscaTypeDefinition.Kind.COLLECTION && definition.getType().getCollectionType() == ToscaCollectionType.LIST) {
+            return getApiRepresentationOfLists();
+        }
+
+        if (kind == ToscaTypeDefinition.Kind.COLLECTION && definition.getType().getCollectionType() == ToscaCollectionType.MAP) {
+            return getApiRepresentationOfMaps(0, ToscaYamlHelper.asMap(evaluatedValue), null);
+        }
+
+        return getApiRepresentationOfMaps(0, ToscaYamlHelper.asMap(evaluatedValue), definition.getType().getDataType());
+    }
+
+    private Map<String, String> getApiRepresentationOfLists() {
+        ToscaTypeDefinition.Kind entrySchemaKind = definition.getType().getEntrySchema().getKind();
+        if (entrySchemaKind == ToscaTypeDefinition.Kind.PRIMITIVE) {
+            List<String> items = ToscaYamlHelper.asList(evaluatedValue).stream().map(item -> String.valueOf((Object) item)).collect(Collectors.toList());
+            return Map.of(definition.getApiParameter(), String.join(",", items));
+        }
+
+        Map<String, String> params = new HashMap<>();
+        List<?> items = ToscaYamlHelper.asList(evaluatedValue);
+        ToscaDataTypeDefinition dataTypeDefinition = definition.getType().getEntrySchema().getDataType();
+        for (int i = 0; i < items.size(); i++) {
+            params.putAll(getApiRepresentationOfMaps(i, ToscaYamlHelper.asMap(items.get(i)), dataTypeDefinition));
+        }
+        return params;
+    }
+
+    private Map<String, String> getApiRepresentationOfMaps(int index, Map<String, Object> map, ToscaDataTypeDefinition dataTypeDefinition) {
+        Map<String, String> params = new HashMap<>();
+        String key = String.format("%s[%d].", definition.getApiParameter(), index);
+        map.forEach((field, value) -> {
+            String apiFieldName = dataTypeDefinition == null ? field : dataTypeDefinition.getProperties().get(field).getApiParameter();
+            params.put(key + apiFieldName, String.valueOf(value));
+        });
+        return params;
     }
 }
