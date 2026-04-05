@@ -20,16 +20,12 @@ import com.cloud.api.ApiDispatcher;
 import com.cloud.api.ApiGsonHelper;
 import com.cloud.api.ApiServer;
 import com.cloud.exception.InvalidParameterValueException;
-import com.cloud.utils.Pair;
-import com.cloud.utils.UuidUtils;
 import com.cloud.utils.component.ComponentContext;
 import com.cloud.utils.db.EntityManager;
 import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.api.BaseAsyncCmd;
 import org.apache.cloudstack.api.BaseAsyncCreateCmd;
 import org.apache.cloudstack.api.BaseCmd;
-import org.apache.cloudstack.api.command.user.vmgroup.CreateVMGroupCmd;
-import org.apache.cloudstack.api.command.user.vpc.CreateVPCCmd;
 import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.framework.jobs.AsyncJob;
 import org.apache.cloudstack.framework.jobs.AsyncJobDispatcher;
@@ -48,7 +44,6 @@ import org.apache.cloudstack.tosca.parser.ToscaParser;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -58,9 +53,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -105,19 +98,20 @@ public class ToscaOrchestrator {
     private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<String>> futures = new HashMap<>();
+        CallContext callContext = CallContext.current();
         getServiceTemplateTopologicalSort(serviceTemplate).forEach((node, dependencies) -> {
             ToscaNodeTemplate nodeTemplate = serviceTemplate.getNodeTemplates().get(node);
             CompletableFuture<String> taskFuture;
             if (dependencies.isEmpty()) {
                 logger.debug("Node [{}] has no dependencies. Building its provisioning task, which will be ready to be allocated for execution.", node);
-                taskFuture = buildNodeProvisioningTask(nodeTemplate);
+                taskFuture = buildNodeProvisioningTask(nodeTemplate, callContext);
             } else {
                 logger.debug("Node [{}] has [{}] dependencies. Building its provisioning task, which will only be allocated for execution when all dependencies are ready.", node, dependencies.size());
                 CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
                         .map((dep) -> futures.get(dep.getName())).toArray(CompletableFuture[]::new);
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
                     logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
-                    return buildNodeProvisioningTask(nodeTemplate);
+                    return buildNodeProvisioningTask(nodeTemplate, callContext);
                 });
             }
 
@@ -160,8 +154,8 @@ public class ToscaOrchestrator {
         topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
-    private CompletableFuture<String> buildNodeProvisioningTask(ToscaNodeTemplate nodeTemplate) {
-        return provisionNode(nodeTemplate)
+    private CompletableFuture<String> buildNodeProvisioningTask(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
+        return provisionNode(nodeTemplate, callContext)
 //                .orTimeout(5, TimeUnit.SECONDS)
                 .thenApply(result -> {
                     logger.debug("SUCCESS [{}] [{}]", nodeTemplate.getName(), Thread.currentThread().getName());
@@ -172,14 +166,11 @@ public class ToscaOrchestrator {
                 });
     }
 
-    private CompletableFuture<String> provisionNode(ToscaNodeTemplate nodeTemplate) {
-        CallContext callerContext = CallContext.current();
-        String newTaskLogContextId = UuidUtils.first(UUID.randomUUID().toString());
-        logger.info("Submitting new task with [logcontextid] equal to [{}] for handling the provisioning of the following node: [{}].", newTaskLogContextId, nodeTemplate.getName());
+    private CompletableFuture<String> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
         return CompletableFuture.supplyAsync(() -> {
-            ThreadContext.put("logcontextid", newTaskLogContextId);
+            CallContext.register(callContext, null);
             ManagedContextExecutor.execute(() -> {
-                dispatchProvisioningCommand(nodeTemplate, callerContext);
+                dispatchProvisioningCommand(nodeTemplate, callContext);
             });
             return "res-" + nodeTemplate.getName();
         }, executorPool);
@@ -192,7 +183,7 @@ public class ToscaOrchestrator {
             if (cmd instanceof BaseAsyncCreateCmd) {
                 dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, nodeTemplate.getApiParams(), callContext);
             } else if (cmd instanceof BaseCmd && !(cmd instanceof BaseAsyncCmd)) {
-                dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams(), callContext);
+                dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams());
             } else {
                 throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
             }
@@ -202,43 +193,42 @@ public class ToscaOrchestrator {
         }
     }
 
-    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams, CallContext callContext) {
-        CallContext.register(callContext, null);
+    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams) throws Exception {
+        logger.info("Dispatching the provisioning synchronous command [{}] with the following parameters {}.", syncCmd.getClass().getName(), apiParams);
         syncCmd = ComponentContext.inject(syncCmd);
-        try {
-            apiDispatcher.dispatch(syncCmd, apiParams, false);
-            logger.info(syncCmd.getResponseObject());
-        } catch (Exception e) {
-            throw new CloudRuntimeException(String.format("Unable to dispatch the API command [%s].", syncCmd.getCommandName()));
-        } finally {
-            CallContext.unregister();
-        }
+        apiDispatcher.dispatch(syncCmd, apiParams, false);
+        logger.info("Result of the [{}] execution: {}.", syncCmd.getClass().getName(), syncCmd.getResponseObject());
     }
 
-    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
-        asyncCmd = ComponentContext.inject(asyncCmd);
+    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) throws Exception {
+        logger.info("Dispatching the provisioning asynchronous command [{}] with the following parameters {}.", asyncCmd.getClass().getName(), apiParams);
+        AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
         try {
-            CallContext.register(callContext, null);
+            asyncCmd = ComponentContext.inject(asyncCmd);
+            logger.debug("Dispatching the create workflow for the command [{}].", asyncCmd.getClass().getName());
             apiDispatcher.dispatchCreateCmd(asyncCmd, apiParams);
-            apiParams.put("ctxStartEventId", "1");
-            Long objectId = ObjectUtils.defaultIfNull(asyncCmd.getEntityId(), asyncCmd.getApiResourceId());
-            apiParams.put("id", objectId.toString());
+
+            logger.debug("Successfully executed the create workflow for the command [{}]. Thus, dispatching its async job.", asyncCmd.getClass().getName());
             AsyncJobVO job = dispatchAsyncJob(asyncCmd, apiParams, callContext);
-            AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
             executionContext.joinJob(job.getId());
             Outcome<String> outcome = new NodeTemplateProvisioningOutcome(job);
-            String jobResult = outcome.get();
-            logger.info("Provisioning outcome: {}", jobResult);
-            asyncJobManager.expungeAsyncJob((AsyncJobVO) executionContext.getJob());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            String asyncCmdResult = outcome.get();
+            logger.info("Result of the [{}] execution: {}.", asyncJobManager.getClass().getName(), asyncCmdResult);
         } finally {
-            CallContext.unregister();
+            if (executionContext.getJob() != null) {
+                asyncJobManager.expungeAsyncJob((AsyncJobVO) executionContext.getJob());
+            }
         }
     }
 
     private AsyncJobVO dispatchAsyncJob(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
-        AsyncJobVO job = new AsyncJobVO("", callContext.getCallingUserId(), callContext.getCallingAccountId(), CreateVPCCmd.class.getName(),
+        apiParams.put("ctxStartEventId", "1");
+        Long objectId = ObjectUtils.defaultIfNull(asyncCmd.getEntityId(), asyncCmd.getApiResourceId());
+        apiParams.put("id", objectId.toString());
+        apiParams.put("ctxUserId", String.valueOf(callContext.getCallingUserId()));
+        apiParams.put("ctxAccountId", String.valueOf(callContext.getCallingAccountId()));
+
+        AsyncJobVO job = new AsyncJobVO("", callContext.getCallingUserId(), callContext.getCallingAccountId(), asyncCmd.getClass().getName(),
                 ApiGsonHelper.getBuilder().create().toJson(apiParams), objectId,
                 asyncCmd.getApiResourceType() != null ? asyncCmd.getApiResourceType().toString() : null,
                 null);

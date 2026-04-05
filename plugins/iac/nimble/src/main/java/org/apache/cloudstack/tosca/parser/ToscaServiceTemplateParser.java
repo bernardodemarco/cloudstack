@@ -19,8 +19,6 @@ package org.apache.cloudstack.tosca.parser;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.user.Account;
 import org.apache.cloudstack.tosca.functions.ToscaFunction;
-import org.apache.cloudstack.tosca.model.ToscaCollectionType;
-import org.apache.cloudstack.tosca.model.ToscaDataTypeDefinition;
 import org.apache.cloudstack.tosca.model.ToscaFieldDefinition;
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
@@ -41,7 +39,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ToscaServiceTemplateParser {
     private final Logger logger = LogManager.getLogger(ToscaServiceTemplateParser.class);

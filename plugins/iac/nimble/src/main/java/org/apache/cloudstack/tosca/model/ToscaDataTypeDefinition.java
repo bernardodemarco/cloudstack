@@ -19,8 +19,6 @@ package org.apache.cloudstack.tosca.model;
 import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
 
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ToscaDataTypeDefinition {
     private final String name;
