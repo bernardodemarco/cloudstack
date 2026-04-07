@@ -21,6 +21,9 @@ description: >
 
 node_types:
   IpAddress:
+    metadata:
+      provisioning-api: associateIpAddress
+      rollback-api: disassociateIpAddress
     properties:
       zone-id:
         type: string
@@ -33,11 +36,13 @@ node_types:
         description: "The ID of the network for which the IP address will be associated. Mutually exclusive with the 'vpc-id' property."
         required: false
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       vpc-id:
         type: string
         description: "The ID of the VPC for which the IP address will associated. Mutually exclusive with the 'network-id' property."
         required: false
+        metadata:
+          api-parameter: vpcid
     attributes:
       id:
         type: string

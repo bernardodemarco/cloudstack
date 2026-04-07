@@ -33,6 +33,9 @@ data_types:
 
 node_types:
   AutoScalingVmProfile:
+    metadata:
+      provisioning-api: createAutoScaleVmProfile
+      rollback-api: deleteAutoScaleVmProfile
     properties:
       zone-id:
         type: string
@@ -46,24 +49,26 @@ node_types:
         required: true
         metadata:
           api-parameter: serviceofferingid
+      template-id:
+        type: string
+        description: The ID of the template from which the auto deployed VMs will be provisioned.
+        required: true
+        metadata:
+          api-parameter: templateid
       other-deploy-params:
         type: list
         entry_schema:
           type: NameValueMapping
         description: Other deployment parameters.
         required: false
+        metadata:
+          api-parameter: otherdeployparams
       expunge-vm-grace-period:
         type: integer
         description: The time allowed for existing connections to get closed before a VM is expunged.
         required: false
-      name:
-        type: string
-        description: The name of the auto scaling VM profile.
-        required: false
-      description:
-        type: string
-        description: The description of the auto scaling VM profile.
-        required: false
+        metadata:
+          api-parameter: expungevmgraceperiod
       account:
         type: string
         description: "The name of the account associated with the auto scaling VM profile. It must be used with the 'domain-id' property."
@@ -84,18 +89,36 @@ node_types:
         type: string
         description: The ID of the user used to launch and destroy the VMs.
         required: false
-      network-id:
-        type: string
-        description: The ID of the network in which the auto scaling VM profile will be launched.
-        required: false
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: autoscaleuserid
       counter-parameters:
         type: list
         entry_schema:
           type: NameValueMapping
         required: false
         description: Counter parameters list.
+        metadata:
+          api-parameter: counterparam
+      user-data-id:
+        type: string
+        description: The ID of the user data.
+        required: false
+        metadata:
+          api-parameter: userdataid
+      user-data-details:
+        type: map
+        entry_schema:
+          type: string
+        description: User data details.
+        required: false
+        metadata:
+          api-parameter: userdatadetails
+      user-data:
+        type: string
+        description: User data.
+        required: false
+        metadata:
+          api-parameter: userdata
     attributes:
       id:
         type: string

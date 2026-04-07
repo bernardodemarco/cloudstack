@@ -21,16 +21,25 @@ description: >
 
 node_types:
   VolumeAttachment:
+    metadata:
+      provisioning-api: attachVolume
+      rollback-api: detachVolume
     properties:
       volume-id:
         type: string
         description: The ID of the volume to be attached.
         required: true
+        metadata:
+          api-parameter: id
       virtual-machine-id:
         type: string
         description: The ID of the VM to which the volume will be attached.
         required: true
+        metadata:
+          api-parameter: virtualmachineid
       device-id:
         type: string
         description: The ID of the device to map the volume to the guest operating system.
         required: false
+        metadata:
+          api-parameter: deviceid

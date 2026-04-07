@@ -21,11 +21,16 @@ description: >
 
 node_types:
   PortForwardingRule:
+    metadata:
+      provisioning-api: createPortForwardingRule
+      rollback-api: deletePortForwardingRule
     properties:
       ip-address-id:
         type: string
         description: The ID of the public IP address.
         required: true
+        metadata:
+          api-parameter: ipaddressid
       protocol:
         type: string
         description: "The protocol of the port forwarding rule. Valid values are ''TCP' and 'UDP'."
@@ -35,26 +40,38 @@ node_types:
         type: integer
         description: The starting private port of the port forwarding rule.
         required: true
+        metadata:
+          api-parameter: privateport
       private-end-port:
         type: integer
         description: The ending private port of the port forwarding rule.
         required: false
+        metadata:
+          api-parameter: privateendport
       public-start-port:
         type: integer
         description: The starting public port of the port forwarding rule.
         required: true
+        metadata:
+          api-parameter: publicport
       public-end-port:
         type: integer
         description: The ending public port of the port forwarding rule.
         required: false
+        metadata:
+          api-parameter: publicendport
       virtual-machine-id:
         type: string
         description: The ID of the virtual machine.
         required: true
+        metadata:
+          api-parameter: virtualmachineid
       vm-guest-ip:
         type: string
         description: The VM IP address for the port forwarding rule.
         required: false
+        metadata:
+          api-parameter: vmguestip
       network-id:
         type: string
         description: >
@@ -62,18 +79,22 @@ node_types:
           Required for when the public IP address is not associated with any guest network.
         required: false
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       cidr-list:
         type: list
         entry_schema:
           type: string
         description: The source CIDR list to allow traffic from.
         required: false
+        metadata:
+          api-parameter: cidrlist
       open-firewall:
         type: boolean
         description: >
           If true, firewall rules for the starting and ending public ports are automatically created.
         required: false
+        metadata:
+          api-parameter: openfirewall
     attributes:
       id:
         type: string

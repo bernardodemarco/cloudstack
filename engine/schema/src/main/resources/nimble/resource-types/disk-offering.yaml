@@ -21,6 +21,9 @@ description: >
 
 node_types:
   DiskOffering:
+    metadata:
+      provisioning-api: createDiskOffering
+      rollback-api: deleteDiskOffering
     properties:
       name:
         type: string
@@ -30,6 +33,8 @@ node_types:
         type: string
         description: Display text of the disk offering.
         required: false
+        metadata:
+          api-parameter: displaytext
       zone-id:
         type: string
         description: The ID of the availability zone. If not specified, the disk offering will be public.
@@ -47,16 +52,22 @@ node_types:
         description: "The type of storage used by the disk offering. Valid values are 'local' and 'shared'."
         required: false
         validation: { $valid_values: [ $value, [ local, shared ] ] }
+        metadata:
+          api-parameter: storagetype
       provisioning-type:
         type: string
         description: "The type of provisioning used by the disk offering. Valid values are 'thin', 'sparse' and 'fat'."
         required: false
         validation: { $valid_values: [ $value, [ thin, sparse, fat ] ] }
+        metadata:
+          api-parameter: provisioningtype
       cache-mode:
         type: string
         description: "The cache mode used by the disk offering. Valid values are 'none', 'writethrough', 'writeback' and 'hypervisor default'."
         required: false
         validation: { $valid_values: [ $value, [ none, writethrough, writeback, hypervisor default ] ] }
+        metadata:
+          api-parameter: cachemode
       encrypt:
         type: boolean
         description: If true, the disk offering will be encrypted.
@@ -65,10 +76,14 @@ node_types:
         type: boolean
         description: Indicates whether the resize operation will be allowed for disks created with this disk offering.
         required: false
+        metadata:
+          api-parameter: disksizestrictness
       disk-size:
         type: integer
         description: The disk size of the disk offering in GB.
         required: false
+        metadata:
+          api-parameter: disksize
       customized:
         type: boolean
         description: If true, the disk offering is customized, i.e., its size is arbitrarily defined.
@@ -79,66 +94,98 @@ node_types:
           type: string
         description: The storage tags of the disk offering.
         required: false
+        metadata:
+          api-parameter: storagetags
       customized-iops:
         type: boolean
         description: Whether the disk offering IOPS is custom or not.
         required: false
+        metadata:
+          api-parameter: customizediops
       min-iops:
         type: integer
         description: The minimum IOPS for the disk offering.
         required: false
+        metadata:
+          api-parameter: miniops
       max-iops:
         type: integer
         description: The maximum IOPS for the disk offering.
         required: false
+        metadata:
+          api-parameter: maxiops
       iops-read-rate:
         type: integer
         description: The IO requests read rate of the disk offering.
         required: false
+        metadata:
+          api-parameter: iopsreadrate
       iops-read-rate-max:
         type: integer
         description: Burst requests read rate of the disk offering.
         required: false
+        metadata:
+          api-parameter: iopsreadratemax
       iops-read-rate-max-length:
         type: integer
         description: Burst requests read rate length (in seconds) of the disk offering.
         required: false
+        metadata:
+          api-parameter: iopsreadratemaxlength
       iops-write-rate:
         type: integer
         description: The IO requests write rate of the disk offering.
         required: false
+        metadata:
+          api-parameter: iopswriterate
       iops-write-rate-max:
         type: integer
         description: Burst IO requests write rate of the disk offering.
         required: false
+        metadata:
+          api-parameter: iopswriteratemax
       iops-write-rate-max-length:
         type: integer
         description: Burst requests write rate length (in seconds) of the disk offering.
         required: false
+        metadata:
+          api-parameter: iopswriteratemaxlength
       bytes-write-rate:
         type: integer
         description: The bytes write rate for the disk offering.
         required: false
+        metadata:
+          api-parameter: byteswriterate
       bytes-write-rate-max:
         type: integer
         description: Burst bytes write rate for the disk offering.
         required: false
+        metadata:
+          api-parameter: byteswriteratemax
       bytes-write-rate-max-length:
         type: integer
         description: Burst bytes write rate length (in seconds) for the disk offering.
         required: false
+        metadata:
+          api-parameter: byteswriteratemaxlength
       bytes-read-rate:
         type: integer
         description: The bytes read rate for the disk offering.
         required: false
+        metadata:
+          api-parameter: bytesreadrate
       bytes-read-rate-max:
         type: integer
         description: Burst bytes read rate for the disk offering.
         required: false
+        metadata:
+          api-parameter: bytesreadratemax
       bytes-read-rate-max-length:
         type: integer
         description: Burst bytes read rate length (in seconds) for the disk offering.
         required: false
+        metadata:
+          api-parameter: bytesreadratemaxlength
     attributes:
       id:
         type: string

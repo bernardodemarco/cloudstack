@@ -21,6 +21,9 @@ description: >
 
 node_types:
   Volume:
+    metadata:
+      provisioning-api: createVolume
+      rollback-api: deleteVolume
     properties:
       name:
         type: string
@@ -36,6 +39,8 @@ node_types:
         type: string
         description: The ID of the disk offering for the volume.
         required: false
+        metadata:
+          api-parameter: diskofferingid
       size:
         type: integer
         description: The size of the volume.
@@ -44,10 +49,14 @@ node_types:
         type: integer
         description: The minimum IOPS for the volume.
         required: false
+        metadata:
+          api-parameter: miniops
       max-iops:
         type: integer
         description: The maximum IOPS for the volume.
         required: false
+        metadata:
+          api-parameter: maxiops
       account:
         type: string
         description: The account name associated with the volume. It must be used with the domain-id property.
@@ -62,6 +71,8 @@ node_types:
         type: string
         description: The project ID associated with the volume.
         required: false
+        metadata:
+          api-parameter: projectid
     attributes:
       id:
         type: string

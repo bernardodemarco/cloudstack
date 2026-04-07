@@ -21,6 +21,9 @@ description: >
 
 node_types:
   SharedFilesystem:
+    metadata:
+      provisioning-api: createSharedFileSystem
+      rollback-api: expungeSharedFileSystem
     properties:
       zone-id:
         type: string
@@ -64,7 +67,7 @@ node_types:
         description: The ID of the network in which the shared filesystem will be attached to.
         required: true
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       service-offering-id:
         type: string
         description: Service offering ID for the shared filesystem VM hosting the data.
@@ -75,6 +78,8 @@ node_types:
         type: string
         description: Disk offering ID to use for the underlying storage.
         required: true
+        metadata:
+          api-parameter: diskofferingid
       size:
         type: integer
         description: The size of the shared filesystem in GiB.
@@ -89,10 +94,14 @@ node_types:
         type: integer
         description: Minimum IOPS.
         required: false
+        metadata:
+          api-parameter: miniops
       max-iops:
         type: integer
         description: Maximum IOPS.
         required: false
+        metadata:
+          api-parameter: maxiops
     attributes:
       id:
         type: string

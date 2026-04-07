@@ -21,13 +21,16 @@ description: >
 
 node_types:
   EgressFirewallRule:
+    metadata:
+      provisioning-api: createEgressFirewallRule
+      rollback-api: deleteEgressFirewallRule
     properties:
       network-id:
         type: string
         description: The ID of the network this rule belongs to.
         required: true
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       protocol:
         type: string
         description: The protocol of the egress rule.
@@ -39,28 +42,40 @@ node_types:
           type: string
         description: The CIDR list for source CIDRs.
         required: false
+        metadata:
+          api-parameter: cidrlist
       destination-cidr-list:
         type: list
         entry_schema:
           type: string
         description: The CIDR list for destination CIDRs.
         required: false
+        metadata:
+          api-parameter: destcidrlist
       start-port:
         type: integer
         description: The starting port of the rule.
         required: false
+        metadata:
+          api-parameter: startport
       end-port:
         type: integer
         description: The ending port of the rule.
         required: false
+        metadata:
+          api-parameter: endport
       icmp-type:
         type: integer
         description: The ICMP type.
         required: false
+        metadata:
+          api-parameter: icmptype
       icmp-code:
         type: integer
         description: The ICMP code.
         required: false
+        metadata:
+          api-parameter: icmpcode
     attributes:
       id:
         type: string

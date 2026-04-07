@@ -21,6 +21,9 @@ description: >
 
 node_types:
   Project:
+    metadata:
+      provisioning-api: createProject
+      rollback-api: deleteProject
     properties:
       name:
         type: string

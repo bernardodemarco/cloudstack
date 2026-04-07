@@ -21,6 +21,9 @@ description: >
 
 node_types:
   NetworkAclList:
+    metadata:
+      provisioning-api: createNetworkACLList
+      rollback-api: deleteNetworkACLList
     properties:
       name:
         type: string
@@ -34,6 +37,8 @@ node_types:
         type: string
         required: false
         description: The ID of the VPC that will be associated with the ACL List.
+        metadata:
+          api-parameter: vpcid
     attributes:
       id:
         type: string

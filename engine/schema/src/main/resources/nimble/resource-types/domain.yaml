@@ -21,6 +21,9 @@ description: >
 
 node_types:
   Domain:
+    metadata:
+      provisioning-api: createDomain
+      rollback-api: deleteDomain
     properties:
       name:
         type: string
@@ -30,6 +33,8 @@ node_types:
         type: string
         description: "ID of the parent domain. If not specified, the 'ROOT' domain is assumed."
         required: false
+        metadata:
+          api-parameter: parentdomainid
     attributes:
       id:
         type: string

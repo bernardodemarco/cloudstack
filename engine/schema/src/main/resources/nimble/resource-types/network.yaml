@@ -21,6 +21,9 @@ description: >
 
 node_types:
   Network:
+    metadata:
+      provisioning-api: createNetwork
+      rollback-api: deleteNetwork
     properties:
       zone-id:
         type: string
@@ -36,10 +39,14 @@ node_types:
         type: string
         description: The ID of the network offering that will be used to create the network.
         required: true
+        metadata:
+          api-parameter: networkofferingid
       display-text:
         type: string
         description: The display text of the network.
         required: false
+        metadata:
+          api-parameter: displaytext
       netmask:
         type: string
         description: The netmask of the network.
@@ -56,10 +63,14 @@ node_types:
         type: string
         description: The ACL ID that will be attached to the network.
         required: false
+        metadata:
+          api-parameter: aclid
       vpc-id:
         type: string
         description: The ID of the VPC in which the network will be created.
         required: false
+        metadata:
+          api-parameter: vpcid
       account:
         type: string
         description: "The name of the account associated with the network. It must be used with the 'domain-id' property."
@@ -81,32 +92,46 @@ node_types:
         description: "The scope of the network. Valid values are: 'all', 'domain' and 'project'."
         required: false
         validation: { $valid_values: [ $value, [all, domain, project] ] }
+        metadata:
+          api-parameter: acltype
       sub-domain-access:
         type: boolean
         description: >
           "Indicates whether sub-domain access is enabled for the network.
           It should be used when the 'scope' property is set to 'domain'."
         required: false
+        metadata:
+          api-parameter: subdomainaccess
       source-nat-ip-address:
         type: string
         description: The IPv4 source NAT IP address of the network.
         required: false
+        metadata:
+          api-parameter: sourcenatipaddress
       first-dns:
         type: string
         description: The first IPv4 DNS of the network.
         required: false
+        metadata:
+          api-parameter: dns1
       second-dns:
         type: string
         description: The second IPv4 DNS of the network.
         required: false
+        metadata:
+          api-parameter: dns2
       start-ip:
         type: string
         description: The starting IPv4 address of the network.
         required: false
+        metadata:
+          api-parameter: startip
       end-ip:
         type: string
         description: The ending IPv4 address of the network.
         required: false
+        metadata:
+          api-parameter: endip
     attributes:
       id:
         type: string

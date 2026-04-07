@@ -21,6 +21,9 @@ description: >
 
 node_types:
   User:
+    metadata:
+      provisioning-api: createUser
+      rollback-api: deleteUser
     properties:
       account:
         type: string
@@ -48,10 +51,14 @@ node_types:
         type: string
         description: The first name of the user.
         required: true
+        metadata:
+          api-parameter: firstname
       last-name:
         type: string
         description: The last name of the user.
         required: true
+        metadata:
+          api-parameter: lastname
       timezone:
         type: string
         description: The timezone of the user.

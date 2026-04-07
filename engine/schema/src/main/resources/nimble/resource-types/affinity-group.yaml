@@ -21,6 +21,9 @@ description: >
 
 node_types:
   AffinityGroup:
+    metadata:
+      provisioning-api: createAffinityGroup
+      rollback-api: deleteAffinityGroup
     properties:
       name:
         type: string

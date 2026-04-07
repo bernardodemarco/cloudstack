@@ -21,6 +21,9 @@ description: >
 
 node_types:
   UserData:
+    metadata:
+      provisioning-api: registerUserData
+      rollback-api: deleteUserData
     properties:
       name:
         type: string

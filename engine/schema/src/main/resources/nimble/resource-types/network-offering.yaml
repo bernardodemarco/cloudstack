@@ -36,13 +36,20 @@ data_types:
         type: string
         description: The capability type.
         required: true
+        metadata:
+          api-parameter: capabilitytype
       capability-value:
         type: string
         description: The capability value.
         required: true
+        metadata:
+          api-parameter: capabilityvalue
 
 node_types:
   NetworkOffering:
+    metadata:
+      provisioning-api: createNetworkOffering
+      rollback-api: deleteNetworkOffering
     properties:
       name:
         type: string
@@ -53,14 +60,20 @@ node_types:
         description: "The type of the network created from the offering. Valid values are 'isolated', 'l2' and 'shared'."
         validation: { $valid_values: [ $value, [ isolated, l2, shared ] ] }
         required: true
+        metadata:
+          api-parameter: guestiptype
       traffic-type:
         type: string
         description: The traffic type of the network offering.
         required: true
+        metadata:
+          api-parameter: traffictype
       display-text:
         type: string
         description: Display text of the network offering.
         required: false
+        metadata:
+          api-parameter: displaytext
       zone-id:
         type: string
         description: The ID of the availability zone. If not specified, the network offering will be public.
@@ -82,27 +95,37 @@ node_types:
         description: "The internet protocol of the offering. Valid values are 'ipv4' and 'dualstack'."
         validation: { $valid_values: [ $value, [ ipv4, dualstack ] ] }
         required: false
+        metadata:
+          api-parameter: internetprotocol
       for-vpc:
         type: boolean
         description: Whether the network offering is for VPC tiers.
         required: false
+        metadata:
+          api-parameter: forvpc
       egress-default-policy:
         type: string
         description: "The default egress policy for the network created from the offering. Valid values are 'allow' and 'deny'."
         validation: { $valid_values: [ $value, [ allow, deny ] ] }
         required: false
+        metadata:
+          api-parameter: egressdefaultpolicy
       supported-services:
         type: list
         entry_schema:
           type: string
         description: The network services supported by the offering.
         required: false
+        metadata:
+          api-parameter: supportedservices
       service-provider-list:
         type: list
         entry_schema:
           type: NetworkServiceProviderMapping
         description: The network services mapped to their providers.
         required: false
+        metadata:
+          api-parameter: serviceproviderlist
       service-offering-id:
         type: string
         description: The ID of the network service offering for the network router.
@@ -118,27 +141,39 @@ node_types:
         type: boolean
         description: Whether the network offering requires a VLAN ID to be specified..
         required: false
+        metadata:
+          api-parameter: specifyvlan
       specify-ip-ranges:
         type: boolean
         description: Whether the network offering requires IP ranges to be specified.
         required: false
+        metadata:
+          api-parameter: specifyipranges
       network-rate:
         type: integer
         description: The network rate in Mbps.
         required: false
+        metadata:
+          api-parameter: networkrate
       persistent:
         type: boolean
         description: Whether the network created from this offering will be persistent.
         required: false
+        metadata:
+          api-parameter: ispersistent
       conserve-mode:
         type: boolean
         description: Whether the conserve mode is enabled.
+        metadata:
+          api-parameter: conservemode
       service-capability-list:
         type: list
         entry_schema:
           type: ServiceCapability
         description: The list of service capabilities.
         required: false
+        metadata:
+          api-parameter: servicecapabilitylist
     attributes:
       id:
         type: string

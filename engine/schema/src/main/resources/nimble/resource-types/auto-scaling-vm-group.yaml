@@ -21,6 +21,9 @@ description: >
 
 node_types:
   AutoScalingVmGroup:
+    metadata:
+      provisioning-api: createAutoScaleVmGroup
+      rollback-api: deleteAutoScaleVmGroup
     properties:
       name:
         type: string
@@ -30,30 +33,42 @@ node_types:
         type: string
         description: The auto scaling profile that contains information about the VMs in the VM group.
         required: true
+        metadata:
+          api-parameter: vmprofileid
       scale-up-policy-ids:
         type: list
         entry_schema:
           type: string
         description: List of scale up auto scaling policies.
         required: true
+        metadata:
+          api-parameter: scaleuppolicyids
       scale-down-policy-ids:
         type: list
         entry_schema:
           type: string
         description: List of scale down auto scaling policies.
         required: true
+        metadata:
+          api-parameter: scaledownpolicyids
       min-members:
         type: integer
         description: The minimum number of VMs in the VM group.
         required: true
+        metadata:
+          api-parameter: minmembers
       max-members:
         type: integer
         description: The maximum number of VMs in the VM group.
         required: true
+        metadata:
+          api-parameter: maxmembers
       load-balancer-id:
         type: string
         description: The ID of the load balancer that is associated with the VM group.
         required: true
+        metadata:
+          api-parameter: lbruleid
       interval:
         type: integer
         description: The interval in which the performance counters will be collected.

@@ -21,17 +21,24 @@ description: >
 
 node_types:
   FirewallRule:
+    metadata:
+      provisioning-api: createFirewallRule
+      rollback-api: deleteFirewallRule
     properties:
       ip-address-id:
         type: string
         required: true
         description: The ID of the public IP address for the firewall rule.
+        metadata:
+          api-parameter: ipaddressid
       cidr-list:
         type: list
         description: The CIDR list for the source CIDRs.
         required: false
         entry_schema:
           type: string
+        metadata:
+          api-parameter: cidrlist
       protocol:
         type: string
         description: The network protocol (TCP, UDP, ICMP).
@@ -41,18 +48,26 @@ node_types:
         type: integer
         required: false
         description: The starting port of the rule.
+        metadata:
+          api-parameter: startport
       end-port:
         type: integer
         required: false
         description: The ending port of the rule.
+        metadata:
+          api-parameter: endport
       icmp-type:
         type: integer
         description: The ICMP type.
         required: false
+        metadata:
+          api-parameter: icmptype
       icmp-code:
         type: integer
         description: The ICMP code.
         required: false
+        metadata:
+          api-parameter: icmpcode
     attributes:
       id:
         type: string

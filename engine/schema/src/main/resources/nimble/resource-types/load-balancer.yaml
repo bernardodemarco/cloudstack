@@ -21,6 +21,9 @@ description: >
 
 node_types:
   LoadBalancer:
+    metadata:
+      provisioning-api: createLoadBalancerRule
+      rollback-api: deleteLoadBalancerRule
     properties:
       name:
         type: string
@@ -30,10 +33,14 @@ node_types:
         type: integer
         description: The private port of the VM for which the network traffic will be load balanced to.
         required: true
+        metadata:
+          api-parameter: privateport
       public-port:
         type: integer
         description: The public port from where the network traffic will be load balanced from.
         required: true
+        metadata:
+          api-parameter: publicport
       algorithm:
         type: string
         description: "Load balancer algorithm. Valid values are 'source', 'roundrobin' and 'leastconn'."
@@ -44,11 +51,13 @@ node_types:
         description: The network for which the load balancer will be created for.
         required: false
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       ip-address-id:
         type: string
         required: false
-        description: The ID of the public IP address where the network traffic will be load balanced from..
+        description: The ID of the public IP address where the network traffic will be load balanced from.
+        metadata:
+          api-parameter: publicipid
       protocol:
         type: string
         description: "Load balancer protocol. Valid values are 'tcp', 'udp', 'tcp-proxy' and 'ssl'."
@@ -60,6 +69,8 @@ node_types:
           type: string
         description: The source CIDR list to allow traffic from.
         required: false
+        metadata:
+          api-parameter: cidrlist
       account:
         type: string
         description: "The name of the account associated with the load balancer. It must be used with the 'domain-id' property."

@@ -35,20 +35,29 @@ data_types:
 
 node_types:
   LoadBalancerAttachment:
+    metadata:
+      provisioning-api: assignToLoadBalancerRule
+      rollback-api: removeFromLoadBalancerRule
     properties:
       load-balancer-id:
         type: string
         description: The ID of the load balancer.
         required: true
+        metadata:
+          api-parameter: id
       virtual-machine-ids:
         type: list
         entry_schema:
           type: string
         description: The list of IDs of the virtual machines to attach to the load balancer.
         required: true
+        metadata:
+          api-parameter: virtualmachineids
       virtual-machine-ip-map:
         type: list
         entry_schema:
           type: VirtualMachineIpMapping
         description: The mapping between virtual machine IDs and their internal IP addresses.
         required: true
+        metadata:
+          api-parameter: vmidipmap

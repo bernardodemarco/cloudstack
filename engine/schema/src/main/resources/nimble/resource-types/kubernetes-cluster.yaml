@@ -88,7 +88,7 @@ node_types:
         description: The ID of the network in which the cluster will be launched.
         required: false
         metadata:
-          api-parameter: kubernetesversionid
+          api-parameter: networkid
       node-root-disk-size:
         type: integer
         description: Root disk size (GB) for each node.

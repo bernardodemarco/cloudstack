@@ -21,16 +21,34 @@ description: >
 
 node_types:
   StaticNat:
+    metadata:
+      provisioning-api: enableStaticNat
+      rollback-api: disableStaticNat
     properties:
       ip-address-id:
         type: string
         description: The ID of the public IP address for which the static NAT is enabled.
         required: true
+        metadata:
+          api-parameter: ipaddressid
+      network-id:
+        type: string
+        description: >
+          The network of the VM for which the static NAT will be enabled. This field
+          is only required for VPCs, when the public IP address is not yet associated with
+          any guest network.
+        required: false
+        metadata:
+          api-parameter: networkid
       virtual-machine-id:
         type: string
         description: The ID of the virtual machine for which the static NAT is enabled.
         required: true
+        metadata:
+          api-parameter: virtualmachineid
       vm-guest-ip:
         type: string
         description: The VM IP address to forward the static NAT traffic to.
         required: false
+        metadata:
+          api-parameter: vmguestip
