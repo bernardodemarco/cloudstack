@@ -138,7 +138,7 @@ node_types:
         description: The IP addresses of the networks in which the VM will be launched.
         required: false
         metadata:
-          api-parameter: ipnetworklist
+          api-parameter: iptonetworklist
       password:
         type: string
         description: The password for the VM.

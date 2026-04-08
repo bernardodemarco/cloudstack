@@ -71,4 +71,16 @@ public class ToscaNodeTemplate {
 
         return params;
     }
+
+    public void resolveAttributes(Map<String, Object> potentialAttributes) {
+        type.getAttributes().forEach((name, definition) -> {
+//            get metadata from the response->retrieve from the metadata's value
+//            and, add logs :)
+
+            Object value = potentialAttributes.get(name);
+            if (value != null) {
+                attributes.put(name, value);
+            }
+        });
+    }
 }

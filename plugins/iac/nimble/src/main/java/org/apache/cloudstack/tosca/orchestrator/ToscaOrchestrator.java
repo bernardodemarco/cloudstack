@@ -18,7 +18,9 @@ package org.apache.cloudstack.tosca.orchestrator;
 
 import com.cloud.api.ApiDispatcher;
 import com.cloud.api.ApiGsonHelper;
+import com.cloud.api.ApiSerializerHelper;
 import com.cloud.api.ApiServer;
+import com.cloud.api.response.ApiResponseSerializer;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.utils.component.ComponentContext;
 import com.cloud.utils.db.EntityManager;
@@ -26,6 +28,7 @@ import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.api.BaseAsyncCmd;
 import org.apache.cloudstack.api.BaseAsyncCreateCmd;
 import org.apache.cloudstack.api.BaseCmd;
+import org.apache.cloudstack.api.ResponseObject;
 import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.framework.jobs.AsyncJob;
 import org.apache.cloudstack.framework.jobs.AsyncJobDispatcher;
@@ -180,27 +183,30 @@ public class ToscaOrchestrator {
         Class<?> apiClass = apiServer.getCmdClass(nodeTemplate.getType().getProvisioningApi());
         try {
             Object cmd = apiClass.getDeclaredConstructor().newInstance();
+            Map<String, Object> provisioningResult;
             if (cmd instanceof BaseAsyncCreateCmd) {
-                dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, nodeTemplate.getApiParams(), callContext);
+                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, nodeTemplate.getApiParams(), callContext);
             } else if (cmd instanceof BaseCmd && !(cmd instanceof BaseAsyncCmd)) {
-                dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams());
+                provisioningResult = dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams());
             } else {
                 throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
             }
+            logger.info("Result of the [{}] execution: {}.", nodeTemplate.getName(), provisioningResult);
+            nodeTemplate.resolveAttributes(provisioningResult);
         } catch (Exception e) {
-            logger.error("Could not instantiate the API class [{}].", apiClass.getName());
+            logger.error("Could Q instantiate the API class [{}]: {}.", apiClass.getName(), e.getMessage());
             throw new InvalidParameterValueException(String.format("Could not dispatch the provisioning task of [%s]. Please, check the availability of the API associated with it.", nodeTemplate.getName()));
         }
     }
 
-    private void dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams) throws Exception {
+    private Map<String, Object> dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams) throws Exception {
         logger.info("Dispatching the provisioning synchronous command [{}] with the following parameters {}.", syncCmd.getClass().getName(), apiParams);
         syncCmd = ComponentContext.inject(syncCmd);
         apiDispatcher.dispatch(syncCmd, apiParams, false);
-        logger.info("Result of the [{}] execution: {}.", syncCmd.getClass().getName(), syncCmd.getResponseObject());
+        return ApiSerializerHelper.fromSerializedStringToMap(ApiResponseSerializer.toSerializedString((ResponseObject) syncCmd.getResponseObject(), BaseCmd.RESPONSE_TYPE_JSON));
     }
 
-    private void dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) throws Exception {
+    private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) throws Exception {
         logger.info("Dispatching the provisioning asynchronous command [{}] with the following parameters {}.", asyncCmd.getClass().getName(), apiParams);
         AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
         try {
@@ -212,8 +218,7 @@ public class ToscaOrchestrator {
             AsyncJobVO job = dispatchAsyncJob(asyncCmd, apiParams, callContext);
             executionContext.joinJob(job.getId());
             Outcome<String> outcome = new NodeTemplateProvisioningOutcome(job);
-            String asyncCmdResult = outcome.get();
-            logger.info("Result of the [{}] execution: {}.", asyncJobManager.getClass().getName(), asyncCmdResult);
+            return ApiSerializerHelper.fromSerializedStringToMap(outcome.get());
         } finally {
             if (executionContext.getJob() != null) {
                 asyncJobManager.expungeAsyncJob((AsyncJobVO) executionContext.getJob());
