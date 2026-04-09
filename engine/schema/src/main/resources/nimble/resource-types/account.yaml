@@ -75,6 +75,18 @@ node_types:
       id:
         type: string
         description: The ID of the account.
-      user-id:
+      role-type:
         type: string
-        description: The ID of the account's user.
+        description: The type of the role assigned to the account.
+        metadata:
+          api-response-attribute: roletype
+      role-name:
+        type: string
+        description: The name of the role assigned to the account.
+        metadata:
+          api-response-attribute: rolename
+      domain-path:
+        type: string
+        description: The path of the domain associated with the account.
+        metadata:
+          api-response-attribute: domainpath

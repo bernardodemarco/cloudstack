@@ -85,3 +85,23 @@ node_types:
       id:
         type: string
         description: The ID of the load balancer.
+      zone-name:
+        type: string
+        description: The name of the zone the load balancer belongs to.
+        metadata:
+          api-response-attribute: zonename
+      domain-path:
+        type: string
+        description: The domain path of the load balancer's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the load balancer.
+        metadata:
+          api-response-attribute: project
+      public-ip-address:
+        type: string
+        description: Public IP address of the load balancer.
+        metadata:
+          api-response-attribute: publicip

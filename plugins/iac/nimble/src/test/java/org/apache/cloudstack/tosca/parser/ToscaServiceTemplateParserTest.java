@@ -78,7 +78,7 @@ public class ToscaServiceTemplateParserTest {
 
         ToscaPropertyDefinition ipAddresses = new ToscaPropertyDefinition("ip-addresses", "IPs.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.LIST, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, "apiaddresses");
         ToscaPropertyDefinition details = new ToscaPropertyDefinition("offering-details", "Offering details.", ToscaTypeDefinition.ofCollection(ToscaCollectionType.MAP, ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING)), false, null, "offeringdetails");
-        ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
+        ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the system VM.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), "uuid");
 
         return new ToscaNodeType("Vm",
                 Map.of(type.getName(), type, vcpus.getName(), vcpus, startVm.getName(), startVm,
@@ -92,7 +92,7 @@ public class ToscaServiceTemplateParserTest {
         ToscaPropertyDefinition name = new ToscaPropertyDefinition("name", "Name of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, "name");
         ToscaPropertyDefinition publicKey = new ToscaPropertyDefinition("public-key", "Public key of the SSH key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), true, null, "publickey");
 
-        ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING));
+        ToscaAttributeDefinition uuid = new ToscaAttributeDefinition("uuid", "UUID of the key pair.", ToscaTypeDefinition.ofPrimitive(ToscaPrimitiveType.STRING), "uuid");
         return new ToscaNodeType("SshPair", Map.of(name.getName(), name, publicKey.getName(), publicKey), Map.of(uuid.getName(), uuid), "registerSSHKeyPair", "deleteSSHKeyPair");
     }
 

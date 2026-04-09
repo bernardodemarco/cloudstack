@@ -96,3 +96,13 @@ node_types:
       id:
         type: string
         description: The ID of the VPC offering.
+      zone-name:
+        type: string
+        description: The name of the zone the VPC offering belongs to.
+        metadata:
+          api-response-attribute: zone
+      domain-name:
+        type: string
+        description: The domain name associated with the VPC offering.
+        metadata:
+          api-response-attribute: domain

@@ -70,3 +70,30 @@ node_types:
       account-id:
         type: string
         description: The ID of the account associated with the user.
+        metadata:
+          api-response-attribute: accountid
+      domain-name:
+        type: string
+        description: The name of the domain associated with the user.
+        metadata:
+          api-response-attribute: domain
+      role-type:
+        type: string
+        description: The role type of the user.
+        metadata:
+          api-response-attribute: roletype
+      role-id:
+        type: string
+        description: The ID of the role associated with the user.
+        metadata:
+          api-response-attribute: roleid
+      role-name:
+        type: string
+        description: The name of the role associated with the user.
+        metadata:
+          api-response-attribute: rolename
+      user-source:
+        type: string
+        description: The source of the user (such as native, ldap and saml2).
+        metadata:
+          api-response-attribute: usersource

@@ -55,3 +55,13 @@ node_types:
       id:
         type: string
         description: The ID of the SSH key pair.
+      project-name:
+        type: string
+        description: The name of the project associated with the SSH key pair.
+        metadata:
+          api-response-attribute: project
+      domain-name:
+        type: string
+        description: The name of the domain associated with the SSH key pair.
+        metadata:
+          api-response-attribute: domain

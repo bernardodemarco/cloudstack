@@ -136,9 +136,33 @@ node_types:
       id:
         type: string
         description: ID of the network.
-      source-nat-ip-address:
+      zone-name:
         type: string
-        description: The source NAT IP address of the network.
-      source-nat-ip-id:
+        description: The name of the zone the network belongs to.
+        metadata:
+          api-response-attribute: zonename
+      network-offering-name:
         type: string
-        description: The ID of the source NAT IP of the network.
+        description: The name of the network offering used to create the network.
+        metadata:
+          api-response-attribute: networkofferingname
+      acl-name:
+        type: string
+        description: The name of the ACL associated with the VPC tier.
+        metadata:
+          api-response-attribute: aclname
+      vpc-name:
+        type: string
+        description: The name of the VPC the tier belongs to.
+        metadata:
+          api-response-attribute: vpcname
+      domain-path:
+        type: string
+        description: The domain path of the VPC's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the VPC.
+        metadata:
+          api-response-attribute: project

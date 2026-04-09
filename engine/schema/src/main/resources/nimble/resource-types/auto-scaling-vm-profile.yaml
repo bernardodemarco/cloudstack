@@ -123,3 +123,13 @@ node_types:
       id:
         type: string
         description: The ID of the auto scaling VM profile.
+      domain-path:
+        type: string
+        description: The domain path of the auto scaling VM profile's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the auto scaling VM profile.
+        metadata:
+          api-response-attribute: project

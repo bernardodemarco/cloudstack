@@ -31,6 +31,12 @@ node_types:
         required: true
         metadata:
           api-parameter: zoneid
+      ip-address:
+        type: string
+        description: The IP address to be acquired.
+        required: false
+        metadata:
+          api-parameter: ipaddress
       network-id:
         type: string
         description: "The ID of the network for which the IP address will be associated. Mutually exclusive with the 'vpc-id' property."
@@ -50,3 +56,20 @@ node_types:
       ip-address:
         type: string
         description: The acquired IP address.
+        metadata:
+          api-response-attribute: ipaddress
+      domain-path:
+        type: string
+        description: The domain path to which the public IP address belongs.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the public IP address.
+        metadata:
+          api-response-attribute: project
+      zone-name:
+        type: string
+        description: The name of the zone the public IP address belongs to.
+        metadata:
+          api-response-attribute: zonename

@@ -77,6 +77,23 @@ node_types:
       id:
         type: string
         description: ID of the volume.
-      disk-offering-id:
+      zone-name:
         type: string
-        description: The ID of the disk offering used by the volume.
+        description: Name of the zone in which the volume is created.
+        metadata:
+          api-response-attribute: zonename
+      domain-path:
+        type: string
+        description: The domain path of the volume's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the volume.
+        metadata:
+          api-response-attribute: project
+      disk-offering-name:
+        type: string
+        description: The name of the disk offering associated with the volume.
+        metadata:
+          api-response-attribute: diskofferingname

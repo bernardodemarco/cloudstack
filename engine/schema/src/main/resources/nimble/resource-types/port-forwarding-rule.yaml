@@ -99,3 +99,18 @@ node_types:
       id:
         type: string
         description: The ID of the port forwarding rule.
+      ip-address:
+        type: string
+        description: The IP address associated with the port forwarding rule.
+        metadata:
+          api-response-attribute: ipaddress
+      virtual-machine-name:
+        type: string
+        description: The name of the virtual machine associated with the port forwarding rule.
+        metadata:
+          api-response-attribute: virtualmachinename
+      virtual-machine-display-name:
+        type: string
+        description: The display name of the virtual machine associated with the port forwarding rule.
+        metadata:
+          api-response-attribute: virtualmachinedisplayname

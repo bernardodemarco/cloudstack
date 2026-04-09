@@ -77,3 +77,38 @@ node_types:
       id:
         type: string
         description: ID of the auto scaling VM group.
+      network-name:
+        type: string
+        description: The name of the network that is associated with the auto scaling VM group's load balancer.
+        metadata:
+          api-response-attribute: associatednetworkname
+      network-id:
+        type: string
+        description: The ID of the network that is associated with the auto scaling VM group's load balancer.
+        metadata:
+          api-response-attribute: associatednetworkid
+      public-ip-address:
+        type: string
+        description: The public IP address of the auto scaling VM group's load balancer.
+        metadata:
+          api-response-attribute: publicip
+      public-ip-address-id:
+        type: string
+        description: The ID of the public IP address of the auto scaling VM group's load balancer.
+        metadata:
+          api-response-attribute: publicipid
+      domain-path:
+        type: string
+        description: The domain path of the owner of the auto scaling VM group.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the auto scaling VM group.
+        metadata:
+          api-response-attribute: project
+      account-name:
+        type: string
+        description: The name of the account associated with the auto scaling VM group.
+        metadata:
+          api-response-attribute: account

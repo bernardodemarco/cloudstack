@@ -70,7 +70,7 @@ public class ToscaFieldParserTest {
 
     @Test
     public void parseFieldTestSuccessfullyParseAttributes() {
-        String attributes = "{id: {type: string, description: ID.}, name: {type: string, description: Name.}}";
+        String attributes = "{id: {type: string, description: ID.}, name: {type: string, description: Name., metadata: {api-response-attribute: nameattributefromapiresponse}}}";
         Map<String, ToscaAttributeDefinition> attributeDefinitions = (Map<String, ToscaAttributeDefinition>) toscaFieldParserSpy.parseField(ToscaYamlHelper.loadYaml(attributes), ToscaFieldParser.TypeOfToscaField.ATTRIBUTE, null);
         Assert.assertEquals(2, attributeDefinitions.size());
         Assert.assertTrue(attributeDefinitions.containsKey("id"));
@@ -82,6 +82,7 @@ public class ToscaFieldParserTest {
         Assert.assertEquals("name", attributeDefinitions.get("name").getName());
         Assert.assertEquals("Name.", attributeDefinitions.get("name").getDescription());
         Assert.assertEquals(ToscaPrimitiveType.STRING, attributeDefinitions.get("name").getType().getPrimitiveType());
+        Assert.assertEquals("nameattributefromapiresponse", attributeDefinitions.get("name").getApiResponseAttribute());
     }
 
     @Test

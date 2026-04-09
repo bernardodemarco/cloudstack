@@ -178,3 +178,13 @@ node_types:
       id:
         type: string
         description: The ID of the network offering.
+      zone-name:
+        type: string
+        description: The name of the zone the network offering belongs to.
+        metadata:
+          api-response-attribute: zone
+      domain-name:
+        type: string
+        description: The domain name associated with the network offering.
+        metadata:
+          api-response-attribute: domain

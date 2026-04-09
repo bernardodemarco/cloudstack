@@ -106,3 +106,28 @@ node_types:
       id:
         type: string
         description: The ID of the shared filesystem.
+      zone-name:
+        type: string
+        description: The name of the zone the VM belongs to.
+        metadata:
+          api-response-attribute: zonename
+      domain-path:
+        type: string
+        description: The domain path of the VM's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the VM.
+        metadata:
+          api-response-attribute: project
+      service-offering-name:
+        type: string
+        description: The name of the service offering used to create the VM.
+        metadata:
+          api-response-attribute: serviceofferingname
+      disk-offering-name:
+        type: string
+        description: The name of the disk offering used to create the VM's disk.'
+        metadata:
+          api-response-attribute: diskofferingname

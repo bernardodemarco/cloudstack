@@ -19,6 +19,7 @@ package org.apache.cloudstack.tosca.parser;
 public class ToscaConstants {
     public static final String ATTRIBUTES = "attributes";
     public static final String API_PARAMETER = "api-parameter";
+    public static final String API_RESPONSE_ATTRIBUTE = "api-response-attribute";
     public static final String DATA_TYPES = "data_types";
     public static final String DEFAULT_VALUE = "default_value";
     public static final String DEPENDENCY = "dependency";

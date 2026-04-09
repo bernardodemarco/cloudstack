@@ -256,3 +256,51 @@ node_types:
       id:
         type: string
         description: The ID of the VM.
+      user-id:
+        type: string
+        description: The ID of the user associated with the VM.
+        metadata:
+          api-response-attribute: userid
+      username:
+        type: string
+        description: The name of the user associated with the VM.
+      zone-name:
+        type: string
+        description: The name of the zone the VM belongs to.
+        metadata:
+          api-response-attribute: zonename
+      domain-path:
+        type: string
+        description: The domain path of the VM's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the VM.
+        metadata:
+          api-response-attribute: project
+      template-name:
+        type: string
+        description: The name of the template used to create the VM.
+        metadata:
+          api-response-attribute: templatename
+      iso-name:
+        type: string
+        description: The name of the ISO used to create the VM.
+        metadata:
+          api-response-attribute: isoname
+      service-offering-name:
+        type: string
+        description: The name of the service offering used to create the VM.
+        metadata:
+          api-response-attribute: serviceofferingname
+      disk-offering-name:
+        type: string
+        description: The name of the disk offering used to create the VM's disk.'
+        metadata:
+          api-response-attribute: diskofferingname
+      private-ip-address:
+        type: string
+        description: The private and primary IP address of the VM.
+        metadata:
+          api-response-attribute: ipaddress

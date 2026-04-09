@@ -178,3 +178,33 @@ node_types:
       id:
         type: string
         description: The ID of the Kubernetes cluster.
+      zone-name:
+        type: string
+        description: The name of the zone the Kubernetes cluster belongs to.
+        metadata:
+          api-response-attribute: zonename
+      domain-path:
+        type: string
+        description: The domain path of the Kubernetes cluster's owner.
+        metadata:
+          api-response-attribute: domainpath
+      project-name:
+        type: string
+        description: The name of the project associated with the Kubernetes cluster.
+        metadata:
+          api-response-attribute: project
+      kubernetes-version-name:
+        type: string
+        description: The name of the Kubernetes version used to launch the cluster.
+        metadata:
+          api-response-attribute: kubernetesversionname
+      public-ip-address:
+        type: string
+        description: Public IP address of the Kubernetes cluster.
+        metadata:
+          api-response-attribute: ipaddress
+      public-ip-address-id:
+        type: string
+        description: Public IP address ID of the Kubernetes cluster.
+        metadata:
+          api-response-attribute: ipaddressid

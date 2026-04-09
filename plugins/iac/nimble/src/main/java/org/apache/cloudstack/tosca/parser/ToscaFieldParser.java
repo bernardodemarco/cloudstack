@@ -61,14 +61,15 @@ public class ToscaFieldParser {
             ToscaTypeDefinition type = parseType(fieldBody, dataTypes);
 
             if (typeOfToscaField == TypeOfToscaField.ATTRIBUTE) {
-                ToscaAttributeDefinition attributeDefinition = new ToscaAttributeDefinition(name, description, type);
+                String apiResponseAttribute = ObjectUtils.defaultIfNull(parseMetadata(fieldBody.get(ToscaConstants.METADATA), typeOfToscaField), name);
+                ToscaAttributeDefinition attributeDefinition = new ToscaAttributeDefinition(name, description, type, apiResponseAttribute);
                 logger.debug("Successfully parsed the following attribute: [{}].", attributeDefinition::toString);
                 return attributeDefinition;
             }
 
             boolean required = ToscaYamlHelper.asBoolean(fieldBody.get(ToscaConstants.REQUIRED));
             ToscaFunction.ToscaBooleanFunction validation = parseToscaBooleanFunction(ToscaYamlHelper.asMap(fieldBody.get(ToscaConstants.VALIDATION)));
-            String apiParameter = ObjectUtils.defaultIfNull(parseMetadata(fieldBody.get(ToscaConstants.METADATA)), name);
+            String apiParameter = ObjectUtils.defaultIfNull(parseMetadata(fieldBody.get(ToscaConstants.METADATA), typeOfToscaField), name);
             ToscaPropertyDefinition propertyDefinition = new ToscaPropertyDefinition(name, description, type, required, validation, apiParameter);
             logger.debug("Successfully parsed the following property: [{}].", propertyDefinition::toString);
             return propertyDefinition;
@@ -137,8 +138,9 @@ public class ToscaFieldParser {
         return new ToscaBooleanFunctions.ValidValues(validValues);
     }
 
-    private String parseMetadata(Object metadataBody) {
+    private String parseMetadata(Object metadataBody, TypeOfToscaField typeOfToscaField) {
         Map<String, Object> metadata = ToscaYamlHelper.asMap(metadataBody);
-        return ToscaYamlHelper.asString(metadata.get(ToscaConstants.API_PARAMETER));
+        String metadataYamlKey = typeOfToscaField == TypeOfToscaField.PROPERTY ? ToscaConstants.API_PARAMETER : ToscaConstants.API_RESPONSE_ATTRIBUTE;
+        return ToscaYamlHelper.asString(metadata.get(metadataYamlKey));
     }
 }

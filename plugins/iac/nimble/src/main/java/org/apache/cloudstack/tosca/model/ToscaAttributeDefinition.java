@@ -17,7 +17,14 @@
 package org.apache.cloudstack.tosca.model;
 
 public class ToscaAttributeDefinition extends ToscaFieldDefinition {
-    public ToscaAttributeDefinition(String name, String description, ToscaTypeDefinition type) {
+    private final String apiResponseAttribute;
+
+    public ToscaAttributeDefinition(String name, String description, ToscaTypeDefinition type, String apiResponseAttribute) {
         super(name, description, type);
+        this.apiResponseAttribute = apiResponseAttribute;
+    }
+
+    public String getApiResponseAttribute() {
+        return apiResponseAttribute;
     }
 }

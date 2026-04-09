@@ -43,3 +43,8 @@ node_types:
       id:
         type: string
         description: The ID of the project.
+      domain-name:
+        type: string
+        description: The name of the domain associated with the project.
+        metadata:
+          api-response-attribute: domain

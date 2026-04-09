@@ -194,7 +194,7 @@ public class ToscaOrchestrator {
             logger.info("Result of the [{}] execution: {}.", nodeTemplate.getName(), provisioningResult);
             nodeTemplate.resolveAttributes(provisioningResult);
         } catch (Exception e) {
-            logger.error("Could Q instantiate the API class [{}]: {}.", apiClass.getName(), e.getMessage());
+            logger.error("Could not instantiate the API class [{}]: {}.", apiClass.getName(), e.getMessage());
             throw new InvalidParameterValueException(String.format("Could not dispatch the provisioning task of [%s]. Please, check the availability of the API associated with it.", nodeTemplate.getName()));
         }
     }

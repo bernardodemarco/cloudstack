@@ -72,3 +72,8 @@ node_types:
       id:
         type: string
         description: The ID of the firewall rule.
+      ip-address:
+        type: string
+        description: The IP address associated with the firewall rule.
+        metadata:
+          api-response-attribute: ipaddress
