@@ -24,11 +24,15 @@ import javax.inject.Inject;
 import java.util.Map;
 
 public class ToscaParser {
-    @Inject
-    private ToscaNodeTypeParser toscaNodeTypeParser;
+    private final ToscaNodeTypeParser toscaNodeTypeParser;
+
+    private final ToscaServiceTemplateParser toscaServiceTemplateParser;
 
     @Inject
-    private ToscaServiceTemplateParser toscaServiceTemplateParser;
+    public ToscaParser(ToscaNodeTypeParser toscaNodeTypeParser, ToscaServiceTemplateParser toscaServiceTemplateParser) {
+        this.toscaNodeTypeParser = toscaNodeTypeParser;
+        this.toscaServiceTemplateParser = toscaServiceTemplateParser;
+    }
 
     public ToscaNodeType parseNodeTypeDefinitionFile(String nodeTypeContent) {
         return toscaNodeTypeParser.parseNodeTypeDefinitionFile(nodeTypeContent);

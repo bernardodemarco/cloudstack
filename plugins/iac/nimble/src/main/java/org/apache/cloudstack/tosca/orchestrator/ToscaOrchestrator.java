@@ -42,8 +42,12 @@ import org.apache.cloudstack.managed.context.ManagedContextExecutor;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
+import org.apache.cloudstack.tosca.model.ToscaProperty;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
+import org.apache.cloudstack.tosca.parser.ToscaConstants;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
+import org.apache.cloudstack.tosca.parser.ToscaYamlHelper;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -114,6 +118,8 @@ public class ToscaOrchestrator {
                         .map((dep) -> futures.get(dep.getName())).toArray(CompletableFuture[]::new);
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
                     logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
+                    resolveUnresolvedPropertiesByToscaFunction(nodeTemplate, serviceTemplate, ToscaConstants.GET_PROPERTY_FUNCTION);
+                    resolveUnresolvedPropertiesByToscaFunction(nodeTemplate, serviceTemplate, ToscaConstants.GET_ATTRIBUTE_FUNCTION);
                     return buildNodeProvisioningTask(nodeTemplate, callContext);
                 });
             }
@@ -192,7 +198,7 @@ public class ToscaOrchestrator {
                 throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
             }
             logger.info("Result of the [{}] execution: {}.", nodeTemplate.getName(), provisioningResult);
-            nodeTemplate.resolveAttributes(provisioningResult);
+            populateNodeTemplateAttributes(nodeTemplate, provisioningResult);
         } catch (Exception e) {
             logger.error("Could not instantiate the API class [{}]: {}.", apiClass.getName(), e.getMessage());
             throw new InvalidParameterValueException(String.format("Could not dispatch the provisioning task of [%s]. Please, check the availability of the API associated with it.", nodeTemplate.getName()));
@@ -265,6 +271,54 @@ public class ToscaOrchestrator {
                 throw new CloudRuntimeException(String.format("Failure in job [%d]", jobId));
             }
             return job.getResult();
+        }
+    }
+
+    protected void populateNodeTemplateAttributes(ToscaNodeTemplate nodeTemplate, Map<String, Object> potentialAttributes) {
+        ToscaNodeType nodeType = nodeTemplate.getType();
+        if (nodeType.getAttributes().isEmpty()) {
+            logger.debug("Node template [{}] has no attributes to be populated.", nodeTemplate.getName());
+            return;
+        }
+
+        logger.debug("Populating node template [{}] attributes.", nodeTemplate.getName());
+        nodeType.getAttributes().forEach((name, definition) -> {
+            String apiResponseAttribute = definition.getApiResponseAttribute();
+            Object value = potentialAttributes.get(apiResponseAttribute);
+            if (value == null) {
+                logger.debug("Not populating attribute [{}] of node template [{}], because it is not available in the API response.", name, nodeTemplate.getName());
+            } else {
+                logger.debug("Populating attribute [{}] of node template [{}] with value [{}].", name, nodeTemplate.getName(), value);
+                nodeTemplate.addAttribute(name, value);
+            }
+        });
+    }
+
+    protected void resolveUnresolvedPropertiesByToscaFunction(ToscaNodeTemplate nodeTemplate, ToscaServiceTemplate serviceTemplate, String toscaFunction) {
+        Set<ToscaProperty> unresolvedProperties = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ? nodeTemplate.getUnresolvedPropertiesByGetProperty() : nodeTemplate.getUnresolvedPropertiesByGetAttribute();
+        if (CollectionUtils.isEmpty(unresolvedProperties)) {
+            logger.debug("Node template [{}] has no unresolved properties to be resolved by the [{}] TOSCA function.", nodeTemplate.getName(), toscaFunction);
+            return;
+        }
+
+        logger.info("Resolving the unresolved properties of the node template [{}] by the [{}] TOSCA function.", nodeTemplate.getName(), toscaFunction);
+        for (ToscaProperty unresolvedProperty : unresolvedProperties) {
+            Map<String, Object> unresolvedPropertyRawValue = ToscaYamlHelper.asMap(unresolvedProperty.getRawValue());
+            List<?> functionCallArgs = ToscaYamlHelper.asList(unresolvedPropertyRawValue.get(toscaFunction));
+            String targetNodeName = ToscaYamlHelper.asString(functionCallArgs.get(0));
+            ToscaNodeTemplate targetNode = serviceTemplate.getNodeTemplates().get(targetNodeName);
+            String targetField = ToscaYamlHelper.asString(functionCallArgs.get(1));
+            Object valueToBeResolved = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ? targetNode.getProperty(targetField).getEvaluatedValue() : targetNode.getAttribute(targetField);
+            if (unresolvedProperty.getDefinition().getValidation() != null) {
+                logger.debug("The unresolved property [{}] has a validation clause. Executing it.", unresolvedProperty.getDefinition().getName());
+                boolean validationResult = unresolvedProperty.getDefinition().getValidation().evaluate(valueToBeResolved);
+                if (!validationResult) {
+                    logger.error("The value of the property [{}] of node template [{}] is not valid. Aborting IaC template deployment.", unresolvedProperty.getDefinition().getName(), nodeTemplate.getName());
+                    throw new InvalidParameterValueException(String.format("The value of the property [%s] of node template [%s] is not valid. Please, check the value and try again.", targetField, targetNodeName));
+                }
+            }
+            logger.debug("The unresolved property [{}] of node template [{}] will be resolved to value [{}] (retrieved from {}.{}).", unresolvedProperty.getDefinition().getName(), nodeTemplate.getName(), valueToBeResolved, targetNodeName, targetField);
+            unresolvedProperty.setEvaluatedValue(valueToBeResolved);
         }
     }
 

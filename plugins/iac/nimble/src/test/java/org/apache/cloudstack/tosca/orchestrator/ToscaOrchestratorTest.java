@@ -16,10 +16,16 @@
 // under the License.
 package org.apache.cloudstack.tosca.orchestrator;
 
+import org.apache.cloudstack.fixtures.ToscaFixtures;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
+import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
+import org.apache.cloudstack.tosca.parser.ToscaFieldParser;
+import org.apache.cloudstack.tosca.parser.ToscaNodeTypeParser;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
+import org.apache.cloudstack.tosca.parser.ToscaServiceTemplateParser;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
@@ -40,7 +46,30 @@ public class ToscaOrchestratorTest {
     @Mock
     private ToscaParser toscaParserMock;
 
+    private ToscaParser toscaParser;
+
     List<IacResourceTypeVO> iacResourceTypesMock = List.of(Mockito.mock(IacResourceTypeVO.class), Mockito.mock(IacResourceTypeVO.class));
+
+    @Before
+    public void setUp() {
+        ToscaFieldParser toscaFieldParser = new ToscaFieldParser();
+        ToscaNodeTypeParser toscaNodeTypeParser = new ToscaNodeTypeParser(toscaFieldParser);
+        ToscaServiceTemplateParser toscaServiceTemplateParser = new ToscaServiceTemplateParser(toscaFieldParser);
+        toscaParser = new ToscaParser(toscaNodeTypeParser, toscaServiceTemplateParser);
+    }
+
+    @Test
+    public void resolveUnresolvedPropertiesByToscaFunctionTest() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, ssh-key-pair-name: {$get_property: [pair, name]}, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, other-instance: {type: Vm, properties: {type: SSVM, ssh-key-pair-name: {$get_attribute: [pair, uuid]}, vcpus: 1, ip-addresses: [10.0.0.1]}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+        serviceTemplate.getNodeTemplates().get("pair").addAttribute("uuid", "UUID");
+
+        toscaOrchestratorSpy.resolveUnresolvedPropertiesByToscaFunction(serviceTemplate.getNodeTemplates().get("instance"), serviceTemplate, "$get_property");
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getProperty("name").getEvaluatedValue(), serviceTemplate.getNodeTemplates().get("instance").getProperty("ssh-key-pair-name").getEvaluatedValue());
+
+        toscaOrchestratorSpy.resolveUnresolvedPropertiesByToscaFunction(serviceTemplate.getNodeTemplates().get("other-instance"), serviceTemplate, "$get_attribute");
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getAttribute("uuid"), serviceTemplate.getNodeTemplates().get("other-instance").getProperty("ssh-key-pair-name").getEvaluatedValue());
+    }
 
     @Test
     public void loadToscaProfileTestEachIacResourceTypeShouldBeParsed() {

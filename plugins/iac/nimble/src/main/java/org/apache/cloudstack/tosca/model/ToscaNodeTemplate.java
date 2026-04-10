@@ -58,8 +58,16 @@ public class ToscaNodeTemplate {
         this.unresolvedPropertiesByGetProperty = unresolvedPropertiesByGetProperty;
     }
 
+    public Set<ToscaProperty> getUnresolvedPropertiesByGetProperty() {
+        return unresolvedPropertiesByGetProperty;
+    }
+
     public void setUnresolvedPropertiesByGetAttribute(Set<ToscaProperty> unresolvedPropertiesByGetAttribute) {
         this.unresolvedPropertiesByGetAttribute = unresolvedPropertiesByGetAttribute;
+    }
+
+    public Set<ToscaProperty> getUnresolvedPropertiesByGetAttribute() {
+        return unresolvedPropertiesByGetAttribute;
     }
 
     public Map<String, String> getApiParams() {
@@ -72,13 +80,11 @@ public class ToscaNodeTemplate {
         return params;
     }
 
-    public void resolveAttributes(Map<String, Object> potentialAttributes) {
-        type.getAttributes().forEach((name, definition) -> {
-            String apiResponseAttribute = definition.getApiResponseAttribute();
-            Object value = potentialAttributes.get(apiResponseAttribute);
-            if (value != null) {
-                attributes.put(name, value);
-            }
-        });
+    public void addAttribute(String name, Object value) {
+        attributes.put(name, value);
+    }
+
+    public Object getAttribute(String name) {
+        return attributes.get(name);
     }
 }
