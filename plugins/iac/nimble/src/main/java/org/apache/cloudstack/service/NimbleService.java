@@ -23,6 +23,8 @@ import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
 
+import java.util.Map;
+
 public interface NimbleService extends PluggableService, Configurable {
     ConfigKey<Boolean> NimbleServiceEnabled = new ConfigKey<>("Advanced", Boolean.class,
             "nimble.service.enabled", "false",
@@ -35,5 +37,5 @@ public interface NimbleService extends PluggableService, Configurable {
             false, NimbleServiceEnabled.key());
 
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
-    void deployIacTemplate(String iacTemplateContent);
+    void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs);
 }

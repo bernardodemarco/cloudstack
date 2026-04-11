@@ -59,8 +59,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
-    public void deployIacTemplate(String iacTemplateContent) {
-        toscaOrchestrator.deployIacTemplate(iacTemplateContent);
+    public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
+        toscaOrchestrator.deployIacTemplate(iacTemplateContent, inputs);
     }
 
     @Override

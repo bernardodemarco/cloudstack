@@ -93,13 +93,22 @@ public class ToscaOrchestrator {
 
     private ExecutorService executorPool;
 
-    public void deployIacTemplate(String iacTemplateContent) {
+    public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
+        resolveServiceTemplateInputs(serviceTemplate, inputs);
         Map<String, CompletableFuture<String>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
         logger.debug("Awaiting for all the provisioning tasks of the node template to complete.");
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
         serviceTemplateFeature.join();
         logger.info("All provisioning tasks have completed successfully.");
+    }
+
+    protected void resolveServiceTemplateInputs(ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
+        serviceTemplate.getInputs();
+
+//        como que tu vai fazer com collections? o tosca permite passar collections como inputs? e, o tosca permite definir apenas 1 item da collection como o que vem do input?
+        
+
     }
 
     private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
@@ -274,6 +283,13 @@ public class ToscaOrchestrator {
         }
     }
 
+    /**
+     * Populates the attributes of a node template based on the result of its provisioning task.
+     * Each attribute declared in the node template's type will be searched in the <code>potentialAttributes</code>
+     * map. If its corresponding value is found, it will be used to populate the node template's attribute.
+     * @param nodeTemplate The node template whose attributes will be resolved.
+     * @param potentialAttributes The return of the node template's provisioning task from which the values of the attributes will be retrieved.
+     */
     protected void populateNodeTemplateAttributes(ToscaNodeTemplate nodeTemplate, Map<String, Object> potentialAttributes) {
         ToscaNodeType nodeType = nodeTemplate.getType();
         if (nodeType.getAttributes().isEmpty()) {
@@ -294,6 +310,14 @@ public class ToscaOrchestrator {
         });
     }
 
+    /**
+     * Resolve the unresolved/pending properties of a node template by the <code>$get_attribute</code> and <code>$get_property</code> TOSCA functions.
+     * @param nodeTemplate The node template from which the pending dependencies will be resolved.
+     * @param serviceTemplate The TOSCA service template the node template belongs to.
+     * @param toscaFunction The TOSCA function used to resolve the pending dependencies. Current supported functions are: <code>$get_attribute</code> and <code>$get_property</code>.
+     * @throws InvalidParameterValueException When the return value of the <code>$get_attribute</code> and <code>$get_property</code> function calls is null
+     * or when the return value does not passes the validation function.
+     */
     protected void resolveUnresolvedPropertiesByToscaFunction(ToscaNodeTemplate nodeTemplate, ToscaServiceTemplate serviceTemplate, String toscaFunction) {
         Set<ToscaProperty> unresolvedProperties = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ? nodeTemplate.getUnresolvedPropertiesByGetProperty() : nodeTemplate.getUnresolvedPropertiesByGetAttribute();
         if (CollectionUtils.isEmpty(unresolvedProperties)) {
@@ -308,7 +332,13 @@ public class ToscaOrchestrator {
             String targetNodeName = ToscaYamlHelper.asString(functionCallArgs.get(0));
             ToscaNodeTemplate targetNode = serviceTemplate.getNodeTemplates().get(targetNodeName);
             String targetField = ToscaYamlHelper.asString(functionCallArgs.get(1));
+
             Object valueToBeResolved = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ? targetNode.getProperty(targetField).getEvaluatedValue() : targetNode.getAttribute(targetField);
+            if (valueToBeResolved == null) {
+                logger.error("The field [{}] of the target node [{}] has not been defined. Thus, it is not possible to resolve the property [{}] of the [{}] node template.", targetField, targetNode.getName(), unresolvedProperty.getDefinition().getName(), nodeTemplate.getName());
+                throw new InvalidParameterValueException(String.format("The field [%s] of the target node [%s] has not been defined. Unable to deploy [%s].", targetField, targetNode.getName(), nodeTemplate.getName()));
+            }
+
             if (unresolvedProperty.getDefinition().getValidation() != null) {
                 logger.debug("The unresolved property [{}] has a validation clause. Executing it.", unresolvedProperty.getDefinition().getName());
                 boolean validationResult = unresolvedProperty.getDefinition().getValidation().evaluate(valueToBeResolved);

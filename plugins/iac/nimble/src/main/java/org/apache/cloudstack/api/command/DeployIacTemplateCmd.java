@@ -16,6 +16,7 @@
 // under the License.
 package org.apache.cloudstack.api.command;
 
+import com.cloud.exception.InvalidParameterValueException;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseAsyncCmd;
@@ -25,6 +26,7 @@ import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.service.NimbleService;
 
 import javax.inject.Inject;
+import java.util.Map;
 
 @APICommand(name = "deployIacTemplate", description = "", responseObject = SuccessResponse.class, entityType = {IacResourceType.class},
         requestHasSensitiveInfo = false, responseHasSensitiveInfo = false)
@@ -35,9 +37,20 @@ public class DeployIacTemplateCmd extends BaseAsyncCmd {
     @Parameter(name = ApiConstants.IAC_RESOURCE_TYPE_CONTENT, type = CommandType.STRING, length = 65535, description = "")
     private String iacTemplateContent;
 
+    @Parameter(name = ApiConstants.INPUTS, type = CommandType.MAP, description = "Input variables of the IaC template. They must be specified as key-pairs, for instance: 'inputs[0].first-input=\"First input value\" inputs[0].second-input=\"Second input value\"'")
+    private Map<String, Map<String, String>> inputs;
+
+    public Map<String, String> getInputs() {
+        if (inputs.size() > 1) {
+            throw new InvalidParameterValueException("Please, specify the inputs as key-pairs, indexed with [0]. For instance: 'inputs[0].first-input=\"First input value\" inputs[0].second-input=\"Second input value\"'");
+        }
+
+        return inputs.get(0);
+    }
+
     @Override
     public void execute() {
-        nimbleService.deployIacTemplate(iacTemplateContent);
+        nimbleService.deployIacTemplate(iacTemplateContent, getInputs());
     }
 
     @Override

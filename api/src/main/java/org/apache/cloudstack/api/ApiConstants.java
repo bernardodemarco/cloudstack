@@ -1329,6 +1329,7 @@ public class ApiConstants {
     public static final String OBJECT_STORAGE_TOTAL = "objectstoragetotal";
 
 //    NIMBLE related
+    public static final String INPUTS = "inputs";
     public static final String IAC_RESOURCE_TYPE_CONTENT = "iacresourcetypecontent";
     public static final String SHOW_IAC_RESOURCE_TYPE_CONTENT = "showiacresourcetypecontent";
 

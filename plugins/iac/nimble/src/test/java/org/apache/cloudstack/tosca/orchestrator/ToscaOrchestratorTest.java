@@ -16,8 +16,10 @@
 // under the License.
 package org.apache.cloudstack.tosca.orchestrator;
 
+import com.cloud.exception.InvalidParameterValueException;
 import org.apache.cloudstack.fixtures.ToscaFixtures;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
+import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.parser.ToscaFieldParser;
@@ -59,7 +61,31 @@ public class ToscaOrchestratorTest {
     }
 
     @Test
-    public void resolveUnresolvedPropertiesByToscaFunctionTest() {
+    public void populateNodeTemplateAttributesTestSuccessfullyPopulateNodeAttributes() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, ssh-key-pair-name: {$get_property: [pair, name]}, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, other-instance: {type: Vm, properties: {type: SSVM, ssh-key-pair-name: {$get_attribute: [pair, uuid]}, vcpus: 1, ip-addresses: [10.0.0.1]}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+        ToscaNodeTemplate instanceNodeTemplate = serviceTemplate.getNodeTemplates().get("instance");
+        Map<String, Object> potentialAttributes = Map.of("uuid", "UUID Value", "name", "VM Name", "vCPUs", 2, "systemVm", false);
+        toscaOrchestratorSpy.populateNodeTemplateAttributes(instanceNodeTemplate, potentialAttributes);
+        Map<String, Object> nodeTemplateAttributes = instanceNodeTemplate.getAttributes();
+        Assert.assertEquals(instanceNodeTemplate.getType().getAttributes().size(), nodeTemplateAttributes.size());
+        Assert.assertEquals(potentialAttributes.get("uuid"), nodeTemplateAttributes.get("uuid"));
+    }
+
+    @Test
+    public void populateNodeTemplateAttributesTestNotPopulateAttributeWhenItsValueIsNotAvailable() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, ssh-key-pair-name: {$get_property: [pair, name]}, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, other-instance: {type: Vm, properties: {type: SSVM, ssh-key-pair-name: {$get_attribute: [pair, uuid]}, vcpus: 1, ip-addresses: [10.0.0.1]}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+        ToscaNodeTemplate instanceNodeTemplate = serviceTemplate.getNodeTemplates().get("instance");
+        Map<String, Object> potentialAttributes = Map.of("name", "VM Name", "vCPUs", 2, "systemVm", false);
+        toscaOrchestratorSpy.populateNodeTemplateAttributes(instanceNodeTemplate, potentialAttributes);
+        Map<String, Object> nodeTemplateAttributes = instanceNodeTemplate.getAttributes();
+        Assert.assertEquals(0, nodeTemplateAttributes.size());
+        Assert.assertFalse(nodeTemplateAttributes.containsKey("uuid"));
+    }
+
+    @Test
+    public void resolveUnresolvedPropertiesByToscaFunctionTestExecuteGetAttributeAndGetPropertyFunctions() {
         String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, ssh-key-pair-name: {$get_property: [pair, name]}, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, other-instance: {type: Vm, properties: {type: SSVM, ssh-key-pair-name: {$get_attribute: [pair, uuid]}, vcpus: 1, ip-addresses: [10.0.0.1]}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
         serviceTemplate.getNodeTemplates().get("pair").addAttribute("uuid", "UUID");
@@ -69,6 +95,28 @@ public class ToscaOrchestratorTest {
 
         toscaOrchestratorSpy.resolveUnresolvedPropertiesByToscaFunction(serviceTemplate.getNodeTemplates().get("other-instance"), serviceTemplate, "$get_attribute");
         Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getAttribute("uuid"), serviceTemplate.getNodeTemplates().get("other-instance").getProperty("ssh-key-pair-name").getEvaluatedValue());
+    }
+
+    @Test(expected = InvalidParameterValueException.class)
+    public void resolveUnresolvedPropertiesByToscaFunctionTestThrowExceptionWhenTargetAttributeIsNotAvailable() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: {$get_attribute: [pair, uuid]}, ssh-key-pair-name: Name, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, pair: {type: SshPair, properties: {name: SSVM, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+        toscaOrchestratorSpy.resolveUnresolvedPropertiesByToscaFunction(serviceTemplate.getNodeTemplates().get("instance"), serviceTemplate, "$get_attribute");
+    }
+
+    @Test(expected = InvalidParameterValueException.class)
+    public void resolveUnresolvedPropertiesByToscaFunctionTestThrowExceptionWhenValidationFunctionFailsAfterResolvingAProperty() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: {$get_property: [pair, name]}, ssh-key-pair-name: Name, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+        toscaOrchestratorSpy.resolveUnresolvedPropertiesByToscaFunction(serviceTemplate.getNodeTemplates().get("instance"), serviceTemplate, "$get_property");
+    }
+
+    @Test
+    public void resolveUnresolvedPropertiesByToscaFunctionTestResolvePropertyWhenValidationFunctionSucceeds() {
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: {$get_property: [pair, name]}, ssh-key-pair-name: Name, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, pair: {type: SshPair, properties: {name: SSVM, public-key: Public Key}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+        toscaOrchestratorSpy.resolveUnresolvedPropertiesByToscaFunction(serviceTemplate.getNodeTemplates().get("instance"), serviceTemplate, "$get_property");
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getProperty("name").getEvaluatedValue(), serviceTemplate.getNodeTemplates().get("instance").getProperty("type").getEvaluatedValue());
     }
 
     @Test
