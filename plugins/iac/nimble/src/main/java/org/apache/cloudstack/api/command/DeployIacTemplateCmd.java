@@ -24,8 +24,10 @@ import org.apache.cloudstack.api.Parameter;
 import org.apache.cloudstack.api.response.SuccessResponse;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.service.NimbleService;
+import org.apache.commons.collections.MapUtils;
 
 import javax.inject.Inject;
+import java.util.HashMap;
 import java.util.Map;
 
 @APICommand(name = "deployIacTemplate", description = "", responseObject = SuccessResponse.class, entityType = {IacResourceType.class},
@@ -41,11 +43,15 @@ public class DeployIacTemplateCmd extends BaseAsyncCmd {
     private Map<String, Map<String, String>> inputs;
 
     public Map<String, String> getInputs() {
+        if (MapUtils.isEmpty(inputs)) {
+            return new HashMap<>();
+        }
+
         if (inputs.size() > 1) {
             throw new InvalidParameterValueException("Please, specify the inputs as key-pairs, indexed with [0]. For instance: 'inputs[0].first-input=\"First input value\" inputs[0].second-input=\"Second input value\"'");
         }
 
-        return inputs.get(0);
+        return inputs.values().iterator().next();
     }
 
     @Override

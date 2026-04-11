@@ -16,7 +16,11 @@
 // under the License.
 package org.apache.cloudstack.tosca.model;
 
+import com.cloud.exception.InvalidParameterValueException;
+import org.apache.cloudstack.tosca.parser.ToscaConstants;
+import org.apache.cloudstack.tosca.parser.ToscaYamlHelper;
 import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
+import org.apache.commons.lang3.BooleanUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -45,8 +49,8 @@ public class ToscaTypeDefinition {
         return new ToscaTypeDefinition(Kind.DATA_TYPE, null, null, null, dataType);
     }
 
-    private ToscaTypeDefinition(Kind kind, ToscaPrimitiveType type, ToscaCollectionType collectionType, ToscaTypeDefinition entrySchema, ToscaDataTypeDefinition dataType) {
-        this.primitiveType = type;
+    private ToscaTypeDefinition(Kind kind, ToscaPrimitiveType primitiveType, ToscaCollectionType collectionType, ToscaTypeDefinition entrySchema, ToscaDataTypeDefinition dataType) {
+        this.primitiveType = primitiveType;
         this.collectionType = collectionType;
         this.entrySchema = entrySchema;
         this.dataType = dataType;
@@ -74,6 +78,12 @@ public class ToscaTypeDefinition {
     }
 
     public boolean isCompatibleWith(Object value) {
+        Map<String, Object> valueAsMap = ToscaYamlHelper.asMap(value);
+        boolean isFunctionCall = valueAsMap.size() == 1 && valueAsMap.keySet().iterator().next().startsWith(ToscaConstants.FUNCTION_PREFIX);
+        if (isFunctionCall) {
+            return true;
+        };
+
         if (kind == Kind.PRIMITIVE) {
             return isCompatibleWithPrimitive(value);
         }
@@ -135,6 +145,24 @@ public class ToscaTypeDefinition {
         if (other.entrySchema == null) return false;
 
         return entrySchema.isAssignableFrom(other.entrySchema);
+    }
+
+    public Object convertPrimitiveTypeFromString(String value) {
+        if (value == null || primitiveType == null) {
+            return null;
+        }
+
+        try {
+            switch (primitiveType) {
+                case STRING:  return value;
+                case INTEGER: return Integer.parseInt(value);
+                case FLOAT:   return Double.parseDouble(value);
+                case BOOLEAN: return BooleanUtils.toBoolean(value, "true", "false");
+                default: throw new InvalidParameterValueException(String.format("Unsupported primitive type: [%s].", primitiveType));
+            }
+        } catch (IllegalArgumentException e) {
+            throw new InvalidParameterValueException(String.format("Value [%s] is not compatible with primitive type [%s].", value, primitiveType));
+        }
     }
 
     @Override

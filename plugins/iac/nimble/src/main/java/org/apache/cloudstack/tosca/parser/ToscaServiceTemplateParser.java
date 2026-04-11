@@ -136,9 +136,9 @@ public class ToscaServiceTemplateParser {
                 ToscaConstants.INPUTS, context);
 
         ToscaTypeDefinition type = toscaFieldParser.parseType(body, null);
-        if (type == null) {
+        if (type == null || type.getKind() != ToscaTypeDefinition.Kind.PRIMITIVE) {
             logger.debug("The type of the input [{}] is not specified or it is not supported. Skipping it.", name);
-            context.addError(String.format("The type of the input [%s] was not specified or it is not supported.", name), ToscaConstants.INPUTS);
+            context.addError(String.format("The type of the input [%s] was not specified or it is not supported (only TOSCA primitive types are currently supported).", name), ToscaConstants.INPUTS);
             return null;
         }
 
@@ -235,83 +235,122 @@ public class ToscaServiceTemplateParser {
 
     private ToscaProperty parseProperty(String propertyName, Object propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
         logger.debug("Parsing the property [{}] of the node template [{}].", propertyName, nodeTemplateName);
-        Map<String, Object> body = ToscaYamlHelper.asMap(propertyBody);
-        boolean isFunctionCall = body.size() == 1 && body.keySet().iterator().next().startsWith(ToscaConstants.FUNCTION_PREFIX);
-        if (!isFunctionCall) {
-            return parsePropertyValue(propertyName, propertyBody, propertyDefinition, nodeTemplateName, context);
-        }
-
-        if (body.containsKey(ToscaConstants.GET_INPUT_FUNCTION)) {
-            return parseGetInputPropertyValue(propertyName, body, propertyDefinition, nodeTemplateName, context);
-        }
-
-        return parseGetPropertyAndGetAttributePropertyValue(propertyName, body, propertyDefinition, nodeTemplateName, context);
-    }
-
-    private ToscaProperty parsePropertyValue(String propertyName, Object propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
         ToscaTypeDefinition type = propertyDefinition.getType();
         if (!type.isCompatibleWith(propertyBody)) {
             context.addError(String.format("The provided value [%s] for the property [%s] of the [%s] node template is not compatible with the property type [%s].", propertyBody, propertyName, nodeTemplateName, propertyDefinition.getType()), nodeTemplateName);
             return null;
         }
 
+        Map<String, List<Map<String, Object>>> functionCalls = getAllToscaFunctionCalls(propertyBody);
         ToscaFunction.ToscaBooleanFunction validationFunction = propertyDefinition.getValidation();
-        if (validationFunction != null && !validationFunction.evaluate(propertyBody)) {
-            context.addError(String.format("The provided value [%s] for the property [%s] of the [%s] node template is not valid according to the property validation function [%s].", propertyBody, propertyName, nodeTemplateName, validationFunction), nodeTemplateName);
+        if (MapUtils.isEmpty(functionCalls) && validationFunction != null && !validationFunction.evaluate(propertyBody)) {
+            context.addError(String.format("The provided value [%s] for the property [%s] of the [%s] node template is not valid according to the property validation function.", propertyBody, propertyName, nodeTemplateName), nodeTemplateName);
             return null;
         }
 
-        return new ToscaProperty(propertyDefinition, propertyBody, propertyBody);
+        if (MapUtils.isEmpty(functionCalls)) {
+            return new ToscaProperty(propertyDefinition, propertyBody, propertyBody);
+        }
+
+        if (functionCalls.containsKey(ToscaConstants.GET_INPUT_FUNCTION)) {
+            handleGetInputFunctions(functionCalls.get(ToscaConstants.GET_INPUT_FUNCTION), propertyName, nodeTemplateName, context);
+            logger.debug("Successfully parsed the [{}] function call of the property [{}]. Adding the property to the mapping of unresolved properties by the given function.", ToscaConstants.GET_INPUT_FUNCTION, propertyName);
+            ToscaProperty property = new ToscaProperty(propertyDefinition, propertyBody, null);
+            context.addUnresolvedByGetInput(nodeTemplateName, property);
+            return property;
+        }
+
+//        Map<String, Object> body = ToscaYamlHelper.asMap(propertyBody);
+//        boolean isFunctionCall = body.size() == 1 && body.keySet().iterator().next().startsWith(ToscaConstants.FUNCTION_PREFIX);
+//        if (!isFunctionCall) {
+//            return parsePropertyValue(propertyName, propertyBody, propertyDefinition, nodeTemplateName, context);
+//        }
+//
+//        if (body.containsKey(ToscaConstants.GET_INPUT_FUNCTION)) {
+//            return parseGetInputPropertyValue(propertyName, body, propertyDefinition, nodeTemplateName, context);
+//        }
+//
+//        return parseGetPropertyAndGetAttributePropertyValue(propertyName, body, propertyDefinition, nodeTemplateName, context);
+        return null;
     }
 
-    private ToscaProperty parseGetInputPropertyValue(String propertyName, Map<String, Object> propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
-        logger.debug("Parsing the [{}] function call of the property [{}].", ToscaConstants.GET_INPUT_FUNCTION, propertyName);
-        String targetInputName = ToscaYamlHelper.asString(propertyBody.get(ToscaConstants.GET_INPUT_FUNCTION));
-        if (!context.getInputs().containsKey(targetInputName)) {
-            logger.debug("The property [{}] is referencing a non-existent input [{}]. Skipping it.", propertyName, targetInputName);
-            context.addError(String.format("The input [%s] referenced in the property [%s] of the [%s] node template is not valid.", targetInputName, propertyName, nodeTemplateName), nodeTemplateName);
-            return null;
+    private Map<String, List<Map<String, Object>>> getAllToscaFunctionCalls(Object propertyBody) {
+        Map<String, List<Map<String, Object>>> functionCalls = new HashMap<>();
+        getAllToscaFunctionCallsRecursive(propertyBody, functionCalls);
+        return functionCalls;
+    }
+
+    private void getAllToscaFunctionCallsRecursive(Object propertyBody, Map<String, List<Map<String, Object>>> functionCalls) {
+        if (propertyBody instanceof List) {
+            ToscaYamlHelper.asList(propertyBody).forEach(value -> getAllToscaFunctionCallsRecursive(value, functionCalls));
+            return;
         }
 
+        Map<String, Object> valueAsMap = ToscaYamlHelper.asMap(propertyBody);
+        if (MapUtils.isEmpty(valueAsMap)) {
+            return;
+        }
+
+        if (valueAsMap.size() == 1) {
+            String function = valueAsMap.keySet().iterator().next();
+            if (ToscaConstants.GETTER_FUNCTION_KEYS.contains(function)) {
+                functionCalls.computeIfAbsent(function, k -> new ArrayList<>()).add(valueAsMap);
+                return;
+            }
+        }
+
+        valueAsMap.values().forEach(value -> getAllToscaFunctionCallsRecursive(value, functionCalls));
+    }
+
+    private void handleGetInputFunctions(List<Map<String, Object>> functionCalls, String propertyName, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
+        logger.debug("Parsing the [{}] function calls contained in the property [{}].", ToscaConstants.GET_INPUT_FUNCTION, propertyName);
+        for (Map<String, Object> functionCall : functionCalls) {
+            String targetInputName = ToscaYamlHelper.asString(functionCall.get(ToscaConstants.GET_INPUT_FUNCTION));
+            if (!context.getInputs().containsKey(targetInputName)) {
+                logger.debug("The property [{}] is referencing a non-existent input [{}]. Skipping it.", propertyName, targetInputName);
+                context.addError(String.format("The input [%s] referenced in the property [%s] of the [%s] node template is not valid.", targetInputName, propertyName, nodeTemplateName), nodeTemplateName);
+                return;
+            }
+
+            logger.debug("Successfully parsed the [{}] function call of the property [{}]. Adding the property to the mapping of unresolved properties by the given function.", ToscaConstants.GET_INPUT_FUNCTION, propertyName);
+        }
+    }
+
+/*    private ToscaProperty parseGetInputPropertyValue(String propertyName, Map<String, Object> propertyBody, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
         ToscaInputDefinition inputDefinition = context.getInputs().get(targetInputName);
         if (!propertyDefinition.getType().isAssignableFrom(inputDefinition.getType())) {
             logger.debug("The property [{}] is referencing an input [{}] of a different type. Skipping it.", propertyName, targetInputName);
             context.addError(String.format("The input [%s] referenced in the property [%s] of the [%s] node template is not compatible with the property type [%s].", targetInputName, propertyName, nodeTemplateName, propertyDefinition.getType()), nodeTemplateName);
             return null;
         }
+    }*/
 
-        logger.debug("Successfully parsed the [{}] function call of the property [{}]. Adding the property to the mapping of unresolved properties by the given function.", ToscaConstants.GET_INPUT_FUNCTION, propertyName);
-        ToscaProperty property = new ToscaProperty(propertyDefinition, propertyBody, null);
-        context.addUnresolvedByGetInput(nodeTemplateName, property);
-        return property;
-    }
-
-    private ToscaProperty parseGetPropertyAndGetAttributePropertyValue(String propertyName, Map<String, Object> body, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
-        boolean getPropertyFunctionCall = body.containsKey(ToscaConstants.GET_PROPERTY_FUNCTION);
-        if (!getPropertyFunctionCall && !body.containsKey(ToscaConstants.GET_ATTRIBUTE_FUNCTION)) {
-            logger.debug("The property [{}] is calling an invalid TOSCA functon. Skipping it.", propertyName);
-            context.addError(String.format("The property [%s] of the [%s] node template is not valid.", propertyName, nodeTemplateName), nodeTemplateName);
-            return null;
-        }
-
-        logger.debug("Parsing the [{}] function call of the property [{}].", getPropertyFunctionCall ? ToscaConstants.GET_PROPERTY_FUNCTION : ToscaConstants.GET_ATTRIBUTE_FUNCTION, propertyName);
-        List<?> args = getPropertyFunctionCall ? (List<?>) body.get(ToscaConstants.GET_PROPERTY_FUNCTION) : (List<?>) body.get(ToscaConstants.GET_ATTRIBUTE_FUNCTION);
-        if (args == null || args.size() != 2) {
-            logger.debug("The function call either has not specified any arguments or has not specified two arguments. Skipping it.");
-            context.addError(String.format("The [%s] function must have exactly two arguments.", getPropertyFunctionCall ? ToscaConstants.GET_PROPERTY_FUNCTION : ToscaConstants.GET_ATTRIBUTE_FUNCTION), nodeTemplateName);
-            return null;
-        }
-
-        ToscaProperty property = new ToscaProperty(propertyDefinition, body, null);
-        logger.debug("Successfully parsed the [{}] function call of the property [{}]. Adding the property to the mapping of unresolved properties by the given function.", getPropertyFunctionCall ? ToscaConstants.GET_PROPERTY_FUNCTION : ToscaConstants.GET_ATTRIBUTE_FUNCTION, propertyName);
-        if (getPropertyFunctionCall) {
-            context.addUnresolvedByGetProperty(nodeTemplateName, property);
-        } else {
-            context.addUnresolvedByGetAttribute(nodeTemplateName, property);
-        }
-
-        return property;
-    }
+//    private ToscaProperty parseGetPropertyAndGetAttributePropertyValue(String propertyName, Map<String, Object> body, ToscaPropertyDefinition propertyDefinition, String nodeTemplateName, ToscaServiceTemplateParsingContext context) {
+//        boolean getPropertyFunctionCall = body.containsKey(ToscaConstants.GET_PROPERTY_FUNCTION);
+//        if (!getPropertyFunctionCall && !body.containsKey(ToscaConstants.GET_ATTRIBUTE_FUNCTION)) {
+//            logger.debug("The property [{}] is calling an invalid TOSCA functon. Skipping it.", propertyName);
+//            context.addError(String.format("The property [%s] of the [%s] node template is not valid.", propertyName, nodeTemplateName), nodeTemplateName);
+//            return null;
+//        }
+//
+//        logger.debug("Parsing the [{}] function call of the property [{}].", getPropertyFunctionCall ? ToscaConstants.GET_PROPERTY_FUNCTION : ToscaConstants.GET_ATTRIBUTE_FUNCTION, propertyName);
+//        List<?> args = getPropertyFunctionCall ? (List<?>) body.get(ToscaConstants.GET_PROPERTY_FUNCTION) : (List<?>) body.get(ToscaConstants.GET_ATTRIBUTE_FUNCTION);
+//        if (args == null || args.size() != 2) {
+//            logger.debug("The function call either has not specified any arguments or has not specified two arguments. Skipping it.");
+//            context.addError(String.format("The [%s] function must have exactly two arguments.", getPropertyFunctionCall ? ToscaConstants.GET_PROPERTY_FUNCTION : ToscaConstants.GET_ATTRIBUTE_FUNCTION), nodeTemplateName);
+//            return null;
+//        }
+//
+//        ToscaProperty property = new ToscaProperty(propertyDefinition, body, null);
+//        logger.debug("Successfully parsed the [{}] function call of the property [{}]. Adding the property to the mapping of unresolved properties by the given function.", getPropertyFunctionCall ? ToscaConstants.GET_PROPERTY_FUNCTION : ToscaConstants.GET_ATTRIBUTE_FUNCTION, propertyName);
+//        if (getPropertyFunctionCall) {
+//            context.addUnresolvedByGetProperty(nodeTemplateName, property);
+//        } else {
+//            context.addUnresolvedByGetAttribute(nodeTemplateName, property);
+//        }
+//
+//        return property;
+//    }
 
     private void parseNodeTemplateRequirements(String nodeTemplateName, List<?> requirements, ToscaServiceTemplateParsingContext context) {
         if (CollectionUtils.isEmpty(requirements)) {

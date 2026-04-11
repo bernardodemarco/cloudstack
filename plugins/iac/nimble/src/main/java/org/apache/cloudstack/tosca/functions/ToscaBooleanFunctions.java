@@ -28,7 +28,12 @@ public class ToscaBooleanFunctions {
 
         @Override
         public boolean evaluate(Object value) {
-            return validValues.contains(value);
+            return validValues.stream().anyMatch(validValue -> {
+                if (validValue instanceof String) {
+                    return ((String) validValue).equalsIgnoreCase(value.toString());
+                }
+                return validValue.equals(value);
+            });
         }
 
         public List<Object> getValidValues() {

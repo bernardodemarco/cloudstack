@@ -20,7 +20,6 @@ import com.cloud.api.ApiDispatcher;
 import com.cloud.api.ApiGsonHelper;
 import com.cloud.api.ApiSerializerHelper;
 import com.cloud.api.ApiServer;
-import com.cloud.api.response.ApiResponseSerializer;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.utils.component.ComponentContext;
 import com.cloud.utils.db.EntityManager;
@@ -28,7 +27,6 @@ import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.api.BaseAsyncCmd;
 import org.apache.cloudstack.api.BaseAsyncCreateCmd;
 import org.apache.cloudstack.api.BaseCmd;
-import org.apache.cloudstack.api.ResponseObject;
 import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.framework.jobs.AsyncJob;
 import org.apache.cloudstack.framework.jobs.AsyncJobDispatcher;
@@ -40,20 +38,26 @@ import org.apache.cloudstack.framework.jobs.impl.OutcomeImpl;
 import org.apache.cloudstack.jobs.JobInfo;
 import org.apache.cloudstack.managed.context.ManagedContextExecutor;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
+import org.apache.cloudstack.tosca.functions.ToscaFunction;
+import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
+import org.apache.cloudstack.tosca.model.ToscaPrimitiveType;
 import org.apache.cloudstack.tosca.model.ToscaProperty;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
+import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
 import org.apache.cloudstack.tosca.parser.ToscaConstants;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
 import org.apache.cloudstack.tosca.parser.ToscaYamlHelper;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -103,12 +107,57 @@ public class ToscaOrchestrator {
         logger.info("All provisioning tasks have completed successfully.");
     }
 
+    /**
+     * Resolves the unresolved properties of a node template by the <code>$get_input</code> TOSCA function.
+     * @param serviceTemplate The service template whose node templates properties will be resolved.
+     * @param inputs The user provided inputs.
+     * @throws InvalidParameterValueException If the user-provided inputs do not match the service template's inputs or are not accepted values by the service template.
+     */
     protected void resolveServiceTemplateInputs(ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
-        serviceTemplate.getInputs();
+        Set<String> unknownInputs = inputs.keySet().stream()
+                .filter(input -> !serviceTemplate.getInputs().containsKey(input)).collect(Collectors.toSet());
+        if (CollectionUtils.isNotEmpty(unknownInputs)) {
+            throw new InvalidParameterValueException(String.format("The following inputs have been specified but are not accepted by the service template: %s.", unknownInputs));
+        }
 
-//        como que tu vai fazer com collections? o tosca permite passar collections como inputs? e, o tosca permite definir apenas 1 item da collection como o que vem do input?
-        
+        if (MapUtils.isEmpty(serviceTemplate.getInputs())) {
+            logger.debug("The service template has no inputs. Skipping the input resolution workflow.");
+            return;
+        }
 
+        serviceTemplate.getUnresolvedPropertiesByGetInput().forEach((nodeTemplate, unresolvedProperties) -> {
+            unresolvedProperties.forEach(unresolvedProperty -> {
+                resolveUnresolvedPropertyByGetInput(nodeTemplate, unresolvedProperty, serviceTemplate, inputs);
+            });
+        });
+    }
+
+    private void resolveUnresolvedPropertyByGetInput(String nodeTemplateName, ToscaProperty unresolvedProperty, ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
+        logger.debug("Resolving the unresolved property [{}] of the node template [{}] by the [{}] TOSCA function.", unresolvedProperty.getDefinition().getName(), nodeTemplateName, ToscaConstants.GET_INPUT_FUNCTION);
+        Map<String, Object> functionCall = ToscaYamlHelper.asMap(unresolvedProperty.getRawValue());
+        String targetInput = ToscaYamlHelper.asString(functionCall.get(ToscaConstants.GET_INPUT_FUNCTION));
+        ToscaInputDefinition inputDefinition = serviceTemplate.getInputs().get(targetInput);
+        Object inputValue = inputDefinition.getType().convertPrimitiveTypeFromString(inputs.get(targetInput));
+        ToscaFunction.ToscaBooleanFunction inputValidationFunction = inputDefinition.getValidation();
+        if (inputValue != null && inputValidationFunction != null && !inputValidationFunction.evaluate(inputValue)) {
+            throw new InvalidParameterValueException(String.format("The input [%s] of the node template [%s] is invalid. The value [%s] does not satisfy the validation rules.", targetInput, nodeTemplateName, inputValue));
+        }
+
+        if (inputValue == null) {
+            logger.debug("The input [{}] was not provided. Checking if it has a default value.", targetInput);
+            if (inputDefinition.getDefaultValue() == null) {
+                throw new InvalidParameterValueException(String.format("The input [%s] is required by the node template [%s] but it was not provided and it does not have a default value.", targetInput, nodeTemplateName));
+            }
+            inputValue = inputDefinition.getDefaultValue();
+        }
+
+        ToscaFunction.ToscaBooleanFunction propertyValidationFunction = unresolvedProperty.getDefinition().getValidation();
+        if (propertyValidationFunction != null && !propertyValidationFunction.evaluate(inputValue)) {
+            throw new InvalidParameterValueException(String.format("The input [%s] of the node template [%s] is invalid. The value [%s] does not satisfy the validation rules.", targetInput, nodeTemplateName, inputValue));
+        }
+
+        logger.debug("The input [{}] of the property [{}] of the node template [{}] has been resolved successfully.", targetInput, unresolvedProperty.getDefinition().getName(), nodeTemplateName);
+        unresolvedProperty.setEvaluatedValue(inputValue);
     }
 
     private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
@@ -127,8 +176,8 @@ public class ToscaOrchestrator {
                         .map((dep) -> futures.get(dep.getName())).toArray(CompletableFuture[]::new);
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
                     logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
-                    resolveUnresolvedPropertiesByToscaFunction(nodeTemplate, serviceTemplate, ToscaConstants.GET_PROPERTY_FUNCTION);
-                    resolveUnresolvedPropertiesByToscaFunction(nodeTemplate, serviceTemplate, ToscaConstants.GET_ATTRIBUTE_FUNCTION);
+                    resolveUnresolvedPropertiesByGetPropertyAndGetAttribute(nodeTemplate, serviceTemplate, ToscaConstants.GET_PROPERTY_FUNCTION);
+                    resolveUnresolvedPropertiesByGetPropertyAndGetAttribute(nodeTemplate, serviceTemplate, ToscaConstants.GET_ATTRIBUTE_FUNCTION);
                     return buildNodeProvisioningTask(nodeTemplate, callContext);
                 });
             }
@@ -218,7 +267,7 @@ public class ToscaOrchestrator {
         logger.info("Dispatching the provisioning synchronous command [{}] with the following parameters {}.", syncCmd.getClass().getName(), apiParams);
         syncCmd = ComponentContext.inject(syncCmd);
         apiDispatcher.dispatch(syncCmd, apiParams, false);
-        return ApiSerializerHelper.fromSerializedStringToMap(ApiResponseSerializer.toSerializedString((ResponseObject) syncCmd.getResponseObject(), BaseCmd.RESPONSE_TYPE_JSON));
+        return ApiSerializerHelper.fromSerializedStringToMap(ApiSerializerHelper.toSerializedString(syncCmd.getResponseObject()));
     }
 
     private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) throws Exception {
@@ -318,8 +367,9 @@ public class ToscaOrchestrator {
      * @throws InvalidParameterValueException When the return value of the <code>$get_attribute</code> and <code>$get_property</code> function calls is null
      * or when the return value does not passes the validation function.
      */
-    protected void resolveUnresolvedPropertiesByToscaFunction(ToscaNodeTemplate nodeTemplate, ToscaServiceTemplate serviceTemplate, String toscaFunction) {
-        Set<ToscaProperty> unresolvedProperties = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ? nodeTemplate.getUnresolvedPropertiesByGetProperty() : nodeTemplate.getUnresolvedPropertiesByGetAttribute();
+    protected void resolveUnresolvedPropertiesByGetPropertyAndGetAttribute(ToscaNodeTemplate nodeTemplate, ToscaServiceTemplate serviceTemplate, String toscaFunction) {
+        Set<ToscaProperty> unresolvedProperties = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ?
+                nodeTemplate.getUnresolvedPropertiesByGetProperty() : nodeTemplate.getUnresolvedPropertiesByGetAttribute();
         if (CollectionUtils.isEmpty(unresolvedProperties)) {
             logger.debug("Node template [{}] has no unresolved properties to be resolved by the [{}] TOSCA function.", nodeTemplate.getName(), toscaFunction);
             return;
@@ -327,29 +377,72 @@ public class ToscaOrchestrator {
 
         logger.info("Resolving the unresolved properties of the node template [{}] by the [{}] TOSCA function.", nodeTemplate.getName(), toscaFunction);
         for (ToscaProperty unresolvedProperty : unresolvedProperties) {
-            Map<String, Object> unresolvedPropertyRawValue = ToscaYamlHelper.asMap(unresolvedProperty.getRawValue());
-            List<?> functionCallArgs = ToscaYamlHelper.asList(unresolvedPropertyRawValue.get(toscaFunction));
-            String targetNodeName = ToscaYamlHelper.asString(functionCallArgs.get(0));
-            ToscaNodeTemplate targetNode = serviceTemplate.getNodeTemplates().get(targetNodeName);
-            String targetField = ToscaYamlHelper.asString(functionCallArgs.get(1));
+            Object valueToBeResolved = resolveValue(unresolvedProperty.getRawValue(), toscaFunction, serviceTemplate, nodeTemplate);
 
-            Object valueToBeResolved = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ? targetNode.getProperty(targetField).getEvaluatedValue() : targetNode.getAttribute(targetField);
-            if (valueToBeResolved == null) {
-                logger.error("The field [{}] of the target node [{}] has not been defined. Thus, it is not possible to resolve the property [{}] of the [{}] node template.", targetField, targetNode.getName(), unresolvedProperty.getDefinition().getName(), nodeTemplate.getName());
-                throw new InvalidParameterValueException(String.format("The field [%s] of the target node [%s] has not been defined. Unable to deploy [%s].", targetField, targetNode.getName(), nodeTemplate.getName()));
-            }
-
-            if (unresolvedProperty.getDefinition().getValidation() != null) {
+            if (unresolvedProperty.getDefinition().getValidation() != null && unresolvedProperty.getDefinition().getType().getKind() == ToscaTypeDefinition.Kind.PRIMITIVE) {
                 logger.debug("The unresolved property [{}] has a validation clause. Executing it.", unresolvedProperty.getDefinition().getName());
                 boolean validationResult = unresolvedProperty.getDefinition().getValidation().evaluate(valueToBeResolved);
                 if (!validationResult) {
                     logger.error("The value of the property [{}] of node template [{}] is not valid. Aborting IaC template deployment.", unresolvedProperty.getDefinition().getName(), nodeTemplate.getName());
-                    throw new InvalidParameterValueException(String.format("The value of the property [%s] of node template [%s] is not valid. Please, check the value and try again.", targetField, targetNodeName));
+                    throw new InvalidParameterValueException(String.format("The value of the property [%s] of node template [%s] is not valid. Please, check the value and try again.", unresolvedProperty.getDefinition().getName(), nodeTemplate.getName()));
                 }
             }
-            logger.debug("The unresolved property [{}] of node template [{}] will be resolved to value [{}] (retrieved from {}.{}).", unresolvedProperty.getDefinition().getName(), nodeTemplate.getName(), valueToBeResolved, targetNodeName, targetField);
+
+            logger.debug("The unresolved property [{}] of node template [{}] will be resolved to value [{}].", unresolvedProperty.getDefinition().getName(), nodeTemplate.getName(), valueToBeResolved);
             unresolvedProperty.setEvaluatedValue(valueToBeResolved);
         }
+    }
+
+    private Object resolveValue(Object rawValue, String toscaFunction, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+        if (rawValue instanceof List) {
+            List<?> rawList = ToscaYamlHelper.asList(rawValue);
+            return resolveList(rawList, toscaFunction, serviceTemplate, nodeTemplate);
+        }
+        if (rawValue instanceof Map) {
+            Map<String, Object> rawMap = ToscaYamlHelper.asMap(rawValue);
+            if (isToscaFunctionCall(rawMap, toscaFunction)) {
+                return resolveGetAttributeAndGetPropertyFunctionCall(rawMap, toscaFunction, serviceTemplate, nodeTemplate);
+            }
+            return resolveMap(rawMap, toscaFunction, serviceTemplate, nodeTemplate);
+        }
+        return rawValue;
+    }
+
+    private Object resolveGetAttributeAndGetPropertyFunctionCall(Map<String, Object> functionCall, String toscaFunction, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+        List<?> args = ToscaYamlHelper.asList(functionCall.get(toscaFunction));
+        String targetNodeName = ToscaYamlHelper.asString(args.get(0));
+        String targetField = ToscaYamlHelper.asString(args.get(1));
+
+        ToscaNodeTemplate targetNode = serviceTemplate.getNodeTemplates().get(targetNodeName);
+        Object functionCallResult = ToscaConstants.GET_PROPERTY_FUNCTION.equals(toscaFunction) ?
+                targetNode.getProperty(targetField).getEvaluatedValue() : targetNode.getAttribute(targetField);
+
+        if (functionCallResult == null) {
+            throw new InvalidParameterValueException(String.format("The field [%s] of the target node [%s] has not been defined. Unable to deploy [%s].", targetField, targetNode.getName(), nodeTemplate.getName()));
+        }
+        return functionCallResult;
+    }
+
+    private List<Object> resolveList(List<?> list, String toscaFunction, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+        List<Object> resolved = new ArrayList<>();
+        for (Object element : list) {
+            Object resolvedElement = resolveValue(element, toscaFunction, serviceTemplate, nodeTemplate);
+            resolved.add(resolvedElement);
+        }
+        return resolved;
+    }
+
+    private Map<String, Object> resolveMap(Map<String, Object> rawMap, String toscaFunction, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+        Map<String, Object> resolved = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : rawMap.entrySet()) {
+            Object resolvedValue = resolveValue(entry.getValue(), toscaFunction, serviceTemplate, nodeTemplate);
+            resolved.put(entry.getKey(), resolvedValue);
+        }
+        return resolved;
+    }
+
+    private boolean isToscaFunctionCall(Map<String, Object> map, String toscaFunction) {
+        return map.size() == 1 && map.containsKey(toscaFunction);
     }
 
     public void configureExecutorPool(int poolSize) {

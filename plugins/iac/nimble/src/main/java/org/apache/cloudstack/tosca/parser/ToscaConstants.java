@@ -16,6 +16,8 @@
 // under the License.
 package org.apache.cloudstack.tosca.parser;
 
+import java.util.List;
+
 public class ToscaConstants {
     public static final String ATTRIBUTES = "attributes";
     public static final String API_PARAMETER = "api-parameter";
@@ -44,4 +46,5 @@ public class ToscaConstants {
     public static final String GET_INPUT_FUNCTION = "$get_input";
     public static final String GET_PROPERTY_FUNCTION = "$get_property";
     public static final String VALID_VALUES_FUNCTION = "$valid_values";
+    public static final List<String> GETTER_FUNCTION_KEYS = List.of(GET_ATTRIBUTE_FUNCTION, GET_INPUT_FUNCTION, GET_PROPERTY_FUNCTION, VALID_VALUES_FUNCTION);
 }
