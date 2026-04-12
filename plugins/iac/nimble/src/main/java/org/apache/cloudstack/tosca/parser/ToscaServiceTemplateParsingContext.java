@@ -18,7 +18,6 @@ package org.apache.cloudstack.tosca.parser;
 
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
-import org.apache.cloudstack.tosca.model.ToscaProperty;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,9 +30,9 @@ public class ToscaServiceTemplateParsingContext {
     private final Map<String, ToscaNodeType> profile;
     private Map<String, ToscaInputDefinition> inputs;
     private final ToscaParsingErrorsContext errorsContext = new ToscaParsingErrorsContext();
-    private final Map<String, Set<ToscaProperty>> unresolvedByGetInput = new HashMap<>();
-    private final Map<String, Set<ToscaProperty>> unresolvedByGetProperty = new HashMap<>();
-    private final Map<String, Set<ToscaProperty>> unresolvedByGetAttribute = new HashMap<>();
+    private final Map<String, Set<ToscaGetterFunctionCallContext>> getInputFunctionCalls = new HashMap<>();
+    private final Map<String, Set<ToscaGetterFunctionCallContext>> getPropertyFunctionCalls = new HashMap<>();
+    private final Map<String, Set<ToscaGetterFunctionCallContext>> getAttributeFunctionCalls = new HashMap<>();
     private final Map<String, Set<String>> nodeDependencies = new HashMap<>();
 
     public ToscaServiceTemplateParsingContext(Map<String, ToscaNodeType> profile) {
@@ -44,16 +43,16 @@ public class ToscaServiceTemplateParsingContext {
         this.inputs = inputs;
     }
 
-    public void addUnresolvedByGetInput(String nodeTemplateName, ToscaProperty property) {
-        unresolvedByGetInput.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).add(property);
+    public void addGetInputFunctionCalls(String nodeTemplateName, Set<ToscaGetterFunctionCallContext> functionCallContexts) {
+        getInputFunctionCalls.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).addAll(functionCallContexts);
     }
 
-    public void addUnresolvedByGetProperty(String nodeTemplateName, ToscaProperty property) {
-        unresolvedByGetProperty.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).add(property);
+    public void addGetPropertyFunctionCalls(String nodeTemplateName, Set<ToscaGetterFunctionCallContext> functionCallContexts) {
+        getPropertyFunctionCalls.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).addAll(functionCallContexts);
     }
 
-    public void addUnresolvedByGetAttribute(String nodeTemplateName, ToscaProperty property) {
-        unresolvedByGetAttribute.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).add(property);
+    public void addGetAttributeFunctionCalls(String nodeTemplateName, Set<ToscaGetterFunctionCallContext> functionCallContexts) {
+        getAttributeFunctionCalls.computeIfAbsent(nodeTemplateName, name -> new HashSet<>()).addAll(functionCallContexts);
     }
 
     public void addNodeDependency(String nodeTemplateName, String dependency) {
@@ -72,16 +71,16 @@ public class ToscaServiceTemplateParsingContext {
         return Collections.unmodifiableMap(inputs);
     }
 
-    public Map<String, Set<ToscaProperty>> getUnresolvedByGetInput() {
-        return Collections.unmodifiableMap(unresolvedByGetInput);
+    public Map<String, Set<ToscaGetterFunctionCallContext>> getGetInputFunctionCalls() {
+        return Collections.unmodifiableMap(getInputFunctionCalls);
     }
 
-    public Map<String, Set<ToscaProperty>> getUnresolvedByGetProperty() {
-        return Collections.unmodifiableMap(unresolvedByGetProperty);
+    public Map<String, Set<ToscaGetterFunctionCallContext>> getGetPropertyFunctionCalls() {
+        return Collections.unmodifiableMap(getPropertyFunctionCalls);
     }
 
-    public Map<String, Set<ToscaProperty>> getUnresolvedByGetAttribute() {
-        return Collections.unmodifiableMap(unresolvedByGetAttribute);
+    public Map<String, Set<ToscaGetterFunctionCallContext>> getGetAttributeFunctionCalls() {
+        return Collections.unmodifiableMap(getAttributeFunctionCalls);
     }
 
     public Map<String, Set<String>> getNodeDependencies() {

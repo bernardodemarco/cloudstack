@@ -16,6 +16,8 @@
 // under the License.
 package org.apache.cloudstack.tosca.model;
 
+import org.apache.cloudstack.tosca.parser.ToscaGetterFunctionCallContext;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -24,13 +26,13 @@ public class ToscaServiceTemplate {
     private final Map<String, ToscaNodeTemplate> nodeTemplates;
     private final Map<String, ToscaInputDefinition> inputs;
     private final Map<String, Set<ToscaNodeTemplate>> dependencyGraph;
-    private final Map<String, Set<ToscaProperty>> unresolvedPropertiesByGetInput;
+    private final Map<String, Set<ToscaGetterFunctionCallContext>> getInputFunctionCalls;
 
-    public ToscaServiceTemplate(Map<String, ToscaNodeTemplate> nodeTemplates, Map<String, Set<ToscaNodeTemplate>> dependencyGraph, Map<String, ToscaInputDefinition> inputs, Map<String, Set<ToscaProperty>> unresolvedPropertiesByGetInput) {
+    public ToscaServiceTemplate(Map<String, ToscaNodeTemplate> nodeTemplates, Map<String, Set<ToscaNodeTemplate>> dependencyGraph, Map<String, ToscaInputDefinition> inputs, Map<String, Set<ToscaGetterFunctionCallContext>> getInputFunctionCalls) {
         this.nodeTemplates = nodeTemplates;
         this.dependencyGraph = dependencyGraph;
         this.inputs = inputs;
-        this.unresolvedPropertiesByGetInput = unresolvedPropertiesByGetInput;
+        this.getInputFunctionCalls = getInputFunctionCalls;
     }
 
     public Map<String, ToscaNodeTemplate> getNodeTemplates() {
@@ -45,7 +47,7 @@ public class ToscaServiceTemplate {
         return Collections.unmodifiableMap(dependencyGraph);
     }
 
-    public Map<String, Set<ToscaProperty>> getUnresolvedPropertiesByGetInput() {
-        return Collections.unmodifiableMap(unresolvedPropertiesByGetInput);
+    public Map<String, Set<ToscaGetterFunctionCallContext>> getGetInputFunctionCalls() {
+        return Collections.unmodifiableMap(getInputFunctionCalls);
     }
 }

@@ -220,14 +220,14 @@ public class ToscaServiceTemplateParserTest {
 
         Map<?, ?> keyPairidRawValue = (Map<?, ?>) instanceNodeTemplate.getProperty("ssh-key-pair-id").getRawValue();
         Assert.assertTrue(keyPairidRawValue.containsKey("$get_attribute"));
-        Mockito.verify(parsingContextMock).addUnresolvedByGetAttribute(Mockito.eq(instanceNodeTemplate.getName()), Mockito.eq(instanceNodeTemplate.getProperty("ssh-key-pair-id")));
+        Mockito.verify(parsingContextMock).addGetAttributeFunctionCalls(Mockito.eq(instanceNodeTemplate.getName()), Mockito.any());
         List<?> keyPairIdArgs = ToscaYamlHelper.asList(keyPairidRawValue.get("$get_attribute"));
         Assert.assertEquals("pair", keyPairIdArgs.get(0));
         Assert.assertEquals("uuid", keyPairIdArgs.get(1));
 
         Map<?, ?> keyPairNameRawValue = (Map<?, ?>) instanceNodeTemplate.getProperty("ssh-key-pair-name").getRawValue();
         Assert.assertTrue(keyPairNameRawValue.containsKey("$get_property"));
-        Mockito.verify(parsingContextMock).addUnresolvedByGetProperty(Mockito.eq(instanceNodeTemplate.getName()), Mockito.eq(instanceNodeTemplate.getProperty("ssh-key-pair-name")));
+        Mockito.verify(parsingContextMock).addGetPropertyFunctionCalls(Mockito.eq(instanceNodeTemplate.getName()), Mockito.any());
         List<?> keyPairNameArgs = ToscaYamlHelper.asList(keyPairNameRawValue.get("$get_property"));
         Assert.assertEquals("pair", keyPairNameArgs.get(0));
         Assert.assertEquals("name", keyPairNameArgs.get(1));
@@ -237,7 +237,7 @@ public class ToscaServiceTemplateParserTest {
         Map<?, ?> publicKeyRawValue = (Map<?, ?>) pairNodeTemplate.getProperty("public-key").getRawValue();
         Assert.assertTrue(publicKeyRawValue.containsKey("$get_input"));
         Assert.assertEquals("public-key", publicKeyRawValue.get("$get_input"));
-        Mockito.verify(parsingContextMock).addUnresolvedByGetInput(Mockito.eq(pairNodeTemplate.getName()), Mockito.eq(pairNodeTemplate.getProperty("public-key")));
+        Mockito.verify(parsingContextMock).addGetInputFunctionCalls(Mockito.eq(pairNodeTemplate.getName()), Mockito.any());
     }
 
     @Test
@@ -275,7 +275,7 @@ public class ToscaServiceTemplateParserTest {
         Assert.assertEquals(5, nodeTemplates.get("instance").getProperties().size());
         Assert.assertEquals(1, nodeTemplates.get("pair").getProperties().size());
         Mockito.verify(parsingContextMock, Mockito.times(2)).addError(Mockito.anyString(), Mockito.anyString());
-        Mockito.verify(parsingContextMock, Mockito.never()).addUnresolvedByGetInput(Mockito.any(), Mockito.any());
+        Mockito.verify(parsingContextMock, Mockito.never()).addGetInputFunctionCalls(Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -289,8 +289,8 @@ public class ToscaServiceTemplateParserTest {
         Assert.assertEquals(2, nodeTemplates.get("instance").getProperties().size());
         Assert.assertEquals(2, nodeTemplates.get("pair").getProperties().size());
         Mockito.verify(parsingContextMock, Mockito.times(4)).addError(Mockito.anyString(), Mockito.anyString());
-        Mockito.verify(parsingContextMock, Mockito.never()).addUnresolvedByGetProperty(Mockito.any(), Mockito.any());
-        Mockito.verify(parsingContextMock, Mockito.never()).addUnresolvedByGetAttribute(Mockito.any(), Mockito.any());
+        Mockito.verify(parsingContextMock, Mockito.never()).addGetPropertyFunctionCalls(Mockito.any(), Mockito.any());
+        Mockito.verify(parsingContextMock, Mockito.never()).addGetAttributeFunctionCalls(Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -437,7 +437,7 @@ public class ToscaServiceTemplateParserTest {
         Assert.assertEquals(2, serviceTemplate.getDependencyGraph().get("instance").size());
         Assert.assertNull(serviceTemplate.getDependencyGraph().get("pair"));
         Assert.assertNull(serviceTemplate.getDependencyGraph().get("other-pair"));
-        Assert.assertEquals(2, serviceTemplate.getUnresolvedPropertiesByGetInput().size());
+        Assert.assertEquals(2, serviceTemplate.getGetInputFunctionCalls().size());
     }
 
     @Test
@@ -449,7 +449,7 @@ public class ToscaServiceTemplateParserTest {
         Assert.assertEquals(0, serviceTemplate.getInputs().size());
         Assert.assertEquals(1, serviceTemplate.getDependencyGraph().get("instance").size());
         Assert.assertNull(serviceTemplate.getDependencyGraph().get("pair"));
-        Assert.assertEquals(0, serviceTemplate.getUnresolvedPropertiesByGetInput().size());
+        Assert.assertEquals(0, serviceTemplate.getGetInputFunctionCalls().size());
     }
 
     @Test

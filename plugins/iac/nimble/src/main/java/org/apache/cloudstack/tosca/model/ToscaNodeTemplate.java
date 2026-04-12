@@ -16,6 +16,8 @@
 // under the License.
 package org.apache.cloudstack.tosca.model;
 
+import org.apache.cloudstack.tosca.parser.ToscaGetterFunctionCallContext;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -24,8 +26,8 @@ public class ToscaNodeTemplate {
     private final String name;
     private final ToscaNodeType type;
     private final Map<String, ToscaProperty> properties;
-    private Set<ToscaProperty> unresolvedPropertiesByGetProperty;
-    private Set<ToscaProperty> unresolvedPropertiesByGetAttribute;
+    private Set<ToscaGetterFunctionCallContext> getPropertyFunctionCalls;
+    private Set<ToscaGetterFunctionCallContext> getAttributeFunctionCalls;
     private final Map<String, Object> attributes = new HashMap<>();
 
     public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
@@ -54,20 +56,20 @@ public class ToscaNodeTemplate {
         return properties;
     }
 
-    public void setUnresolvedPropertiesByGetProperty(Set<ToscaProperty> unresolvedPropertiesByGetProperty) {
-        this.unresolvedPropertiesByGetProperty = unresolvedPropertiesByGetProperty;
+    public void setGetPropertyFunctionCalls(Set<ToscaGetterFunctionCallContext> getPropertyFunctionCalls) {
+        this.getPropertyFunctionCalls = getPropertyFunctionCalls;
     }
 
-    public Set<ToscaProperty> getUnresolvedPropertiesByGetProperty() {
-        return unresolvedPropertiesByGetProperty;
+    public Set<ToscaGetterFunctionCallContext> getGetPropertyFunctionCalls() {
+        return getPropertyFunctionCalls;
     }
 
-    public void setUnresolvedPropertiesByGetAttribute(Set<ToscaProperty> unresolvedPropertiesByGetAttribute) {
-        this.unresolvedPropertiesByGetAttribute = unresolvedPropertiesByGetAttribute;
+    public void setGetAttributeFunctionCalls(Set<ToscaGetterFunctionCallContext> getAttributeFunctionCalls) {
+        this.getAttributeFunctionCalls = getAttributeFunctionCalls;
     }
 
-    public Set<ToscaProperty> getUnresolvedPropertiesByGetAttribute() {
-        return unresolvedPropertiesByGetAttribute;
+    public Set<ToscaGetterFunctionCallContext> getGetAttributeFunctionCalls() {
+        return getAttributeFunctionCalls;
     }
 
     public Map<String, String> getApiParams() {
