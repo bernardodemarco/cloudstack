@@ -100,7 +100,7 @@ public class ToscaServiceTemplateParserTest {
         String content = "{type: {unknownfield: string, validation: {$valid_values: [$value, [validvalue1, validvalue2]]}}, enabled: {description: Enabled input description, type: boolean, default_value: false}}";
         Map<String, ToscaInputDefinition> inputs = toscaServiceTemplateParserSpy.parseInputs(ToscaYamlHelper.asMap(ToscaYamlHelper.loadYaml(content)), parsingContextMock);
         Mockito.verify(parsingContextMock).addError(Mockito.eq("Unknown key [unknownfield]."), Mockito.anyString());
-        Mockito.verify(parsingContextMock).addError(Mockito.eq("The type of the input [type] was not specified or it is not supported."), Mockito.anyString());
+        Mockito.verify(parsingContextMock).addError(Mockito.eq("The type of the input [type] was not specified or it is not supported (only TOSCA primitive types are currently supported)."), Mockito.anyString());
         Assert.assertFalse(inputs.containsKey("type"));
         Assert.assertTrue(inputs.containsKey("enabled"));
     }
@@ -288,7 +288,7 @@ public class ToscaServiceTemplateParserTest {
         Map<String, ToscaNodeTemplate> nodeTemplates = toscaServiceTemplateParserSpy.parseNodeTemplates(serviceTemplate, parsingContextMock);
         Assert.assertEquals(2, nodeTemplates.get("instance").getProperties().size());
         Assert.assertEquals(2, nodeTemplates.get("pair").getProperties().size());
-        Mockito.verify(parsingContextMock, Mockito.times(4)).addError(Mockito.anyString(), Mockito.anyString());
+        Mockito.verify(parsingContextMock, Mockito.times(5)).addError(Mockito.anyString(), Mockito.anyString());
         Mockito.verify(parsingContextMock, Mockito.never()).addGetPropertyFunctionCalls(Mockito.any(), Mockito.any());
         Mockito.verify(parsingContextMock, Mockito.never()).addGetAttributeFunctionCalls(Mockito.any(), Mockito.any());
     }

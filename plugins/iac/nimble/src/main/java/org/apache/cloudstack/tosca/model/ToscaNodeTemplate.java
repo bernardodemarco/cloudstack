@@ -19,6 +19,7 @@ package org.apache.cloudstack.tosca.model;
 import org.apache.cloudstack.tosca.parser.ToscaGetterFunctionCallContext;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,8 +27,8 @@ public class ToscaNodeTemplate {
     private final String name;
     private final ToscaNodeType type;
     private final Map<String, ToscaProperty> properties;
-    private Set<ToscaGetterFunctionCallContext> getPropertyFunctionCalls;
-    private Set<ToscaGetterFunctionCallContext> getAttributeFunctionCalls;
+    private Set<ToscaGetterFunctionCallContext> getPropertyFunctionCalls = new HashSet<>();
+    private Set<ToscaGetterFunctionCallContext> getAttributeFunctionCalls = new HashSet<>();
     private final Map<String, Object> attributes = new HashMap<>();
 
     public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
