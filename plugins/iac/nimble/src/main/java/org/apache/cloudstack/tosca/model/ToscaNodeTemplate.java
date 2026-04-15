@@ -27,8 +27,8 @@ public class ToscaNodeTemplate {
     private final String name;
     private final ToscaNodeType type;
     private final Map<String, ToscaProperty> properties;
-    private Set<ToscaGetterFunctionCallContext> getPropertyFunctionCalls = new HashSet<>();
-    private Set<ToscaGetterFunctionCallContext> getAttributeFunctionCalls = new HashSet<>();
+    private final Set<ToscaProperty> unresolvedPropertiesByGetProperty = new HashSet<>();
+    private final Set<ToscaProperty> unresolvedPropertiesByGetAttribute = new HashSet<>();
     private final Map<String, Object> attributes = new HashMap<>();
 
     public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
@@ -57,20 +57,20 @@ public class ToscaNodeTemplate {
         return properties;
     }
 
-    public void setGetPropertyFunctionCalls(Set<ToscaGetterFunctionCallContext> getPropertyFunctionCalls) {
-        this.getPropertyFunctionCalls = getPropertyFunctionCalls;
+    public void addUnresolvedPropertyByGetProperty(ToscaProperty unresolvedPropertyByGetProperty) {
+        this.unresolvedPropertiesByGetProperty.add(unresolvedPropertyByGetProperty);
     }
 
-    public Set<ToscaGetterFunctionCallContext> getGetPropertyFunctionCalls() {
-        return getPropertyFunctionCalls;
+    public Set<ToscaProperty> getUnresolvedPropertiesByGetProperty() {
+        return unresolvedPropertiesByGetProperty;
     }
 
-    public void setGetAttributeFunctionCalls(Set<ToscaGetterFunctionCallContext> getAttributeFunctionCalls) {
-        this.getAttributeFunctionCalls = getAttributeFunctionCalls;
+    public void addUnresolvedPropertyByGetAttribute(ToscaProperty unresolvedPropertyByGetAttribute) {
+        this.unresolvedPropertiesByGetAttribute.add(unresolvedPropertyByGetAttribute);
     }
 
-    public Set<ToscaGetterFunctionCallContext> getGetAttributeFunctionCalls() {
-        return getAttributeFunctionCalls;
+    public Set<ToscaProperty> getUnresolvedPropertiesByGetAttribute() {
+        return unresolvedPropertiesByGetAttribute;
     }
 
     public Map<String, String> getApiParams() {

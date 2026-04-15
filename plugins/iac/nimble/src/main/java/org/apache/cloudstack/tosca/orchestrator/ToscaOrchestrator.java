@@ -57,6 +57,7 @@ import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -367,30 +368,54 @@ public class ToscaOrchestrator {
      * or when the return value does not pass the validation function.
      */
     protected void executeGetAttributeAndGetPropertyFunctionCalls(ToscaNodeTemplate nodeTemplate, ToscaServiceTemplate serviceTemplate) {
-        Set<ToscaGetterFunctionCallContext> functionCalls = new HashSet<>(nodeTemplate.getGetPropertyFunctionCalls());
-        functionCalls.addAll(nodeTemplate.getGetAttributeFunctionCalls());
-        if (CollectionUtils.isEmpty(functionCalls)) {
-            logger.debug("Node template [{}] has no function calls to the [{}] and [{}] TOSCA function.", nodeTemplate.getName(), ToscaConstants.GET_ATTRIBUTE_FUNCTION, ToscaConstants.GET_PROPERTY_FUNCTION);
+        Set<ToscaProperty> unresolvedProperties = new HashSet<>(nodeTemplate.getUnresolvedPropertiesByGetProperty());
+        unresolvedProperties.addAll(nodeTemplate.getUnresolvedPropertiesByGetAttribute());
+        if (CollectionUtils.isEmpty(unresolvedProperties)) {
+            logger.debug("Node template [{}] has no unresolved properties by the [{}] and [{}] TOSCA functions.", nodeTemplate.getName(), ToscaConstants.GET_ATTRIBUTE_FUNCTION, ToscaConstants.GET_PROPERTY_FUNCTION);
             return;
         }
 
         logger.info("Handling the [{}] and [{}] TOSCA function calls performed by the [{}] node template.", ToscaConstants.GET_ATTRIBUTE_FUNCTION, ToscaConstants.GET_PROPERTY_FUNCTION, nodeTemplate.getName());
-        for (ToscaGetterFunctionCallContext functionCall : functionCalls) {
-            Object valueToBeResolved = resolveGetAttributeAndGetPropertyFunctionCall(functionCall.getFunctionCall(), serviceTemplate, nodeTemplate);
-            ToscaProperty callerProperty = functionCall.getProperty();
+        for (ToscaProperty property : unresolvedProperties) {
+            Object evaluatedValue = getPropertyEvaluatedValue(property.getRawValue(), serviceTemplate, nodeTemplate);
 
-            if (callerProperty.getDefinition().getValidation() != null && callerProperty.getDefinition().getType().getKind() == ToscaTypeDefinition.Kind.PRIMITIVE) {
-                logger.debug("The property [{}] has a validation clause. Executing it.", callerProperty.getDefinition().getName());
-                boolean validationResult = callerProperty.getDefinition().getValidation().evaluate(valueToBeResolved);
+            if (property.getDefinition().getValidation() != null && property.getDefinition().getType().getKind() == ToscaTypeDefinition.Kind.PRIMITIVE) {
+                logger.debug("The property [{}] has a validation clause. Executing it.", property.getDefinition().getName());
+                boolean validationResult = property.getDefinition().getValidation().evaluate(evaluatedValue);
                 if (!validationResult) {
-                    logger.error("The value of the property [{}] of node template [{}] is not valid. Aborting IaC template deployment.", callerProperty.getDefinition().getName(), nodeTemplate.getName());
-                    throw new InvalidParameterValueException(String.format("The value of the property [%s] of node template [%s] is not valid. Please, check the value and try again.", callerProperty.getDefinition().getName(), nodeTemplate.getName()));
+                    logger.error("The value of the property [{}] of node template [{}] is not valid. Aborting IaC template deployment.", property.getDefinition().getName(), nodeTemplate.getName());
+                    throw new InvalidParameterValueException(String.format("The value of the property [%s] of node template [%s] is not valid. Please, check the value and try again.", property.getDefinition().getName(), nodeTemplate.getName()));
                 }
             }
 
-            logger.debug("The unresolved property [{}] of node template [{}] will be resolved to value [{}].", callerProperty.getDefinition().getName(), nodeTemplate.getName(), valueToBeResolved);
-            callerProperty.setEvaluatedValue(valueToBeResolved);
+            logger.debug("Property [{}] of node template [{}] resolved to [{}].", property.getDefinition().getName(), nodeTemplate.getName(), evaluatedValue);
+            property.setEvaluatedValue(evaluatedValue);
         }
+    }
+
+    private Object getPropertyEvaluatedValue(Object rawValue, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+        if (rawValue instanceof List) {
+            List<Object> evaluatedValue = new ArrayList<>();
+            for (Object item : (List<?>) rawValue) {
+                evaluatedValue.add(getPropertyEvaluatedValue(item, serviceTemplate, nodeTemplate));
+            }
+            return evaluatedValue;
+        }
+
+        if (rawValue instanceof Map) {
+            Map<String, Object> rawValueAsMap = ToscaYamlHelper.asMap(rawValue);
+            boolean isToscaFunction = rawValueAsMap.size() == 1 && ToscaConstants.GETTER_FUNCTION_KEYS.contains(rawValueAsMap.keySet().iterator().next());
+            if (isToscaFunction) {
+                return resolveGetAttributeAndGetPropertyFunctionCall(rawValueAsMap, serviceTemplate, nodeTemplate);
+            }
+            Map<String, Object> evaluatedValue = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> entry : rawValueAsMap.entrySet()) {
+                evaluatedValue.put(entry.getKey(), getPropertyEvaluatedValue(entry.getValue(), serviceTemplate, nodeTemplate));
+            }
+            return evaluatedValue;
+        }
+
+        return rawValue;
     }
 
     private Object resolveGetAttributeAndGetPropertyFunctionCall(Map<String, Object> functionCall, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {

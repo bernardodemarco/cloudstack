@@ -305,18 +305,20 @@ public class ToscaServiceTemplateParser {
             String function = valueAsMap.keySet().iterator().next();
             if (function.startsWith(ToscaConstants.FUNCTION_PREFIX) && !ToscaConstants.GETTER_FUNCTION_KEYS.contains(function)) {
                 context.addError(String.format("Function call [%s] is not supported in property definitions.", function), function);
+                return;
             } else if (ToscaConstants.GETTER_FUNCTION_KEYS.contains(function)) {
                 if (validateToscaGetterFunctionCall(valueAsMap, type, context)) {
                     functionCalls.first().computeIfAbsent(function, k -> new HashSet<>()).add(new ToscaGetterFunctionCallContext(property, valueAsMap, type));
                 } else {
                     functionCalls.second(false);
-                    return;
                 }
+                return;
             }
         }
 
         if (type.getKind() != ToscaTypeDefinition.Kind.DATA_TYPE) {
-            valueAsMap.values().forEach(value -> getAllToscaFunctionCallsRecursive(property, value, type, functionCalls, context));
+            ToscaTypeDefinition entrySchema = ObjectUtils.defaultIfNull(type.getEntrySchema(), type);
+            valueAsMap.values().forEach(value -> getAllToscaFunctionCallsRecursive(property, value, entrySchema, functionCalls, context));
             return;
         }
 
@@ -399,12 +401,15 @@ public class ToscaServiceTemplateParser {
             Set<ToscaGetterFunctionCallContext> functionCallContexts = entry.getValue();
 
             if (!CollectionUtils.isEmpty(functionCallContexts)) {
-                verifyToscaGetterFunctionCall(nodeTemplate.getName(), functionCallContexts, nodeTemplates, functionName, context);
-                if (isGetPropertyFunctionCall) {
-                    nodeTemplate.setGetPropertyFunctionCalls(functionCallContexts);
-                } else {
-                    nodeTemplate.setGetAttributeFunctionCalls(functionCallContexts);
-                }
+                functionCallContexts.forEach((functionCall) -> {
+                    ToscaProperty unresolvedProperty = functionCall.getProperty();
+                    verifyToscaGetterFunctionCall(nodeTemplate.getName(), functionCallContexts, nodeTemplates, functionName, context);
+                    if (isGetPropertyFunctionCall) {
+                        nodeTemplate.addUnresolvedPropertyByGetProperty(unresolvedProperty);
+                    } else {
+                        nodeTemplate.addUnresolvedPropertyByGetAttribute(unresolvedProperty);
+                    }
+                });
             }
         }
     }
