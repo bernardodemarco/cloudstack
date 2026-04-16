@@ -437,7 +437,7 @@ public class ToscaServiceTemplateParserTest {
         Assert.assertEquals(2, serviceTemplate.getDependencyGraph().get("instance").size());
         Assert.assertNull(serviceTemplate.getDependencyGraph().get("pair"));
         Assert.assertNull(serviceTemplate.getDependencyGraph().get("other-pair"));
-        Assert.assertEquals(2, serviceTemplate.getGetInputFunctionCalls().size());
+        Assert.assertEquals(2, serviceTemplate.getUnresolvedPropertiesByGetInput().size());
     }
 
     @Test
@@ -449,7 +449,7 @@ public class ToscaServiceTemplateParserTest {
         Assert.assertEquals(0, serviceTemplate.getInputs().size());
         Assert.assertEquals(1, serviceTemplate.getDependencyGraph().get("instance").size());
         Assert.assertNull(serviceTemplate.getDependencyGraph().get("pair"));
-        Assert.assertEquals(0, serviceTemplate.getGetInputFunctionCalls().size());
+        Assert.assertEquals(0, serviceTemplate.getUnresolvedPropertiesByGetInput().size());
     }
 
     @Test

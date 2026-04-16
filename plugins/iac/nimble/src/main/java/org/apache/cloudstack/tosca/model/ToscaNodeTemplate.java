@@ -16,8 +16,6 @@
 // under the License.
 package org.apache.cloudstack.tosca.model;
 
-import org.apache.cloudstack.tosca.parser.ToscaGetterFunctionCallContext;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;

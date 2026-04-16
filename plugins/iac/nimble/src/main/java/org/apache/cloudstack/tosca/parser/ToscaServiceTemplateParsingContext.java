@@ -18,6 +18,7 @@ package org.apache.cloudstack.tosca.parser;
 
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeType;
+import org.apache.cloudstack.tosca.model.ToscaProperty;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ToscaServiceTemplateParsingContext {
     private final Map<String, ToscaNodeType> profile;
@@ -71,8 +73,11 @@ public class ToscaServiceTemplateParsingContext {
         return Collections.unmodifiableMap(inputs);
     }
 
-    public Map<String, Set<ToscaGetterFunctionCallContext>> getGetInputFunctionCalls() {
-        return Collections.unmodifiableMap(getInputFunctionCalls);
+    public Map<String, Set<ToscaProperty>> getUnresolvedPropertiesByGetInput() {
+        return getInputFunctionCalls.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .map(ToscaGetterFunctionCallContext::getProperty)
+                                .collect(Collectors.toSet())));
     }
 
     public Map<String, Set<ToscaGetterFunctionCallContext>> getGetPropertyFunctionCalls() {

@@ -77,7 +77,7 @@ public class ToscaOrchestratorTest {
     @Test
     public void resolveServiceTemplateInputsTestNotResolveInputsWhenTheServiceTemplateHasNoInputs() {
         toscaOrchestratorSpy.resolveServiceTemplateInputs(toscaServiceTemplateMock, Map.of());
-        Mockito.verify(toscaServiceTemplateMock, Mockito.never()).getGetInputFunctionCalls();
+        Mockito.verify(toscaServiceTemplateMock, Mockito.never()).getUnresolvedPropertiesByGetInput();
     }
 
     @Test

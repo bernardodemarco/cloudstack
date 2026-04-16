@@ -46,7 +46,6 @@ import org.apache.cloudstack.tosca.model.ToscaProperty;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.model.ToscaTypeDefinition;
 import org.apache.cloudstack.tosca.parser.ToscaConstants;
-import org.apache.cloudstack.tosca.parser.ToscaGetterFunctionCallContext;
 import org.apache.cloudstack.tosca.parser.ToscaParser;
 import org.apache.cloudstack.tosca.parser.ToscaYamlHelper;
 import org.apache.commons.collections4.CollectionUtils;
@@ -125,41 +124,25 @@ public class ToscaOrchestrator {
             return;
         }
 
-        serviceTemplate.getGetInputFunctionCalls().forEach((nodeTemplate, getInputFunctionCalls) -> {
-            getInputFunctionCalls.forEach(getInputFunctionCall -> {
-                handleGetInputFunctionCall(nodeTemplate, getInputFunctionCall, serviceTemplate, inputs);
+        serviceTemplate.getUnresolvedPropertiesByGetInput().forEach((nodeTemplate, unresolvedProperties) -> {
+            unresolvedProperties.forEach(property -> {
+                handleGetInputFunctionCall(nodeTemplate, property, serviceTemplate, inputs);
             });
         });
     }
 
-    private void handleGetInputFunctionCall(String nodeTemplateName, ToscaGetterFunctionCallContext getInputFunctionCall, ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
-        ToscaProperty callerProperty = getInputFunctionCall.getProperty();
-        logger.debug("Resolving the [{}] function call triggered by the [{}] property of the [{}] node template.", ToscaConstants.GET_INPUT_FUNCTION, callerProperty.getDefinition().getName(), nodeTemplateName);
+    private void handleGetInputFunctionCall(String nodeTemplateName, ToscaProperty property, ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
+        String propertyName = property.getDefinition().getName();
+        logger.debug("Resolving the [{}] function call triggered by the [{}] property of the [{}] node template.", ToscaConstants.GET_INPUT_FUNCTION, propertyName, nodeTemplateName);
 
-        Map<String, Object> functionCall = getInputFunctionCall.getFunctionCall();
-        String targetInput = ToscaYamlHelper.asString(functionCall.get(ToscaConstants.GET_INPUT_FUNCTION));
-        ToscaInputDefinition inputDefinition = serviceTemplate.getInputs().get(targetInput);
-        Object inputValue = inputDefinition.getType().convertPrimitiveTypeFromString(inputs.get(targetInput));
-        ToscaFunction.ToscaBooleanFunction inputValidationFunction = inputDefinition.getValidation();
-        if (inputValue != null && inputValidationFunction != null && !inputValidationFunction.evaluate(inputValue)) {
-            throw new InvalidParameterValueException(String.format("The input [%s] of the node template [%s] is invalid. The value [%s] does not satisfy the validation rules.", targetInput, nodeTemplateName, inputValue));
+        Object evaluatedValue = getPropertyEvaluatedValue(property.getRawValue(), serviceTemplate, nodeTemplateName, inputs);
+        ToscaFunction.ToscaBooleanFunction propertyValidationFunction = property.getDefinition().getValidation();
+        if (propertyValidationFunction != null && property.getDefinition().getType().getKind() == ToscaTypeDefinition.Kind.PRIMITIVE && !propertyValidationFunction.evaluate(evaluatedValue)) {
+            throw new InvalidParameterValueException(String.format("The value [%s] does not satisfy the validation rules of the property [%s] of the node template [%s].", evaluatedValue, propertyName, nodeTemplateName));
         }
 
-        if (inputValue == null) {
-            logger.debug("The input [{}] was not provided. Checking if it has a default value.", targetInput);
-            if (inputDefinition.getDefaultValue() == null) {
-                throw new InvalidParameterValueException(String.format("The input [%s] is required by the node template [%s] but it was not provided and it does not have a default value.", targetInput, nodeTemplateName));
-            }
-            inputValue = inputDefinition.getDefaultValue();
-        }
-
-        ToscaFunction.ToscaBooleanFunction propertyValidationFunction = callerProperty.getDefinition().getValidation();
-        if (propertyValidationFunction != null && !propertyValidationFunction.evaluate(inputValue)) {
-            throw new InvalidParameterValueException(String.format("The input [%s] of the node template [%s] is invalid. The value [%s] does not satisfy the validation rules.", targetInput, nodeTemplateName, inputValue));
-        }
-
-        logger.debug("The input [{}] of the property [{}] of the node template [{}] has been successfully retrieved.", targetInput, callerProperty.getDefinition().getName(), nodeTemplateName);
-        callerProperty.setEvaluatedValue(inputValue);
+        logger.debug("Resolving the evaluated value of the property [{}] of the node template [{}] to be equal to: [{}].", propertyName, nodeTemplateName, evaluatedValue);
+        property.setEvaluatedValue(evaluatedValue);
     }
 
     private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
@@ -377,7 +360,7 @@ public class ToscaOrchestrator {
 
         logger.info("Handling the [{}] and [{}] TOSCA function calls performed by the [{}] node template.", ToscaConstants.GET_ATTRIBUTE_FUNCTION, ToscaConstants.GET_PROPERTY_FUNCTION, nodeTemplate.getName());
         for (ToscaProperty property : unresolvedProperties) {
-            Object evaluatedValue = getPropertyEvaluatedValue(property.getRawValue(), serviceTemplate, nodeTemplate);
+            Object evaluatedValue = getPropertyEvaluatedValue(property.getRawValue(), serviceTemplate, nodeTemplate.getName(), null);
 
             if (property.getDefinition().getValidation() != null && property.getDefinition().getType().getKind() == ToscaTypeDefinition.Kind.PRIMITIVE) {
                 logger.debug("The property [{}] has a validation clause. Executing it.", property.getDefinition().getName());
@@ -393,24 +376,29 @@ public class ToscaOrchestrator {
         }
     }
 
-    private Object getPropertyEvaluatedValue(Object rawValue, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+    private Object getPropertyEvaluatedValue(Object rawValue, ToscaServiceTemplate serviceTemplate, String nodeTemplateName, Map<String, String> rawInputs) {
         if (rawValue instanceof List) {
             List<Object> evaluatedValue = new ArrayList<>();
             for (Object item : (List<?>) rawValue) {
-                evaluatedValue.add(getPropertyEvaluatedValue(item, serviceTemplate, nodeTemplate));
+                evaluatedValue.add(getPropertyEvaluatedValue(item, serviceTemplate, nodeTemplateName, rawInputs));
             }
             return evaluatedValue;
         }
 
         if (rawValue instanceof Map) {
             Map<String, Object> rawValueAsMap = ToscaYamlHelper.asMap(rawValue);
-            boolean isToscaFunction = rawValueAsMap.size() == 1 && ToscaConstants.GETTER_FUNCTION_KEYS.contains(rawValueAsMap.keySet().iterator().next());
+            String functionName = rawValueAsMap.keySet().iterator().next();
+            boolean isToscaFunction = rawValueAsMap.size() == 1 && ToscaConstants.GETTER_FUNCTION_KEYS.contains(functionName);
             if (isToscaFunction) {
-                return resolveGetAttributeAndGetPropertyFunctionCall(rawValueAsMap, serviceTemplate, nodeTemplate);
+                if (ToscaConstants.GET_INPUT_FUNCTION.equals(functionName)) {
+                    return resolveGetInputFunctionCall(rawValueAsMap, nodeTemplateName, serviceTemplate, rawInputs);
+                }
+                return resolveGetAttributeAndGetPropertyFunctionCall(rawValueAsMap, nodeTemplateName, serviceTemplate);
             }
+
             Map<String, Object> evaluatedValue = new LinkedHashMap<>();
             for (Map.Entry<String, Object> entry : rawValueAsMap.entrySet()) {
-                evaluatedValue.put(entry.getKey(), getPropertyEvaluatedValue(entry.getValue(), serviceTemplate, nodeTemplate));
+                evaluatedValue.put(entry.getKey(), getPropertyEvaluatedValue(entry.getValue(), serviceTemplate, nodeTemplateName, rawInputs));
             }
             return evaluatedValue;
         }
@@ -418,7 +406,27 @@ public class ToscaOrchestrator {
         return rawValue;
     }
 
-    private Object resolveGetAttributeAndGetPropertyFunctionCall(Map<String, Object> functionCall, ToscaServiceTemplate serviceTemplate, ToscaNodeTemplate nodeTemplate) {
+    private Object resolveGetInputFunctionCall(Map<String, Object> functionCall, String nodeTemplateName, ToscaServiceTemplate serviceTemplate, Map<String, String> inputValues) {
+        String inputName = ToscaYamlHelper.asString(functionCall.get(ToscaConstants.GET_INPUT_FUNCTION));
+        ToscaInputDefinition inputDefinition = serviceTemplate.getInputs().get(inputName);
+        Object inputValue = inputDefinition.getType().convertPrimitiveTypeFromString(inputValues.get(inputName));
+
+        ToscaFunction.ToscaBooleanFunction inputValidationFunction = inputDefinition.getValidation();
+        if (inputValue != null && inputValidationFunction != null && !inputValidationFunction.evaluate(inputValue)) {
+            throw new InvalidParameterValueException(String.format("The input [%s] declared in the node template [%s] is invalid. The value [%s] does not satisfy the validation rules.", inputName, nodeTemplateName, inputValue));
+        }
+
+        if (inputValue == null) {
+            logger.debug("The input [{}] was not provided. Checking if it has a default value.", inputName);
+            if (inputDefinition.getDefaultValue() == null) {
+                throw new InvalidParameterValueException(String.format("The input [%s] declared in the node template [%s] is required but it was not provided and it does not have a default value.", inputName, nodeTemplateName));
+            }
+            inputValue = inputDefinition.getDefaultValue();
+        }
+        return inputValue;
+    }
+
+    private Object resolveGetAttributeAndGetPropertyFunctionCall(Map<String, Object> functionCall, String nodeTemplateName, ToscaServiceTemplate serviceTemplate) {
         String toscaFunction = functionCall.keySet().iterator().next();
         List<?> args = ToscaYamlHelper.asList(functionCall.get(toscaFunction));
         String targetNodeName = ToscaYamlHelper.asString(args.get(0));
@@ -429,7 +437,7 @@ public class ToscaOrchestrator {
                 targetNode.getProperty(targetField).getEvaluatedValue() : targetNode.getAttribute(targetField);
 
         if (functionCallResult == null) {
-            throw new InvalidParameterValueException(String.format("The field [%s] of the target node [%s] referenced by the TOSCA function [%s] has not been defined. Unable to deploy [%s].", targetField, targetNode.getName(), toscaFunction, nodeTemplate.getName()));
+            throw new InvalidParameterValueException(String.format("The field [%s] of the target node [%s] referenced by the TOSCA function [%s] has not been defined. Unable to deploy [%s].", targetField, targetNode.getName(), toscaFunction, nodeTemplateName));
         }
         return functionCallResult;
     }
