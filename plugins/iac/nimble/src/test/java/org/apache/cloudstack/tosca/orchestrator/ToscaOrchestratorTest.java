@@ -136,6 +136,31 @@ public class ToscaOrchestratorTest {
     }
 
     @Test
+    public void resolveServiceTemplateInputsTestCorrectlyResolveAllGetInputFunctionCallsInsideOfCollections() {
+        String serviceTemplateYaml = "{service_template: {inputs: {first-ip: {type: string}, second-ip: {type: string}, first-detail: {type: string}, second-detail: {type: string}}, node_templates: {instance: {type: Vm, properties: {type: SSVM, vcpus: 2, ip-addresses: [{$get_input: first-ip}, {$get_input: second-ip}], offering-details: {detail1: {$get_input: first-detail}, detail2: {$get_input: second-detail}}, name-value-mapping: [{name: {$get_input: first-detail}, value: {$get_input: first-ip}}, {name: {$get_input: second-detail}, value: {$get_input: second-ip}}]}}}}}";
+        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
+
+        toscaOrchestratorSpy.resolveServiceTemplateInputs(serviceTemplate, Map.of("first-ip", "10.0.0.1", "second-ip", "10.0.0.2", "first-detail", "1st detail", "second-detail", "2nd detail"));
+
+        List<?> instanceIpAddresses = ToscaYamlHelper.asList(serviceTemplate.getNodeTemplates().get("instance").getProperty("ip-addresses").getEvaluatedValue());
+        Assert.assertEquals(2, instanceIpAddresses.size());
+        Assert.assertEquals("10.0.0.1", instanceIpAddresses.get(0));
+        Assert.assertEquals("10.0.0.2", instanceIpAddresses.get(1));
+
+        Map<String, Object> offeringDetails = ToscaYamlHelper.asMap(serviceTemplate.getNodeTemplates().get("instance").getProperty("offering-details").getEvaluatedValue());
+        Assert.assertEquals(2, offeringDetails.size());
+        Assert.assertEquals("1st detail", offeringDetails.get("detail1"));
+        Assert.assertEquals("2nd detail", offeringDetails.get("detail2"));
+
+        List<?> nameValueMappings = ToscaYamlHelper.asList(serviceTemplate.getNodeTemplates().get("instance").getProperty("name-value-mapping").getEvaluatedValue());
+        Assert.assertEquals(2, nameValueMappings.size());
+        Assert.assertEquals("1st detail", ToscaYamlHelper.asMap(nameValueMappings.get(0)).get("name"));
+        Assert.assertEquals("10.0.0.1", ToscaYamlHelper.asMap(nameValueMappings.get(0)).get("value"));
+        Assert.assertEquals("2nd detail", ToscaYamlHelper.asMap(nameValueMappings.get(1)).get("name"));
+        Assert.assertEquals("10.0.0.2", ToscaYamlHelper.asMap(nameValueMappings.get(1)).get("value"));
+    }
+
+    @Test
     public void populateNodeTemplateAttributesTestSuccessfullyPopulateNodeAttributes() {
         String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, ssh-key-pair-name: {$get_property: [pair, name]}, vcpus: 2, ip-addresses: [10.0.0.1, 10.0.0.2]}}, other-instance: {type: Vm, properties: {type: SSVM, ssh-key-pair-name: {$get_attribute: [pair, uuid]}, vcpus: 1, ip-addresses: [10.0.0.1]}}, pair: {type: SshPair, properties: {name: Pair, public-key: Public Key}}}}}";
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
@@ -174,7 +199,7 @@ public class ToscaOrchestratorTest {
 
     @Test
     public void executeGetAttributeAndGetPropertyFunctionCallsTestSuccessfullyExecuteFunctionCallsContainedInsideOfCollections() {
-        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, vcpus: 2, ip-addresses: [{$get_property: [other-instance, type]}, {$get_attribute: [other-instance, uuid]}]}}, other-instance: {type: Vm, properties: {type: {$get_property: [pair, name]}, vcpus: 1, offering-details: {detail1: {$get_attribute: [pair, uuid]}, detail2: {$get_property: [pair, public-key]}}}}, pair: {type: SshPair, properties: {name: SSVM, public-key: Public Key}}}}}";
+        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: VR, vcpus: 2, name-value-mapping: [{name: {$get_property: [pair, name]}, value: {$get_attribute: [pair, uuid]}}, {name: {$get_property: [other-instance, type]}, value: {$get_attribute: [other-instance, uuid]}}], ip-addresses: [{$get_property: [other-instance, type]}, {$get_attribute: [other-instance, uuid]}]}}, other-instance: {type: Vm, properties: {type: {$get_property: [pair, name]}, vcpus: 1, offering-details: {detail1: {$get_attribute: [pair, uuid]}, detail2: {$get_property: [pair, public-key]}}}}, pair: {type: SshPair, properties: {name: SSVM, public-key: Public Key}}}}}";
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
         serviceTemplate.getNodeTemplates().get("other-instance").addAttribute("uuid", "otherinstanceuuid");
         serviceTemplate.getNodeTemplates().get("pair").addAttribute("uuid", "pairuuid");
@@ -186,7 +211,15 @@ public class ToscaOrchestratorTest {
         Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getProperty("public-key").getEvaluatedValue(), offeringDetails.get("detail2"));
 
         toscaOrchestratorSpy.executeGetAttributeAndGetPropertyFunctionCalls(serviceTemplate.getNodeTemplates().get("instance"), serviceTemplate);
+        List<?> nameValueMappings = ToscaYamlHelper.asList(serviceTemplate.getNodeTemplates().get("instance").getProperty("name-value-mapping").getEvaluatedValue());
+        Assert.assertEquals(2, nameValueMappings.size());
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getProperty("name").getEvaluatedValue(), ToscaYamlHelper.asMap(nameValueMappings.get(0)).get("name"));
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("pair").getAttribute("uuid"), ToscaYamlHelper.asMap(nameValueMappings.get(0)).get("value"));
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("other-instance").getProperty("type").getEvaluatedValue(), ToscaYamlHelper.asMap(nameValueMappings.get(1)).get("name"));
+        Assert.assertEquals(serviceTemplate.getNodeTemplates().get("other-instance").getAttribute("uuid"), ToscaYamlHelper.asMap(nameValueMappings.get(1)).get("value"));
+
         List<?> instanceIpAddresses = ToscaYamlHelper.asList(serviceTemplate.getNodeTemplates().get("instance").getProperty("ip-addresses").getEvaluatedValue());
+        Assert.assertEquals(2, offeringDetails.size());
         Assert.assertEquals(serviceTemplate.getNodeTemplates().get("other-instance").getProperty("type").getEvaluatedValue(), instanceIpAddresses.get(0));
         Assert.assertEquals(serviceTemplate.getNodeTemplates().get("other-instance").getAttribute("uuid"), instanceIpAddresses.get(1));
     }

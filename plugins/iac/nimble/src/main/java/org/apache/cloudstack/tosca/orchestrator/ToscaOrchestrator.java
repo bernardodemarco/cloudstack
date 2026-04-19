@@ -126,14 +126,14 @@ public class ToscaOrchestrator {
 
         serviceTemplate.getUnresolvedPropertiesByGetInput().forEach((nodeTemplate, unresolvedProperties) -> {
             unresolvedProperties.forEach(property -> {
-                handleGetInputFunctionCall(nodeTemplate, property, serviceTemplate, inputs);
+                handleGetInputFunctionCalls(nodeTemplate, property, serviceTemplate, inputs);
             });
         });
     }
 
-    private void handleGetInputFunctionCall(String nodeTemplateName, ToscaProperty property, ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
+    private void handleGetInputFunctionCalls(String nodeTemplateName, ToscaProperty property, ToscaServiceTemplate serviceTemplate, Map<String, String> inputs) {
         String propertyName = property.getDefinition().getName();
-        logger.debug("Resolving the [{}] function call triggered by the [{}] property of the [{}] node template.", ToscaConstants.GET_INPUT_FUNCTION, propertyName, nodeTemplateName);
+        logger.debug("Resolving the [{}] function calls triggered by the [{}] property of the [{}] node template.", ToscaConstants.GET_INPUT_FUNCTION, propertyName, nodeTemplateName);
 
         Object evaluatedValue = getPropertyEvaluatedValue(property.getRawValue(), serviceTemplate, nodeTemplateName, inputs);
         ToscaFunction.ToscaBooleanFunction propertyValidationFunction = property.getDefinition().getValidation();

@@ -286,10 +286,6 @@ public class ToscaServiceTemplateParser {
     }
 
     private void getAllToscaFunctionCallsRecursive(ToscaProperty property, Object propertyBody, ToscaTypeDefinition type, Pair<Map<String, Set<ToscaGetterFunctionCallContext>>, Boolean> functionCalls, ToscaServiceTemplateParsingContext context) {
-        if (!functionCalls.second()) {
-            return;
-        }
-
         if (propertyBody instanceof List) {
             ToscaTypeDefinition entrySchema = ObjectUtils.defaultIfNull(type.getEntrySchema(), type);
             ToscaYamlHelper.asList(propertyBody).forEach(value -> getAllToscaFunctionCallsRecursive(property, value, entrySchema, functionCalls, context));
