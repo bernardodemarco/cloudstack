@@ -36,6 +36,10 @@ public interface NimbleService extends PluggableService, Configurable {
                     "tune this setting based on service utilization to optimize provisioning performance.",
             false, NimbleServiceEnabled.key());
 
+    ConfigKey<Integer> NimbleIaCTemplateExecutionTimeout = new ConfigKey<>("Advanced", Integer.class, "nimble.iac.template.execution.timeout", "600",
+            "Timeout, in seconds, for the NIMBLE IaC templates to finish execution. Defaults to 600 seconds (10 minutes).",
+            true, NimbleServiceEnabled.key());
+
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
     void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs);
 }

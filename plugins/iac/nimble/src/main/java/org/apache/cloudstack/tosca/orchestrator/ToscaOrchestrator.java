@@ -38,6 +38,7 @@ import org.apache.cloudstack.framework.jobs.impl.OutcomeImpl;
 import org.apache.cloudstack.jobs.JobInfo;
 import org.apache.cloudstack.managed.context.ManagedContextExecutor;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
+import org.apache.cloudstack.service.NimbleService;
 import org.apache.cloudstack.tosca.functions.ToscaFunction;
 import org.apache.cloudstack.tosca.model.ToscaInputDefinition;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
@@ -65,9 +66,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class ToscaOrchestrator {
@@ -99,10 +101,16 @@ public class ToscaOrchestrator {
     public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
-        Map<String, CompletableFuture<String>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
+        Map<String, CompletableFuture<Void>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
         logger.debug("Awaiting for all the provisioning tasks of the node template to complete.");
-        CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
-        serviceTemplateFeature.join();
+        int iacTemplateExecutionTimeout = NimbleService.NimbleIaCTemplateExecutionTimeout.value();
+        CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]))
+                .orTimeout(iacTemplateExecutionTimeout, TimeUnit.SECONDS);
+        try {
+            serviceTemplateFeature.join();
+        } catch (TimeoutException e) {
+
+        }
         logger.info("All provisioning tasks have completed successfully.");
     }
 
@@ -145,16 +153,16 @@ public class ToscaOrchestrator {
         property.setEvaluatedValue(evaluatedValue);
     }
 
-    private Map<String, CompletableFuture<String>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
+    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
-        Map<String, CompletableFuture<String>> futures = new HashMap<>();
+        Map<String, CompletableFuture<Void>> futures = new HashMap<>();
         CallContext callContext = CallContext.current();
         getServiceTemplateTopologicalSort(serviceTemplate).forEach((node, dependencies) -> {
             ToscaNodeTemplate nodeTemplate = serviceTemplate.getNodeTemplates().get(node);
-            CompletableFuture<String> taskFuture;
+            CompletableFuture<Void> taskFuture;
             if (dependencies.isEmpty()) {
                 logger.debug("Node [{}] has no dependencies. Building its provisioning task, which will be ready to be allocated for execution.", node);
-                taskFuture = buildNodeProvisioningTask(nodeTemplate, callContext);
+                taskFuture = provisionNode(nodeTemplate, callContext);
             } else {
                 logger.debug("Node [{}] has [{}] dependencies. Building its provisioning task, which will only be allocated for execution when all dependencies are ready.", node, dependencies.size());
                 CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
@@ -162,7 +170,7 @@ public class ToscaOrchestrator {
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
                     logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
                     executeGetAttributeAndGetPropertyFunctionCalls(nodeTemplate, serviceTemplate);
-                    return buildNodeProvisioningTask(nodeTemplate, callContext);
+                    return provisionNode(nodeTemplate, callContext);
                 });
             }
 
@@ -205,25 +213,12 @@ public class ToscaOrchestrator {
         topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
-    private CompletableFuture<String> buildNodeProvisioningTask(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
-        return provisionNode(nodeTemplate, callContext)
-//                .orTimeout(5, TimeUnit.SECONDS)
-                .thenApply(result -> {
-                    logger.debug("SUCCESS [{}] [{}]", nodeTemplate.getName(), Thread.currentThread().getName());
-                    return result;
-                }).exceptionally(ex -> {
-                    logger.debug("FAILURE [{}] [{}]", nodeTemplate.getName(), ex);
-                    throw new CompletionException(ex);
-                });
-    }
-
-    private CompletableFuture<String> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
-        return CompletableFuture.supplyAsync(() -> {
+    private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
+        return CompletableFuture.runAsync(() -> {
             CallContext.register(callContext, null);
             ManagedContextExecutor.execute(() -> {
                 dispatchProvisioningCommand(nodeTemplate, callContext);
             });
-            return "res-" + nodeTemplate.getName();
         }, executorPool);
     }
 
@@ -242,8 +237,9 @@ public class ToscaOrchestrator {
             logger.info("Result of the [{}] execution: {}.", nodeTemplate.getName(), provisioningResult);
             populateNodeTemplateAttributes(nodeTemplate, provisioningResult);
         } catch (Exception e) {
-            logger.error("Could not instantiate the API class [{}]: {}.", apiClass.getName(), e.getMessage());
-            throw new InvalidParameterValueException(String.format("Could not dispatch the provisioning task of [%s]. Please, check the availability of the API associated with it.", nodeTemplate.getName()));
+            String errorMessage = String.format("Could execute the provisioning API [%s] of the node template [%s].", apiClass.getName(), nodeTemplate.getName());
+            logger.error(errorMessage, e);
+            throw new CloudRuntimeException(errorMessage, e);
         }
     }
 
