@@ -66,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -101,14 +102,16 @@ public class ToscaOrchestrator {
     public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
-        Map<String, CompletableFuture<Void>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate);
+
+        List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
+        Map<String, CompletableFuture<Void>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate, errors);
         logger.debug("Awaiting for all the provisioning tasks of the node template to complete.");
         int iacTemplateExecutionTimeout = NimbleService.NimbleIaCTemplateExecutionTimeout.value();
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]))
                 .orTimeout(iacTemplateExecutionTimeout, TimeUnit.SECONDS);
         try {
             serviceTemplateFeature.join();
-        } catch (TimeoutException e) {
+        } catch (CompletionException e) {
 
         }
         logger.info("All provisioning tasks have completed successfully.");
@@ -153,7 +156,7 @@ public class ToscaOrchestrator {
         property.setEvaluatedValue(evaluatedValue);
     }
 
-    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate) {
+    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, List<Throwable> errors) {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<Void>> futures = new HashMap<>();
         CallContext callContext = CallContext.current();
@@ -162,7 +165,7 @@ public class ToscaOrchestrator {
             CompletableFuture<Void> taskFuture;
             if (dependencies.isEmpty()) {
                 logger.debug("Node [{}] has no dependencies. Building its provisioning task, which will be ready to be allocated for execution.", node);
-                taskFuture = provisionNode(nodeTemplate, callContext);
+                taskFuture = provisionNode(nodeTemplate, callContext, errors);
             } else {
                 logger.debug("Node [{}] has [{}] dependencies. Building its provisioning task, which will only be allocated for execution when all dependencies are ready.", node, dependencies.size());
                 CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
@@ -170,7 +173,7 @@ public class ToscaOrchestrator {
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
                     logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
                     executeGetAttributeAndGetPropertyFunctionCalls(nodeTemplate, serviceTemplate);
-                    return provisionNode(nodeTemplate, callContext);
+                    return provisionNode(nodeTemplate, callContext, errors);
                 });
             }
 
@@ -213,13 +216,17 @@ public class ToscaOrchestrator {
         topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
-    private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
+    private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext, List<Throwable> errors) {
         return CompletableFuture.runAsync(() -> {
             CallContext.register(callContext, null);
             ManagedContextExecutor.execute(() -> {
                 dispatchProvisioningCommand(nodeTemplate, callContext);
             });
-        }, executorPool);
+        }, executorPool).whenComplete((result, ex) -> {
+            if (ex != null) {
+                errors.add(ex);
+            }
+        });
     }
 
     private void dispatchProvisioningCommand(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
