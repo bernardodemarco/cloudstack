@@ -37,8 +37,14 @@ public interface NimbleService extends PluggableService, Configurable {
             false, NimbleServiceEnabled.key());
 
     ConfigKey<Integer> NimbleIaCTemplateExecutionTimeout = new ConfigKey<>("Advanced", Integer.class, "nimble.iac.template.execution.timeout", "600",
-            "Timeout, in seconds, for the NIMBLE IaC templates to finish execution. Defaults to 600 seconds (10 minutes).",
+            "Timeout, in seconds, for NIMBLE IaC templates to finish execution. Provisioning tasks for node templates that have already " +
+                    "started will not be abruptly interrupted. Instead, they will continue running normally, but no new tasks will be executed. Defaults to 600 seconds (10 minutes).",
             true, NimbleServiceEnabled.key());
+
+    ConfigKey<Long> NimbleNodeProvisioningTaskCheckInterval = new ConfigKey<>("Advanced",
+            Long.class, "nimble.node.provisioning.task.check.interval", "3000",
+            "Interval, in milliseconds, for checking whether an asynchronous node provisioning task job is complete. Defaults to 3000 milliseconds.",
+            true);
 
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
     void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs);

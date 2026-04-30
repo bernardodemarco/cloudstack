@@ -96,6 +96,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
 
     @Override
     public ConfigKey<?>[] getConfigKeys() {
-        return new ConfigKey<?>[] { NimbleServiceEnabled, NimbleServicePoolSize };
+        return new ConfigKey<?>[] {
+                NimbleServiceEnabled, NimbleServicePoolSize, NimbleIaCTemplateExecutionTimeout, NimbleNodeProvisioningTaskCheckInterval
+        };
     }
 }

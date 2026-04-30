@@ -247,13 +247,6 @@ public class ToscaOrchestratorTest {
     }
 
     @Test
-    public void executeGetAttributeAndGetPropertyFunctionCallsTest() {
-        String serviceTemplateYaml = "{service_template: {node_templates: {instance: {type: Vm, properties: {type: {$get_property: [pair, name]}, ssh-key-pair-name: Name, vcpus: 2, ip-addresses: [{$get_attribute: [pair, uuid]}, {$get_property: [pair, name]}]}}, pair: {type: SshPair, properties: {name: SSVM, public-key: Public Key}}}}}";
-        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(serviceTemplateYaml, ToscaFixtures.getToscaProfileForTests(), null);
-        System.out.println(serviceTemplate);
-    }
-
-    @Test
     public void loadToscaProfileTestEachIacResourceTypeShouldBeParsed() {
         String firstResourceTypeContent = "{description: First resource type content}";
         String secondResourceTypeContent = "{description: Second resource type content}";

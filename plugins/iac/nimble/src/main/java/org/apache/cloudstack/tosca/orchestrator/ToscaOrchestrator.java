@@ -65,8 +65,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -105,16 +106,25 @@ public class ToscaOrchestrator {
 
         List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
         Map<String, CompletableFuture<Void>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate, errors);
-        logger.debug("Awaiting for all the provisioning tasks of the node template to complete.");
-        int iacTemplateExecutionTimeout = NimbleService.NimbleIaCTemplateExecutionTimeout.value();
-        CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]))
-                .orTimeout(iacTemplateExecutionTimeout, TimeUnit.SECONDS);
-        try {
-            serviceTemplateFeature.join();
-        } catch (CompletionException e) {
 
+        logger.debug("Awaiting for all the provisioning tasks of the service template to complete.");
+        CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
+        int timeout = NimbleService.NimbleIaCTemplateExecutionTimeout.value();
+        try {
+            serviceTemplateFeature.get(timeout, TimeUnit.SECONDS);
+            logger.info("All provisioning tasks of the service template completed successfully.");
+        } catch (ExecutionException e) {
+            Set<String> errorMessages = errors.stream().map(Throwable::getMessage).collect(Collectors.toSet());
+            throw new CloudRuntimeException(String.format("The following errors occurred during the IaC template deployment: %s", String.join(" | ", errorMessages)), e);
+        } catch (TimeoutException e) {
+            throw new CloudRuntimeException(String.format("IaC template deployment timed out after [%d] seconds.", timeout), e);
+        }  catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CloudRuntimeException("IaC template deployment was interrupted.", e);
+        } finally {
+            logger.debug("Trying to cancel all the provisioning tasks of the service template - this will only work for timeouts - need to think on how to handle other failure scenarios");
+            provisioningTasksFutures.values().forEach(future -> future.cancel(true));
         }
-        logger.info("All provisioning tasks have completed successfully.");
     }
 
     /**
@@ -220,6 +230,12 @@ public class ToscaOrchestrator {
         return CompletableFuture.runAsync(() -> {
             CallContext.register(callContext, null);
             ManagedContextExecutor.execute(() -> {
+                logger.debug("Before checking whether thread has been interrupted.");
+                if (Thread.currentThread().isInterrupted()) {
+                    logger.debug("Thread has been interrupted. Aborting provisioning of the node template [{}].", nodeTemplate.getName());
+                    throw new CancellationException(String.format("Provisioning interrupted before dispatching the provisioning command of the node template [%s].", nodeTemplate.getName()));
+                }
+
                 dispatchProvisioningCommand(nodeTemplate, callContext);
             });
         }, executorPool).whenComplete((result, ex) -> {
@@ -244,8 +260,8 @@ public class ToscaOrchestrator {
             logger.info("Result of the [{}] execution: {}.", nodeTemplate.getName(), provisioningResult);
             populateNodeTemplateAttributes(nodeTemplate, provisioningResult);
         } catch (Exception e) {
-            String errorMessage = String.format("Could execute the provisioning API [%s] of the node template [%s].", apiClass.getName(), nodeTemplate.getName());
-            logger.error(errorMessage, e);
+            String errorMessage = String.format("Failed to execute API [%s] for node [%s]: %s", nodeTemplate.getType().getProvisioningApi(), nodeTemplate.getName(), e.getMessage());
+            logger.error(errorMessage);
             throw new CloudRuntimeException(errorMessage, e);
         }
     }
@@ -297,7 +313,7 @@ public class ToscaOrchestrator {
         private final long jobId;
 
         private NodeTemplateProvisioningOutcome(AsyncJob job) {
-            super(String.class, job, 1000, () -> {
+            super(String.class, job, NimbleService.NimbleNodeProvisioningTaskCheckInterval.value(), () -> {
                 AsyncJobVO jobVo = entityManager.findById(AsyncJobVO.class, job.getId());
                 return jobVo == null || jobVo.getStatus() != JobInfo.Status.IN_PROGRESS;
             }, AsyncJob.Topics.JOB_STATE);
