@@ -17,6 +17,7 @@
 package org.apache.cloudstack.api.command;
 
 import com.cloud.exception.InvalidParameterValueException;
+import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseAsyncCmd;
@@ -31,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @APICommand(name = "deployIacTemplate", description = "", responseObject = SuccessResponse.class, entityType = {IacResourceType.class},
-        requestHasSensitiveInfo = false, responseHasSensitiveInfo = false)
+        requestHasSensitiveInfo = false, responseHasSensitiveInfo = false, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
 public class DeployIacTemplateCmd extends BaseAsyncCmd {
     @Inject
     private NimbleService nimbleService;

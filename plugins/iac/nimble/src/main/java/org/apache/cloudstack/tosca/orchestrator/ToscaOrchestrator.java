@@ -67,11 +67,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class ToscaOrchestrator {
@@ -104,9 +107,33 @@ public class ToscaOrchestrator {
         ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
 
+        Map<String, CompletableFuture<Void>> provisioningTasksFutures = new HashMap<>();
+        Runnable cancelAllProvisioningTasks = getCancelAllProvisioningTasks(provisioningTasksFutures);
         List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
-        Map<String, CompletableFuture<Void>> provisioningTasksFutures = createProvisioningTasksFutures(serviceTemplate, errors);
+        getCurrentNimbleExecutorPoolStatus("before creating provisioning tasks");
+        provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, errors, cancelAllProvisioningTasks));
+        awaitDeployCompletion(provisioningTasksFutures, errors, cancelAllProvisioningTasks);
+    }
 
+    private void getCurrentNimbleExecutorPoolStatus(String context) {
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) executorPool;
+        logger.debug("Current status of the NIMBLE executor pool - [context: {}]: [active count = {}, queue size = {}, completed tasks = {}]",
+                context, pool.getActiveCount(), pool.getQueue().size(), pool.getCompletedTaskCount());
+    }
+
+    private Runnable getCancelAllProvisioningTasks(Map<String, CompletableFuture<Void>> provisioningTasksFutures) {
+        AtomicBoolean cancelled = new AtomicBoolean(false);
+        return () -> {
+            if (cancelled.compareAndSet(false, true)) {
+                logger.trace("Cancelling all provisioning tasks of the service template.");
+                provisioningTasksFutures.values().forEach(future -> future.cancel(true));
+            } else {
+                logger.trace("Not cancelling provisioning tasks, because they have already been cancelled by some other failed task.");
+            }
+        };
+    }
+
+    private void awaitDeployCompletion(Map<String, CompletableFuture<Void>> provisioningTasksFutures, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
         logger.debug("Awaiting for all the provisioning tasks of the service template to complete.");
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
         int timeout = NimbleService.NimbleIaCTemplateExecutionTimeout.value();
@@ -117,13 +144,14 @@ public class ToscaOrchestrator {
             Set<String> errorMessages = errors.stream().map(Throwable::getMessage).collect(Collectors.toSet());
             throw new CloudRuntimeException(String.format("The following errors occurred during the IaC template deployment: %s", String.join(" | ", errorMessages)), e);
         } catch (TimeoutException e) {
+            cancelAllProvisioningTasks.run();
             throw new CloudRuntimeException(String.format("IaC template deployment timed out after [%d] seconds.", timeout), e);
         }  catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            cancelAllProvisioningTasks.run();
             throw new CloudRuntimeException("IaC template deployment was interrupted.", e);
         } finally {
-            logger.debug("Trying to cancel all the provisioning tasks of the service template - this will only work for timeouts - need to think on how to handle other failure scenarios");
-            provisioningTasksFutures.values().forEach(future -> future.cancel(true));
+            getCurrentNimbleExecutorPoolStatus("after awaiting the deployment of the service template");
         }
     }
 
@@ -166,7 +194,7 @@ public class ToscaOrchestrator {
         property.setEvaluatedValue(evaluatedValue);
     }
 
-    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, List<Throwable> errors) {
+    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<Void>> futures = new HashMap<>();
         CallContext callContext = CallContext.current();
@@ -187,11 +215,35 @@ public class ToscaOrchestrator {
                 });
             }
 
+            taskFuture.whenComplete((result, ex) -> {
+                handleTaskCompletion(ex, errors, cancelAllProvisioningTasks);
+                getCurrentNimbleExecutorPoolStatus(String.format("after node template [%s] provisioning", node));
+            });
+
             futures.put(node, taskFuture);
         });
 
         logger.debug("All provisioning tasks for the service template have been built successfully.");
         return futures;
+    }
+
+    private void handleTaskCompletion(Throwable ex, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
+        if (ex == null) {
+            logger.trace("The provisioning of the node template completed successfully. Skipping error handling.");
+            return;
+        }
+
+        if (ex instanceof CompletionException) {
+            ex = ex.getCause();
+        }
+
+        if (!(ex instanceof CancellationException)) {
+            logger.trace("An error occurred during the provisioning of a node template. Adding it to the list of errors.", ex);
+            errors.add(ex);
+            cancelAllProvisioningTasks.run();
+        } else {
+            logger.trace("The provisioning of the node template was cancelled. Skipping error handling.", ex);
+        }
     }
 
     // O(|V|+|E|)
@@ -222,7 +274,7 @@ public class ToscaOrchestrator {
         }
 
         branchAncestors.remove(node);
-        logger.debug("Node [{}] has been added to the topological sort.", node);
+        logger.trace("Node [{}] has been added to the topological sort.", node);
         topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
@@ -230,19 +282,15 @@ public class ToscaOrchestrator {
         return CompletableFuture.runAsync(() -> {
             CallContext.register(callContext, null);
             ManagedContextExecutor.execute(() -> {
-                logger.debug("Before checking whether thread has been interrupted.");
+                logger.trace("Checking whether thread has been interrupted, i.e., whether another task has cancelled its corresponding future.");
                 if (Thread.currentThread().isInterrupted()) {
-                    logger.debug("Thread has been interrupted. Aborting provisioning of the node template [{}].", nodeTemplate.getName());
+                    logger.trace("Thread has been interrupted. Aborting provisioning of the node template [{}].", nodeTemplate.getName());
                     throw new CancellationException(String.format("Provisioning interrupted before dispatching the provisioning command of the node template [%s].", nodeTemplate.getName()));
                 }
 
                 dispatchProvisioningCommand(nodeTemplate, callContext);
             });
-        }, executorPool).whenComplete((result, ex) -> {
-            if (ex != null) {
-                errors.add(ex);
-            }
-        });
+        }, executorPool);
     }
 
     private void dispatchProvisioningCommand(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
@@ -250,10 +298,12 @@ public class ToscaOrchestrator {
         try {
             Object cmd = apiClass.getDeclaredConstructor().newInstance();
             Map<String, Object> provisioningResult;
+            Map<String, String> apiParams = nodeTemplate.getApiParams();
+            logger.info("Dispatching the provisioning command [{}] of the node template [{}] with the following parameters {}.", cmd.getClass().getName(), nodeTemplate.getName(), apiParams);
             if (cmd instanceof BaseAsyncCreateCmd) {
-                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, nodeTemplate.getApiParams(), callContext);
+                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, apiParams, callContext);
             } else if (cmd instanceof BaseCmd && !(cmd instanceof BaseAsyncCmd)) {
-                provisioningResult = dispatchProvisioningSynchronousCommand((BaseCmd) cmd, nodeTemplate.getApiParams());
+                provisioningResult = dispatchProvisioningSynchronousCommand((BaseCmd) cmd, apiParams);
             } else {
                 throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
             }
@@ -267,21 +317,19 @@ public class ToscaOrchestrator {
     }
 
     private Map<String, Object> dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams) throws Exception {
-        logger.info("Dispatching the provisioning synchronous command [{}] with the following parameters {}.", syncCmd.getClass().getName(), apiParams);
         syncCmd = ComponentContext.inject(syncCmd);
         apiDispatcher.dispatch(syncCmd, apiParams, false);
         return ApiSerializerHelper.fromSerializedStringToMap(ApiSerializerHelper.toSerializedString(syncCmd.getResponseObject()));
     }
 
     private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) throws Exception {
-        logger.info("Dispatching the provisioning asynchronous command [{}] with the following parameters {}.", asyncCmd.getClass().getName(), apiParams);
         AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
         try {
             asyncCmd = ComponentContext.inject(asyncCmd);
-            logger.debug("Dispatching the create workflow for the command [{}].", asyncCmd.getClass().getName());
+            logger.trace("Dispatching the create workflow for the command [{}].", asyncCmd.getClass().getName());
             apiDispatcher.dispatchCreateCmd(asyncCmd, apiParams);
 
-            logger.debug("Successfully executed the create workflow for the command [{}]. Thus, dispatching its async job.", asyncCmd.getClass().getName());
+            logger.trace("Successfully executed the create workflow for the command [{}]. Thus, dispatching its async job.", asyncCmd.getClass().getName());
             AsyncJobVO job = dispatchAsyncJob(asyncCmd, apiParams, callContext);
             executionContext.joinJob(job.getId());
             Outcome<String> outcome = new NodeTemplateProvisioningOutcome(job);
@@ -325,9 +373,7 @@ public class ToscaOrchestrator {
         protected String retrieve() {
             AsyncJob job = getJob();
             if (job == null) {
-                throw new CloudRuntimeException(String.format(
-                        "Provisioning job [%d] not found.", jobId));
-            }
+                throw new CloudRuntimeException(String.format("Provisioning job [%d] not found.", jobId));}
             if (job.getStatus() == JobInfo.Status.FAILED) {
                 throw new CloudRuntimeException(String.format("Failure in job [%d]", jobId));
             }
