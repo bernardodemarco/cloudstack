@@ -21,14 +21,18 @@ import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NimbleResponseBuilder;
+import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.discovery.ApiDiscoveryService;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
+import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -50,6 +54,15 @@ public class NimbleManagerImplTest {
     @Mock
     private NimbleResponseBuilder nimbleResponseBuilderMock;
 
+    @Mock
+    private ToscaOrchestrator toscaOrchestratorMock;
+
+    @Mock
+    private ApiDiscoveryService apiDiscoveryServiceMock;
+
+    @Mock
+    private CallContext callContextMock;
+
     List<IacResourceTypeVO> iacResourceTypesMock = List.of(Mockito.mock(IacResourceTypeVO.class), Mockito.mock(IacResourceTypeVO.class));
 
     @Test
@@ -61,23 +74,29 @@ public class NimbleManagerImplTest {
         long pageSize = 5L;
         long startIndex = 1L;
 
-        Mockito.when(listIacResourceTypesCmdMock.getId()).thenReturn(iacResourceTypeId);
-        Mockito.when(listIacResourceTypesCmdMock.getName()).thenReturn(iacResourceTypeName);
-        Mockito.when(listIacResourceTypesCmdMock.getCategory()).thenReturn(iacResourceTypeCategory);
-        Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
-        Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
-        Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
-        Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
-                Mockito.eq(iacResourceTypeCategory), Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
-                .thenReturn(new Pair<>(iacResourceTypesMock, iacResourceTypesMock.size()));
+        try (MockedStatic<CallContext> callContextStaticMock = Mockito.mockStatic(CallContext.class)) {
+            callContextStaticMock.when(CallContext::current).thenReturn(callContextMock);
+            Mockito.when(listIacResourceTypesCmdMock.getId()).thenReturn(iacResourceTypeId);
+            Mockito.when(listIacResourceTypesCmdMock.getName()).thenReturn(iacResourceTypeName);
+            Mockito.when(listIacResourceTypesCmdMock.getCategory()).thenReturn(iacResourceTypeCategory);
+            Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
+            Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
+            Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
+            Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
+                            Mockito.eq(iacResourceTypeCategory), Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
+                    .thenReturn(iacResourceTypesMock);
 
-        List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
-        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)), Mockito.eq(false))).thenReturn(iacResourceTypeResponsesMock.get(0));
-        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)), Mockito.eq(false))).thenReturn(iacResourceTypeResponsesMock.get(1));
+            Mockito.when(toscaOrchestratorMock.getNodeTypeApis(Mockito.any())).thenReturn(new Pair<>("provisioningApi", "rollbackApi"));
+            Mockito.when(apiDiscoveryServiceMock.listApis(Mockito.any(), Mockito.anyString())).thenReturn(new ListResponse<>());
 
-        ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
-        Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
-        Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
+            List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
+            Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)), Mockito.eq(false))).thenReturn(iacResourceTypeResponsesMock.get(0));
+            Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)), Mockito.eq(false))).thenReturn(iacResourceTypeResponsesMock.get(1));
+
+            ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
+            Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
+            Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
+        }
     }
 
     @Test
@@ -90,23 +109,46 @@ public class NimbleManagerImplTest {
         long pageSize = 5L;
         long startIndex = 1L;
 
-        Mockito.when(listIacResourceTypesCmdMock.getId()).thenReturn(iacResourceTypeId);
-        Mockito.when(listIacResourceTypesCmdMock.getName()).thenReturn(iacResourceTypeName);
-        Mockito.when(listIacResourceTypesCmdMock.getCategory()).thenReturn(iacResourceTypeCategory);
-        Mockito.when(listIacResourceTypesCmdMock.showIacResourceTypeContent()).thenReturn(showIacResourceTypeContent);
-        Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
-        Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
-        Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
-        Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
-                        Mockito.eq(iacResourceTypeCategory), Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
-                .thenReturn(new Pair<>(iacResourceTypesMock, iacResourceTypesMock.size()));
+        try (MockedStatic<CallContext> callContextStaticMock = Mockito.mockStatic(CallContext.class)) {
+            callContextStaticMock.when(CallContext::current).thenReturn(callContextMock);
+            Mockito.when(listIacResourceTypesCmdMock.getId()).thenReturn(iacResourceTypeId);
+            Mockito.when(listIacResourceTypesCmdMock.getName()).thenReturn(iacResourceTypeName);
+            Mockito.when(listIacResourceTypesCmdMock.getCategory()).thenReturn(iacResourceTypeCategory);
+            Mockito.when(listIacResourceTypesCmdMock.showIacResourceTypeContent()).thenReturn(showIacResourceTypeContent);
+            Mockito.when(listIacResourceTypesCmdMock.getKeyword()).thenReturn(iacResourceTypeKeyword);
+            Mockito.when(listIacResourceTypesCmdMock.getPageSizeVal()).thenReturn(pageSize);
+            Mockito.when(listIacResourceTypesCmdMock.getStartIndex()).thenReturn(startIndex);
+            Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.eq(iacResourceTypeId), Mockito.eq(iacResourceTypeName),
+                            Mockito.eq(iacResourceTypeCategory), Mockito.eq(iacResourceTypeKeyword), Mockito.eq(pageSize), Mockito.eq(startIndex)))
+                    .thenReturn(iacResourceTypesMock);
 
-        List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
-        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)), Mockito.eq(showIacResourceTypeContent))).thenReturn(iacResourceTypeResponsesMock.get(0));
-        Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)), Mockito.eq(showIacResourceTypeContent))).thenReturn(iacResourceTypeResponsesMock.get(1));
+            Mockito.when(toscaOrchestratorMock.getNodeTypeApis(Mockito.any())).thenReturn(new Pair<>("provisioningApi", "rollbackApi"));
+            Mockito.when(apiDiscoveryServiceMock.listApis(Mockito.any(), Mockito.anyString())).thenReturn(new ListResponse<>());
 
-        ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
-        Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
-        Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
+            List<IacResourceTypeResponse> iacResourceTypeResponsesMock = List.of(Mockito.mock(IacResourceTypeResponse.class), Mockito.mock(IacResourceTypeResponse.class));
+            Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(0)), Mockito.eq(showIacResourceTypeContent))).thenReturn(iacResourceTypeResponsesMock.get(0));
+            Mockito.when(nimbleResponseBuilderMock.createIacResourceTypeResponse(Mockito.eq(iacResourceTypesMock.get(1)), Mockito.eq(showIacResourceTypeContent))).thenReturn(iacResourceTypeResponsesMock.get(1));
+
+            ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
+            Assert.assertEquals(iacResourceTypeResponsesMock, response.getResponses());
+            Assert.assertEquals(iacResourceTypeResponsesMock.size(), response.getCount().intValue());
+        }
+    }
+
+    @Test
+    public void listIacResourceTypesTestShouldNotReturnNodeTypesIfUserDoesNotHavePermissionToAccessItsApis() {
+        try (MockedStatic<CallContext> callContextStaticMock = Mockito.mockStatic(CallContext.class)) {
+            callContextStaticMock.when(CallContext::current).thenReturn(callContextMock);
+            Mockito.when(iacResourceTypeDaoMock.listIacResourceTypes(Mockito.any(), Mockito.any(),
+                            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+                    .thenReturn(iacResourceTypesMock);
+
+            Mockito.when(toscaOrchestratorMock.getNodeTypeApis(Mockito.any())).thenReturn(new Pair<>("provisioningApi", "rollbackApi"));
+            Mockito.when(apiDiscoveryServiceMock.listApis(Mockito.any(), Mockito.eq("rollbackApi"))).thenReturn(null);
+
+            ListResponse<IacResourceTypeResponse> response = nimbleServiceSpy.listIacResourceTypes(listIacResourceTypesCmdMock);
+            Mockito.verify(nimbleResponseBuilderMock, Mockito.never()).createIacResourceTypeResponse(Mockito.any(), Mockito.anyBoolean());
+            Assert.assertEquals(0, response.getCount().intValue());
+        }
     }
 }

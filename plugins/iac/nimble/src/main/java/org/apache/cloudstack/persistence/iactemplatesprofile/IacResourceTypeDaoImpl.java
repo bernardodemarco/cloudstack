@@ -16,7 +16,6 @@
 // under the License.
 package org.apache.cloudstack.persistence.iactemplatesprofile;
 
-import com.cloud.utils.Pair;
 import com.cloud.utils.db.Filter;
 import com.cloud.utils.db.GenericDaoBase;
 import com.cloud.utils.db.SearchBuilder;
@@ -44,7 +43,7 @@ public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Lo
     }
 
     @Override
-    public Pair<List<IacResourceTypeVO>, Integer> listIacResourceTypes(Long id, String name, IacResourceType.Category category, String keyword, Long pageSizeVal, Long startIndex) {
+    public List<IacResourceTypeVO> listIacResourceTypes(Long id, String name, IacResourceType.Category category, String keyword, Long pageSizeVal, Long startIndex) {
         SearchCriteria<IacResourceTypeVO> searchCriteria = listIacResourceTypesSearchBuilder.create();
         searchCriteria.setParametersIfNotNull(ID, id);
         searchCriteria.setParametersIfNotNull(NAME, name);
@@ -54,6 +53,6 @@ public class IacResourceTypeDaoImpl extends GenericDaoBase<IacResourceTypeVO, Lo
         }
 
         Filter filter = new Filter(IacResourceTypeVO.class, ID, true, startIndex, pageSizeVal);
-        return searchAndCount(searchCriteria, filter);
+        return search(searchCriteria, filter);
     }
 }

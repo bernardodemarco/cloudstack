@@ -21,6 +21,7 @@ import com.cloud.api.ApiGsonHelper;
 import com.cloud.api.ApiSerializerHelper;
 import com.cloud.api.ApiServer;
 import com.cloud.exception.InvalidParameterValueException;
+import com.cloud.utils.Pair;
 import com.cloud.utils.component.ComponentContext;
 import com.cloud.utils.db.EntityManager;
 import com.cloud.utils.exception.CloudRuntimeException;
@@ -529,5 +530,10 @@ public class ToscaOrchestrator {
 
     protected Map<String, ToscaNodeType> getToscaProfile() {
         return Collections.unmodifiableMap(toscaProfile);
+    }
+
+    public Pair<String, String> getNodeTypeApis(String nodeTypeName) {
+        ToscaNodeType nodeType = toscaProfile.get(nodeTypeName);
+        return new Pair<>(nodeType.getProvisioningApi(), nodeType.getRollbackApi());
     }
 }

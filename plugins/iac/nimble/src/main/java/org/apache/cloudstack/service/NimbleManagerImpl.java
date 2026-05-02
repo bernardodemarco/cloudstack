@@ -16,6 +16,7 @@
 // under the License.
 package org.apache.cloudstack.service;
 
+import com.cloud.user.User;
 import com.cloud.utils.Pair;
 import com.cloud.utils.component.ManagerBase;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
@@ -23,10 +24,13 @@ import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NimbleResponseBuilder;
+import org.apache.cloudstack.context.CallContext;
+import org.apache.cloudstack.discovery.ApiDiscoveryService;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
+import org.apache.commons.lang3.ObjectUtils;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
@@ -45,17 +49,31 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Inject
     private NimbleResponseBuilder responseBuilder;
 
+    @Inject
+    private ApiDiscoveryService apiDiscoveryService;
+
     @Override
     public ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd) {
-        Pair<List<IacResourceTypeVO>, Integer> iacResourceTypes = iacResourceTypeDao.listIacResourceTypes(cmd.getId(), cmd.getName(),
+        List<IacResourceTypeVO> iacResourceTypes = iacResourceTypeDao.listIacResourceTypes(cmd.getId(), cmd.getName(),
                 cmd.getCategory(), cmd.getKeyword(), cmd.getPageSizeVal(), cmd.getStartIndex());
-        List<IacResourceTypeResponse> iacResourceTypeResponses = iacResourceTypes.first().stream()
+
+        List<IacResourceTypeResponse> iacResourceTypeResponses = iacResourceTypes.stream()
+                .filter(iacResourceTypeVO -> doesUserHaveAccessToNodeTypeApis(toscaOrchestrator.getNodeTypeApis(iacResourceTypeVO.getName())))
                 .map(iacResourceType -> responseBuilder.createIacResourceTypeResponse(iacResourceType, cmd.showIacResourceTypeContent()))
                 .collect(Collectors.toList());
 
         ListResponse<IacResourceTypeResponse> response = new ListResponse<>();
-        response.setResponses(iacResourceTypeResponses, iacResourceTypes.second());
+        response.setResponses(iacResourceTypeResponses, iacResourceTypeResponses.size());
         return response;
+    }
+
+    private boolean doesUserHaveAccessToNodeTypeApis(Pair<String, String> nodeTypeApis) {
+        User callingUser = CallContext.current().getCallingUser();
+        logger.trace("Checking if calling user [{}] has access to node type APIs [{}] and [{}].", callingUser, nodeTypeApis.first(), nodeTypeApis.second());
+        return ObjectUtils.allNotNull(
+                apiDiscoveryService.listApis(callingUser, nodeTypeApis.first()),
+                apiDiscoveryService.listApis(callingUser, nodeTypeApis.second())
+        );
     }
 
     @Override
