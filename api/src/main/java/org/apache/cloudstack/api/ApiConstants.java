@@ -1332,6 +1332,10 @@ public class ApiConstants {
     public static final String INPUTS = "inputs";
     public static final String IAC_RESOURCE_TYPE_CONTENT = "iacresourcetypecontent";
     public static final String SHOW_IAC_RESOURCE_TYPE_CONTENT = "showiacresourcetypecontent";
+    public static final String IAC_TEMPLATE_CONTENT = "iactemplatecontent";
+    public static final String SHARED_DOMAIN_IDS = "shareddomainids";
+    public static final String SHARED_ACCOUNT_IDS = "sharedaccountids";
+    public static final String SHARED_PROJECT_IDS = "sharedprojectids";
 
     public static final String PARAMETER_DESCRIPTION_ACTIVATION_RULE = "Quota tariff's activation rule. It can receive a JS script that results in either " +
             "a boolean or a numeric value: if it results in a boolean value, the tariff value will be applied according to the result; if it results in a numeric value, the " +
