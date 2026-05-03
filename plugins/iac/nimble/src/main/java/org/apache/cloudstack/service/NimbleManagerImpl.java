@@ -16,20 +16,38 @@
 // under the License.
 package org.apache.cloudstack.service;
 
+import com.cloud.domain.Domain;
+import com.cloud.exception.InvalidParameterValueException;
+import com.cloud.projects.Project;
+import com.cloud.projects.ProjectManager;
+import com.cloud.user.Account;
+import com.cloud.user.AccountService;
+import com.cloud.user.DomainManager;
 import com.cloud.user.User;
 import com.cloud.utils.Pair;
 import com.cloud.utils.component.ManagerBase;
+import com.cloud.utils.db.Transaction;
+import com.cloud.utils.db.TransactionCallback;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
+import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NimbleResponseBuilder;
 import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.discovery.ApiDiscoveryService;
 import org.apache.cloudstack.framework.config.ConfigKey;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateAccountMapDao;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateAccountMapVO;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateDao;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapDao;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapVO;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 
 import javax.inject.Inject;
@@ -47,10 +65,28 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     private IacResourceTypeDao iacResourceTypeDao;
 
     @Inject
+    private IacTemplateDao iacTemplateDao;
+
+    @Inject
+    private IacTemplateDomainMapDao iacTemplateDomainMapDao;
+
+    @Inject
+    private IacTemplateAccountMapDao iacTemplateAccountMapDao;
+
+    @Inject
     private NimbleResponseBuilder responseBuilder;
 
     @Inject
     private ApiDiscoveryService apiDiscoveryService;
+
+    @Inject
+    private AccountService accountService;
+
+    @Inject
+    private DomainManager domainManager;
+
+    @Inject
+    private ProjectManager projectManager;
 
     @Override
     public ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd) {
@@ -74,6 +110,68 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 apiDiscoveryService.listApis(callingUser, nodeTypeApis.first()),
                 apiDiscoveryService.listApis(callingUser, nodeTypeApis.second())
         );
+    }
+
+    @Override
+    public IacTemplate registerIacTemplate(RegisterIacTemplateCmd cmd) {
+        Account owner = accountService.getActiveAccountById(cmd.getEntityOwnerId());
+        validateAccessToIacTemplateSharingEntities(owner, cmd);
+        toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
+        IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
+
+    }
+
+    private IacTemplate persistIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
+        IacTemplateVO iacTemplate = new IacTemplateVO(cmd.getName(), cmd.getDescription(), cmd.getIacTemplateContent(),
+                cmd.isRecursiveDomains(), owner.getDomainId(), owner.getAccountId());
+        return Transaction.execute((TransactionCallback<IacTemplate>) (status) -> {
+            IacTemplateVO persistedTemplate = iacTemplateDao.persist(iacTemplate);
+            cmd.getSharedDomainIds().forEach(domainId -> {
+                iacTemplateDomainMapDao.persist(new IacTemplateDomainMapVO(persistedTemplate.getId(), domainId));
+            });
+            cmd.getSharedAccountIds().forEach(accountId -> {
+                iacTemplateAccountMapDao.persist(new IacTemplateAccountMapVO(persistedTemplate.getId(), accountId));
+            });
+            return persistedTemplate;
+        });
+    }
+
+    protected void validateAccessToIacTemplateSharingEntities(Account owner, RegisterIacTemplateCmd cmd) {
+        boolean isTemplateOwnerAdmin = accountService.isAdmin(owner.getId());
+        if (!isTemplateOwnerAdmin) {
+            if (cmd.isRecursiveDomains()) {
+                throw new InvalidParameterValueException(String.format("An IaC template owned by [%s] cannot be shared recursively across different domains.", owner.getAccountName()));
+            }
+
+            if (CollectionUtils.isNotEmpty(cmd.getSharedDomainIds()) || CollectionUtils.isNotEmpty(cmd.getSharedAccountIds())
+                    || CollectionUtils.isNotEmpty(cmd.getSharedProjectIds())) {
+                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with other entities.", owner.getAccountName()));
+            }
+        }
+
+        cmd.getSharedDomainIds().forEach(domainId -> {
+            Domain domain = domainManager.getDomain(domainId);
+            if (domain == null) {
+                throw new InvalidParameterValueException(String.format("Unable to find domain with ID [%s].", domainId));
+            }
+            accountService.checkAccess(owner, domain);
+        });
+
+        cmd.getSharedAccountIds().forEach(accountId -> {
+            Account account = accountService.getActiveAccountById(accountId);
+            if (account == null) {
+                throw new InvalidParameterValueException(String.format("Unable to find account with ID [%s].", accountId));
+            }
+            accountService.checkAccess(owner, null, false, account);
+        });
+
+        cmd.getSharedProjectIds().forEach(projectId -> {
+            Project project = projectManager.getProject(projectId);
+            if (project == null) {
+                throw new InvalidParameterValueException(String.format("Unable to find project with ID [%s].", projectId));
+            }
+            projectManager.canAccessProjectAccount(owner, project.getProjectAccountId());
+        });
     }
 
     @Override

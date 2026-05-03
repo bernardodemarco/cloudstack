@@ -32,4 +32,8 @@ public class NimbleResponseBuilder {
         response.setObjectName("iacresourcetypes");
         return response;
     }
+
+    public void createIacTemplateResponse() {
+        
+    }
 }

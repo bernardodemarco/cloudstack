@@ -1521,16 +1521,13 @@ public class KubernetesClusterManagerImpl extends ManagerBase implements Kuberne
         final Long clusterKubernetesVersionId = clusterKubernetesVersion == null ? null : clusterKubernetesVersion.getId();
         final long finalCores = cores;
         final long finalMemory = memory;
-        final KubernetesClusterVO cluster = Transaction.execute(new TransactionCallback<KubernetesClusterVO>() {
-            @Override
-            public KubernetesClusterVO doInTransaction(TransactionStatus status) {
-                KubernetesClusterVO newCluster = new KubernetesClusterVO(cmd.getName(), cmd.getDisplayName(), zone.getId(), clusterKubernetesVersionId,
-                        finalServiceOfferingId, null, defaultNetworkId, owner.getDomainId(),
-                        owner.getAccountId(), controlNodeCount, clusterSize, KubernetesCluster.State.Running, cmd.getSSHKeyPairName(), finalCores, finalMemory,
-                        cmd.getNodeRootDiskSize(), "", KubernetesCluster.ClusterType.ExternalManaged);
-                kubernetesClusterDao.persist(newCluster);
-                return newCluster;
-            }
+        final KubernetesClusterVO cluster = Transaction.execute((TransactionCallback<KubernetesClusterVO>) status -> {
+            KubernetesClusterVO newCluster = new KubernetesClusterVO(cmd.getName(), cmd.getDisplayName(), zone.getId(), clusterKubernetesVersionId,
+                    finalServiceOfferingId, null, defaultNetworkId, owner.getDomainId(),
+                    owner.getAccountId(), controlNodeCount, clusterSize, KubernetesCluster.State.Running, cmd.getSSHKeyPairName(), finalCores, finalMemory,
+                    cmd.getNodeRootDiskSize(), "", KubernetesCluster.ClusterType.ExternalManaged);
+            kubernetesClusterDao.persist(newCluster);
+            return newCluster;
         });
 
         addKubernetesClusterDetails(cluster, network, cmd);

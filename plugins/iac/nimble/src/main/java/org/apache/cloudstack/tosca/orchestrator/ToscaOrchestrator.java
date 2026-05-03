@@ -105,7 +105,7 @@ public class ToscaOrchestrator {
     private ExecutorService executorPool;
 
     public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
-        ToscaServiceTemplate serviceTemplate = toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
+        ToscaServiceTemplate serviceTemplate = parseServiceTemplate(iacTemplateContent);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
 
         Map<String, CompletableFuture<Void>> provisioningTasksFutures = new HashMap<>();
@@ -114,6 +114,10 @@ public class ToscaOrchestrator {
         getCurrentNimbleExecutorPoolStatus("before creating provisioning tasks");
         provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, errors, cancelAllProvisioningTasks));
         awaitDeployCompletion(provisioningTasksFutures, errors, cancelAllProvisioningTasks);
+    }
+
+    public ToscaServiceTemplate parseServiceTemplate(String iacTemplateContent) {
+        return toscaParser.parseServiceTemplate(iacTemplateContent, toscaProfile, null);
     }
 
     private void getCurrentNimbleExecutorPoolStatus(String context) {

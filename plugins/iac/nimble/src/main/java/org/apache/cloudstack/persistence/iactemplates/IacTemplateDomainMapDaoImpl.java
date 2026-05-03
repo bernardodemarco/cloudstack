@@ -16,21 +16,9 @@
 // under the License.
 package org.apache.cloudstack.persistence.iactemplates;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Table;
+import com.cloud.utils.db.GenericDaoBase;
+import org.springframework.stereotype.Component;
 
-@Entity
-@Table(name = "iac_template_domain_map")
-public class IacTemplateDomainMapVO {
-    @Column(name = "iac_template_id", nullable = false)
-    private long iacTemplateId;
-
-    @Column(name = "domain_id", nullable = false)
-    private long domainId;
-
-    public IacTemplateDomainMapVO(long iacTemplateId, long domainId) {
-        this.iacTemplateId = iacTemplateId;
-        this.domainId = domainId;
-    }
+@Component
+public class IacTemplateDomainMapDaoImpl extends GenericDaoBase<IacTemplateDomainMapVO, Long> implements IacTemplateDomainMapDao {
 }

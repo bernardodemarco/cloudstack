@@ -22,6 +22,9 @@
                       http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="nimbleManager" class="org.apache.cloudstack.service.NimbleManagerImpl" />
     <bean id="iacTemplateProfileDao" class="org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDaoImpl" />
+    <bean id="iacTemplateDao" class="org.apache.cloudstack.persistence.iactemplates.IacTemplateDaoImpl" />
+    <bean id="iacTemplateDomainMapDao" class="org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapDaoImpl" />
+    <bean id="iacTemplateAccountMapDao" class="org.apache.cloudstack.persistence.iactemplates.IacTemplateAccountMapDaoImpl" />
     <bean id="toscaParser" class="org.apache.cloudstack.tosca.parser.ToscaParser" />
     <bean id="nimbleResponseBuilder" class="org.apache.cloudstack.api.response.NimbleResponseBuilder" />
     <bean id="toscaFieldParser" class="org.apache.cloudstack.tosca.parser.ToscaFieldParser" />

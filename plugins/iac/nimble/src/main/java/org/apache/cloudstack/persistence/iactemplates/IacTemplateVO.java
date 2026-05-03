@@ -66,6 +66,15 @@ public class IacTemplateVO implements IacTemplate {
     @Temporal(value = TemporalType.TIMESTAMP)
     private Date removed;
 
+    public IacTemplateVO(String name, String description, String iacTemplateContent, boolean recursiveDomains, long domainId, long accountId) {
+        this.name = name;
+        this.description = description;
+        this.iacTemplateContent = iacTemplateContent;
+        this.recursiveDomains = recursiveDomains;
+        this.domainId = domainId;
+        this.accountId = accountId;
+    }
+
     @Override
     public long getId() {
         return id;
