@@ -132,9 +132,8 @@ public class RegisterIacTemplateCmd extends BaseCmd {
 
     @Override
     public void execute() {
-        IacTemplate iacTemplate = nimbleService.registerIacTemplate(this);
-        if (iacTemplate == null) {
-            throw new ServerApiException(ApiErrorCode.INTERNAL_ERROR, "Failed to register IaC template.");
-        }
+        IacTemplateResponse response = nimbleService.registerIacTemplate(this);
+        response.setResponseName(getCommandName());
+        setResponseObject(response);
     }
 }

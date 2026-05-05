@@ -20,10 +20,10 @@ import com.cloud.utils.component.PluggableService;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
-import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 
 import java.util.Map;
 
@@ -50,5 +50,5 @@ public interface NimbleService extends PluggableService, Configurable {
 
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
     void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs);
-    IacTemplate registerIacTemplate(RegisterIacTemplateCmd cmd);
+    IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd);
 }

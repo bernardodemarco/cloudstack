@@ -28,10 +28,12 @@ import com.cloud.utils.Pair;
 import com.cloud.utils.component.ManagerBase;
 import com.cloud.utils.db.Transaction;
 import com.cloud.utils.db.TransactionCallback;
+import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NimbleResponseBuilder;
 import org.apache.cloudstack.context.CallContext;
@@ -113,12 +115,16 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
-    public IacTemplate registerIacTemplate(RegisterIacTemplateCmd cmd) {
+    public IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd) {
         Account owner = accountService.getActiveAccountById(cmd.getEntityOwnerId());
         validateAccessToIacTemplateSharingEntities(owner, cmd);
         toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
-        IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
 
+        IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
+        if (iacTemplate == null) {
+            throw new CloudRuntimeException("Unable to register IaC template.");
+        }
+        return responseBuilder.createIacTemplateResponse(iacTemplate);
     }
 
     private IacTemplate persistIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
