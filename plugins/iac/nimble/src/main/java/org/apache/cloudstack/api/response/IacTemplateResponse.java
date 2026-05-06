@@ -164,7 +164,6 @@ public class IacTemplateResponse extends BaseResponse {
         this.sharedProjects = sharedProjects;
     }
 
-    //    LBHealthCheckPolicyResponse -> example
     public static class SharedDomainResponse {
         @SerializedName(ApiConstants.DOMAIN_ID)
         @Param(description = "ID of the domain with which the IaC template is shared.")
@@ -178,15 +177,9 @@ public class IacTemplateResponse extends BaseResponse {
         @Param(description = "Path of the domain with which the IaC template is shared.")
         private String domainPath;
 
-        public void setDomainId(String domainId) {
+        public SharedDomainResponse(String domainId, String domainName, String domainPath) {
             this.domainId = domainId;
-        }
-
-        public void setDomainName(String domainName) {
             this.domainName = domainName;
-        }
-
-        public void setDomainPath(String domainPath) {
             this.domainPath = domainPath;
         }
     }
@@ -200,11 +193,8 @@ public class IacTemplateResponse extends BaseResponse {
         @Param(description = "Name of the account with which the IaC template is shared.")
         private String accountName;
 
-        public void setAccountId(String accountId) {
+        public SharedAccountResponse(String accountId, String accountName) {
             this.accountId = accountId;
-        }
-
-        public void setAccountName(String accountName) {
             this.accountName = accountName;
         }
     }
@@ -218,11 +208,8 @@ public class IacTemplateResponse extends BaseResponse {
         @Param(description = "Name of the project with which the IaC template is shared.")
         private String projectName;
 
-        public void setProjectId(String projectId) {
+        public SharedProjectResponse(String projectId, String projectName) {
             this.projectId = projectId;
-        }
-
-        public void setProjectName(String projectName) {
             this.projectName = projectName;
         }
     }

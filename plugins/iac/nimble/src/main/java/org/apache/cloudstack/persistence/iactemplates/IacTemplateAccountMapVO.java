@@ -33,4 +33,12 @@ public class IacTemplateAccountMapVO {
         this.iacTemplateId = iacTemplateId;
         this.accountId = accountId;
     }
+
+    public long getIacTemplateId() {
+        return iacTemplateId;
+    }
+
+    public long getAccountId() {
+        return accountId;
+    }
 }

@@ -17,17 +17,24 @@
 package org.apache.cloudstack.api.response;
 
 import com.cloud.api.ApiDBUtils;
+import com.cloud.domain.Domain;
 import com.cloud.exception.PermissionDeniedException;
 import com.cloud.projects.Project;
 import com.cloud.projects.ProjectManager;
 import com.cloud.user.Account;
 import com.cloud.user.AccountService;
+import com.cloud.utils.Pair;
 import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateAccountMapVO;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
-import org.apache.commons.lang3.ObjectUtils;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class NimbleResponseBuilder {
     @Inject
@@ -50,44 +57,54 @@ public class NimbleResponseBuilder {
         return response;
     }
 
-    public IacTemplateResponse createIacTemplateResponse(IacTemplate iacTemplate) {
+    public IacTemplateResponse createIacTemplateResponse(IacTemplate iacTemplate, boolean showIacTemplateContent) {
         IacTemplateResponse response = new IacTemplateResponse();
         response.setId(iacTemplate.getUuid());
         response.setName(iacTemplate.getName());
         response.setDescription(iacTemplate.getDescription());
-        response.setIacTemplateContent(iacTemplate.getIacTemplateContent());
         response.setRecursiveDomains(iacTemplate.isRecursiveDomains());
         response.setCreated(iacTemplate.getCreated());
         response.setRemoved(iacTemplate.getRemoved());
+        if (showIacTemplateContent) {
+            response.setIacTemplateContent(iacTemplate.getIacTemplateContent());
+        }
 
         Account caller = CallContext.current().getCallingAccount();
         Account owner = ApiDBUtils.findAccountById(iacTemplate.getAccountId());
-        populateIacTemplateOwnerFields(response, iacTemplate, caller, owner);
+        populateIacTemplateOwnerFields(response, caller, owner);
+        populateIacTemplateSharedEntitiesFields(response, iacTemplate, caller, owner);
         response.setObjectName("iactemplates");
         return response;
     }
 
-//    caller vai obter owner quando tem acesso ao projeto/conta do owner
-    private void populateIacTemplateOwnerFields(IacTemplateResponse response, IacTemplate iacTemplate, Account caller, Account owner) {
+    private boolean verifyCallerAccessToIacTemplateOwner(Account caller, Account owner) {
         if (owner.getType() == Account.Type.PROJECT) {
-            if (projectManager.canAccessProjectAccount(caller, owner.getId())) {
-                Project project = ApiDBUtils.findProjectByProjectAccountId(owner.getId());
-                response.setProjectId(project.getUuid());
-                response.setProjectName(project.getName());
-            }
-
-            return;
+            return projectManager.canAccessProjectAccount(caller, owner.getId());
         }
 
         try {
             accountService.checkAccess(caller, null, false, owner);
-            response.setAccountName(owner.getAccountName());
-            response.setAccountId(owner.getUuid());
-        } catch (PermissionDeniedException ignored) {}
+            return true;
+        } catch (PermissionDeniedException ignored) {
+            return false;
+        }
     }
 
-    //    para entidades compartilhadas, vou colocar para ter acesso apenas quando
-//    é root admin, admin e tem acesso ao owner ou é o owner
+    private void populateIacTemplateOwnerFields(IacTemplateResponse response, Account caller, Account owner) {
+        if (!verifyCallerAccessToIacTemplateOwner(caller, owner)) {
+            return;
+        }
+
+        if (owner.getType() == Account.Type.PROJECT) {
+            Project project = ApiDBUtils.findProjectByProjectAccountIdIncludingRemoved(owner.getId());
+            response.setProjectId(project.getUuid());
+            response.setProjectName(project.getName());
+        } else {
+            response.setAccountName(owner.getAccountName());
+            response.setAccountId(owner.getUuid());
+        }
+    }
+
     private void populateIacTemplateSharedEntitiesFields(IacTemplateResponse response, IacTemplate iacTemplate, Account caller, Account owner) {
         boolean isCallerAdmin = accountService.isAdmin(caller.getId());
         boolean isCallerTheIacTemplateOwner = caller.getId() == owner.getId();
@@ -103,6 +120,40 @@ public class NimbleResponseBuilder {
             }
         }
 
-//        has access
+//        the above validation workflow could maybe be tranfered to the access check method
+        response.setSharedDomains(getSharedDomainResponses(iacTemplate.getDomainMappings()));
+        Pair<List<IacTemplateResponse.SharedAccountResponse>, List<IacTemplateResponse.SharedProjectResponse>> sharedAccountAndProjectResponses = getSharedAccountAndProjectResponses(iacTemplate.getAccountMappings());
+        response.setSharedAccounts(sharedAccountAndProjectResponses.first());
+        response.setSharedProjects(sharedAccountAndProjectResponses.second());
+    }
+
+    private List<IacTemplateResponse.SharedDomainResponse> getSharedDomainResponses(List<IacTemplateDomainMapVO> domainMappings) {
+        return domainMappings.stream().map(domainMapping -> {
+            Domain domain = ApiDBUtils.findDomainById(domainMapping.getDomainId());
+            if (domain == null) {
+                return null;
+            }
+
+            return new IacTemplateResponse.SharedDomainResponse(domain.getUuid(), domain.getName(), domain.getPath());
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    private Pair<List<IacTemplateResponse.SharedAccountResponse>, List<IacTemplateResponse.SharedProjectResponse>> getSharedAccountAndProjectResponses(List<IacTemplateAccountMapVO> accountMappings) {
+        List<IacTemplateResponse.SharedAccountResponse> sharedAccountResponses = new ArrayList<>();
+        List<IacTemplateResponse.SharedProjectResponse> sharedProjectResponses = new ArrayList<>();
+
+        for (IacTemplateAccountMapVO accountMapping : accountMappings) {
+            Project project = ApiDBUtils.findProjectByProjectAccountIdIncludingRemoved(accountMapping.getAccountId());
+            if (project != null) {
+                sharedProjectResponses.add(new IacTemplateResponse.SharedProjectResponse(project.getUuid(), project.getName()));
+            } else {
+                Account account = ApiDBUtils.findAccountById(accountMapping.getAccountId());
+                if (account != null) {
+                    sharedAccountResponses.add(new IacTemplateResponse.SharedAccountResponse(account.getUuid(), account.getAccountName()));
+                }
+            }
+        }
+
+        return new Pair<>(sharedAccountResponses, sharedProjectResponses);
     }
 }

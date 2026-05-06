@@ -21,6 +21,7 @@ import org.apache.cloudstack.api.Identity;
 import org.apache.cloudstack.api.InternalIdentity;
 
 import java.util.Date;
+import java.util.List;
 
 public interface IacTemplate extends InternalIdentity, Identity, ControlledEntity {
     String getName();
@@ -29,4 +30,6 @@ public interface IacTemplate extends InternalIdentity, Identity, ControlledEntit
     boolean isRecursiveDomains();
     Date getCreated();
     Date getRemoved();
+    List<IacTemplateAccountMapVO> getAccountMappings();
+    List<IacTemplateDomainMapVO> getDomainMappings();
 }

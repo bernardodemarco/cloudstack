@@ -124,7 +124,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         if (iacTemplate == null) {
             throw new CloudRuntimeException("Unable to register IaC template.");
         }
-        return responseBuilder.createIacTemplateResponse(iacTemplate);
+        return responseBuilder.createIacTemplateResponse(iacTemplate, true);
     }
 
     private IacTemplate persistIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
@@ -132,12 +132,14 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 cmd.isRecursiveDomains(), owner.getDomainId(), owner.getAccountId());
         return Transaction.execute((TransactionCallback<IacTemplate>) (status) -> {
             IacTemplateVO persistedTemplate = iacTemplateDao.persist(iacTemplate);
-            cmd.getSharedDomainIds().forEach(domainId -> {
-                iacTemplateDomainMapDao.persist(new IacTemplateDomainMapVO(persistedTemplate.getId(), domainId));
-            });
-            cmd.getSharedAccountIds().forEach(accountId -> {
-                iacTemplateAccountMapDao.persist(new IacTemplateAccountMapVO(persistedTemplate.getId(), accountId));
-            });
+            List<IacTemplateDomainMapVO> domainMappings = cmd.getSharedDomainIds().stream()
+                    .map(domainId -> iacTemplateDomainMapDao.persist(new IacTemplateDomainMapVO(persistedTemplate.getId(), domainId)))
+                    .collect(Collectors.toList());
+            List<IacTemplateAccountMapVO> accountMappings = cmd.getSharedAccountIds().stream()
+                    .map(accountId -> iacTemplateAccountMapDao.persist(new IacTemplateAccountMapVO(persistedTemplate.getId(), accountId)))
+                    .collect(Collectors.toList());
+            persistedTemplate.setDomainMappings(domainMappings);
+            persistedTemplate.setAccountMappings(accountMappings);
             return persistedTemplate;
         });
     }

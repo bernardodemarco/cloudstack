@@ -26,7 +26,9 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -65,6 +67,12 @@ public class IacTemplateVO implements IacTemplate {
     @Column(name = GenericDao.REMOVED_COLUMN)
     @Temporal(value = TemporalType.TIMESTAMP)
     private Date removed;
+
+    @Transient
+    private List<IacTemplateAccountMapVO> accountMappings;
+
+    @Transient
+    private List<IacTemplateDomainMapVO> domainMappings;
 
     public IacTemplateVO(String name, String description, String iacTemplateContent, boolean recursiveDomains, long domainId, long accountId) {
         this.name = name;
@@ -123,6 +131,22 @@ public class IacTemplateVO implements IacTemplate {
     @Override
     public Date getRemoved() {
         return removed;
+    }
+
+    public void setAccountMappings(List<IacTemplateAccountMapVO> accountMappings) {
+        this.accountMappings = accountMappings;
+    }
+
+    public List<IacTemplateAccountMapVO> getAccountMappings() {
+        return accountMappings;
+    }
+
+    public void setDomainMappings(List<IacTemplateDomainMapVO> domainMappings) {
+        this.domainMappings = domainMappings;
+    }
+
+    public List<IacTemplateDomainMapVO> getDomainMappings() {
+        return domainMappings;
     }
 
     @Override

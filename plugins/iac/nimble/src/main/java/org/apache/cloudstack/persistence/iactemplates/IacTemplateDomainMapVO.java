@@ -33,4 +33,12 @@ public class IacTemplateDomainMapVO {
         this.iacTemplateId = iacTemplateId;
         this.domainId = domainId;
     }
+
+    public long getIacTemplateId() {
+        return iacTemplateId;
+    }
+
+    public long getDomainId() {
+        return domainId;
+    }
 }
