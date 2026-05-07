@@ -27,6 +27,7 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -69,10 +70,13 @@ public class IacTemplateVO implements IacTemplate {
     private Date removed;
 
     @Transient
-    private List<IacTemplateAccountMapVO> accountMappings;
+    private List<IacTemplateAccountMapVO> accountMappings = new ArrayList<>();
 
     @Transient
-    private List<IacTemplateDomainMapVO> domainMappings;
+    private List<IacTemplateDomainMapVO> domainMappings = new ArrayList<>();
+
+    public IacTemplateVO() {
+    }
 
     public IacTemplateVO(String name, String description, String iacTemplateContent, boolean recursiveDomains, long domainId, long accountId) {
         this.name = name;

@@ -21,10 +21,8 @@ import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiArgValidator;
 import org.apache.cloudstack.api.ApiConstants;
-import org.apache.cloudstack.api.ApiErrorCode;
 import org.apache.cloudstack.api.BaseCmd;
 import org.apache.cloudstack.api.Parameter;
-import org.apache.cloudstack.api.ServerApiException;
 import org.apache.cloudstack.api.response.AccountResponse;
 import org.apache.cloudstack.api.response.DomainResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
@@ -34,6 +32,7 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 import org.apache.cloudstack.service.NimbleService;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.List;
 
 @APICommand(name = "registerIacTemplate",
@@ -51,19 +50,19 @@ public class RegisterIacTemplateCmd extends BaseCmd {
     @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "Description of the IaC template.")
     private String description;
 
-    @Parameter(name = ApiConstants.IAC_TEMPLATE_CONTENT, type = CommandType.STRING, length = 65535, 
+    @Parameter(name = ApiConstants.IAC_TEMPLATE_CONTENT, type = CommandType.STRING, length = 65535,
             description = "Content of the IaC template.", required = true, validations = {ApiArgValidator.NotNullOrEmpty})
     private String iacTemplateContent;
 
-    @Parameter(name = ApiConstants.DOMAIN_ID, type = CommandType.UUID, entityType = DomainResponse.class, 
+    @Parameter(name = ApiConstants.DOMAIN_ID, type = CommandType.UUID, entityType = DomainResponse.class,
             description = "ID of the domain associated with the IaC template. It must be used along with the \"account\" parameter.")
     private Long domainId;
 
-    @Parameter(name = ApiConstants.ACCOUNT, type = CommandType.STRING, 
+    @Parameter(name = ApiConstants.ACCOUNT, type = CommandType.STRING,
             description = "Name of the account that will own the IaC template. It must be used along with the \"domainid\" parameter.")
     private String accountName;
 
-    @Parameter(name = ApiConstants.PROJECT_ID, type = CommandType.UUID, entityType = ProjectResponse.class, 
+    @Parameter(name = ApiConstants.PROJECT_ID, type = CommandType.UUID, entityType = ProjectResponse.class,
             description = "ID of the project that will own the IaC template. Mutually exclusive with the \"account\" parameter.")
     private Long projectId;
 
@@ -107,15 +106,28 @@ public class RegisterIacTemplateCmd extends BaseCmd {
         return projectId;
     }
 
+    public boolean isTemplateShared() {
+        return sharedDomainIds != null || sharedAccountIds != null || sharedProjectIds != null;
+    }
+
     public List<Long> getSharedDomainIds() {
+        if (sharedDomainIds == null) {
+            return new ArrayList<>();
+        }
         return sharedDomainIds;
     }
 
     public List<Long> getSharedAccountIds() {
+        if (sharedAccountIds == null) {
+            return new ArrayList<>();
+        }
         return sharedAccountIds;
     }
 
     public List<Long> getSharedProjectIds() {
+        if (sharedProjectIds == null) {
+            return new ArrayList<>();
+        }
         return sharedProjectIds;
     }
 

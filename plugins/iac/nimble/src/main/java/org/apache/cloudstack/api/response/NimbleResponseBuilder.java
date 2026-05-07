@@ -73,6 +73,7 @@ public class NimbleResponseBuilder {
         Account owner = ApiDBUtils.findAccountById(iacTemplate.getAccountId());
         populateIacTemplateOwnerFields(response, caller, owner);
         populateIacTemplateSharedEntitiesFields(response, iacTemplate, caller, owner);
+
         response.setObjectName("iactemplates");
         return response;
     }
@@ -95,10 +96,19 @@ public class NimbleResponseBuilder {
             return;
         }
 
+        Domain domain = ApiDBUtils.findDomainById(owner.getDomainId());
+        if (domain != null) {
+            response.setDomainId(domain.getUuid());
+            response.setDomainName(domain.getName());
+            response.setDomainPath(domain.getPath());
+        }
+
         if (owner.getType() == Account.Type.PROJECT) {
             Project project = ApiDBUtils.findProjectByProjectAccountIdIncludingRemoved(owner.getId());
-            response.setProjectId(project.getUuid());
-            response.setProjectName(project.getName());
+            if (project != null) {
+                response.setProjectId(project.getUuid());
+                response.setProjectName(project.getName());
+            }
         } else {
             response.setAccountName(owner.getAccountName());
             response.setAccountId(owner.getUuid());
@@ -106,25 +116,12 @@ public class NimbleResponseBuilder {
     }
 
     private void populateIacTemplateSharedEntitiesFields(IacTemplateResponse response, IacTemplate iacTemplate, Account caller, Account owner) {
-        boolean isCallerAdmin = accountService.isAdmin(caller.getId());
-        boolean isCallerTheIacTemplateOwner = caller.getId() == owner.getId();
-        if (!isCallerAdmin && !isCallerTheIacTemplateOwner) {
-            return;
+        if (verifyCallerAccessToIacTemplateOwner(caller, owner)) {
+            response.setSharedDomains(getSharedDomainResponses(iacTemplate.getDomainMappings()));
+            Pair<List<IacTemplateResponse.SharedAccountResponse>, List<IacTemplateResponse.SharedProjectResponse>> sharedAccountAndProjectResponses = getSharedAccountAndProjectResponses(iacTemplate.getAccountMappings());
+            response.setSharedAccounts(sharedAccountAndProjectResponses.first());
+            response.setSharedProjects(sharedAccountAndProjectResponses.second());
         }
-
-        if (isCallerAdmin && !accountService.isRootAdmin(caller.getId())) {
-            try {
-                accountService.checkAccess(caller, null, false, owner);
-            } catch (PermissionDeniedException e) {
-                return;
-            }
-        }
-
-//        the above validation workflow could maybe be tranfered to the access check method
-        response.setSharedDomains(getSharedDomainResponses(iacTemplate.getDomainMappings()));
-        Pair<List<IacTemplateResponse.SharedAccountResponse>, List<IacTemplateResponse.SharedProjectResponse>> sharedAccountAndProjectResponses = getSharedAccountAndProjectResponses(iacTemplate.getAccountMappings());
-        response.setSharedAccounts(sharedAccountAndProjectResponses.first());
-        response.setSharedProjects(sharedAccountAndProjectResponses.second());
     }
 
     private List<IacTemplateResponse.SharedDomainResponse> getSharedDomainResponses(List<IacTemplateDomainMapVO> domainMappings) {

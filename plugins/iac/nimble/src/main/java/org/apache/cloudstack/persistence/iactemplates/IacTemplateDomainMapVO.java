@@ -29,6 +29,9 @@ public class IacTemplateDomainMapVO {
     @Column(name = "domain_id", nullable = false)
     private long domainId;
 
+    public IacTemplateDomainMapVO() {
+    }
+
     public IacTemplateDomainMapVO(long iacTemplateId, long domainId) {
         this.iacTemplateId = iacTemplateId;
         this.domainId = domainId;

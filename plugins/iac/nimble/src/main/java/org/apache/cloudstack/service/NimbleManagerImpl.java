@@ -49,7 +49,6 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplateVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 
 import javax.inject.Inject;
@@ -117,14 +116,25 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Override
     public IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd) {
         Account owner = accountService.getActiveAccountById(cmd.getEntityOwnerId());
-        validateAccessToIacTemplateSharingEntities(owner, cmd);
+        boolean isTemplateOwnerAdmin = accountService.isAdmin(owner.getId());
+        if (!isTemplateOwnerAdmin) {
+            if (cmd.isRecursiveDomains()) {
+                throw new InvalidParameterValueException(String.format("An IaC template owned by [%s] cannot be shared recursively across different domains.", owner.getAccountName()));
+            }
+
+            if (cmd.isTemplateShared()) {
+                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with other entities.", owner.getAccountName()));
+            }
+        }
+
+//        validateAccessToIacTemplateSharingEntities(owner, cmd);
         toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
 
         IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
         if (iacTemplate == null) {
             throw new CloudRuntimeException("Unable to register IaC template.");
         }
-        return responseBuilder.createIacTemplateResponse(iacTemplate, true);
+        return responseBuilder.createIacTemplateResponse(iacTemplate, false);
     }
 
     private IacTemplate persistIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
@@ -132,30 +142,54 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 cmd.isRecursiveDomains(), owner.getDomainId(), owner.getAccountId());
         return Transaction.execute((TransactionCallback<IacTemplate>) (status) -> {
             IacTemplateVO persistedTemplate = iacTemplateDao.persist(iacTemplate);
-            List<IacTemplateDomainMapVO> domainMappings = cmd.getSharedDomainIds().stream()
-                    .map(domainId -> iacTemplateDomainMapDao.persist(new IacTemplateDomainMapVO(persistedTemplate.getId(), domainId)))
-                    .collect(Collectors.toList());
-            List<IacTemplateAccountMapVO> accountMappings = cmd.getSharedAccountIds().stream()
-                    .map(accountId -> iacTemplateAccountMapDao.persist(new IacTemplateAccountMapVO(persistedTemplate.getId(), accountId)))
-                    .collect(Collectors.toList());
+            List<IacTemplateDomainMapVO> domainMappings = persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId());
+            List<IacTemplateAccountMapVO> accountMappings = persistAccountMappings(cmd.getSharedAccountIds(), cmd.getSharedProjectIds(), persistedTemplate.getId(), owner);
             persistedTemplate.setDomainMappings(domainMappings);
             persistedTemplate.setAccountMappings(accountMappings);
             return persistedTemplate;
         });
     }
 
-    protected void validateAccessToIacTemplateSharingEntities(Account owner, RegisterIacTemplateCmd cmd) {
-        boolean isTemplateOwnerAdmin = accountService.isAdmin(owner.getId());
-        if (!isTemplateOwnerAdmin) {
-            if (cmd.isRecursiveDomains()) {
-                throw new InvalidParameterValueException(String.format("An IaC template owned by [%s] cannot be shared recursively across different domains.", owner.getAccountName()));
-            }
+    private List<IacTemplateAccountMapVO> persistAccountMappings(List<Long> sharedAccountIds, List<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
+        List<IacTemplateAccountMapVO> accountMappings = new ArrayList<>();
 
-            if (CollectionUtils.isNotEmpty(cmd.getSharedDomainIds()) || CollectionUtils.isNotEmpty(cmd.getSharedAccountIds())
-                    || CollectionUtils.isNotEmpty(cmd.getSharedProjectIds())) {
-                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with other entities.", owner.getAccountName()));
+        for (Long accountId : sharedAccountIds) {
+            Account account = accountService.getActiveAccountById(accountId);
+            if (account == null) {
+                throw new InvalidParameterValueException(String.format("Unable to find account with ID [%s].", accountId));
             }
+            accountService.checkAccess(iacTemplateOwner, null, false, account);
+            IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, accountId);
+            iacTemplateAccountMapDao.persist(accountMapping);
+            accountMappings.add(accountMapping);
         }
+
+        for (Long projectId : sharedProjectIds) {
+            Project project = projectManager.getProject(projectId);
+            if (project == null) {
+                throw new InvalidParameterValueException(String.format("Unable to find project with ID [%s].", projectId));
+            }
+            if (!projectManager.canAccessProjectAccount(iacTemplateOwner, project.getProjectAccountId())) {
+                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with project [%s].", iacTemplateOwner.getAccountName(), project.getName()));
+            }
+            IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, project.getProjectAccountId());
+            iacTemplateAccountMapDao.persist(accountMapping);
+            accountMappings.add(accountMapping);
+        }
+
+        return accountMappings;
+    }
+
+    private List<IacTemplateDomainMapVO> persistDomainMappings(List<Long> sharedDomainIds, long iacTemplateId) {
+        return sharedDomainIds.stream()
+                .map(domainId -> {
+                    IacTemplateDomainMapVO domainMapping = new IacTemplateDomainMapVO(iacTemplateId, domainId);
+                    iacTemplateDomainMapDao.persist(domainMapping);
+                    return domainMapping;
+                }).collect(Collectors.toList());
+    }
+
+    protected void validateAccessToIacTemplateSharingEntities(Account owner, RegisterIacTemplateCmd cmd) {
 
         cmd.getSharedDomainIds().forEach(domainId -> {
             Domain domain = domainManager.getDomain(domainId);
@@ -210,7 +244,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         if (!NimbleServiceEnabled.value()) {
             return commands;
         }
-        return List.of(ListIacResourceTypesCmd.class, DeployIacTemplateCmd.class);
+        return List.of(ListIacResourceTypesCmd.class, RegisterIacTemplateCmd.class, DeployIacTemplateCmd.class);
     }
 
     @Override

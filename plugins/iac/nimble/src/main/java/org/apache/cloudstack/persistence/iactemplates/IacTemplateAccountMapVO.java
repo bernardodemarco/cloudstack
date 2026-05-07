@@ -29,6 +29,9 @@ public class IacTemplateAccountMapVO {
     @Column(name = "account_id", nullable = false)
     private long accountId;
 
+    public IacTemplateAccountMapVO() {
+    }
+
     public IacTemplateAccountMapVO(long iacTemplateId, long accountId) {
         this.iacTemplateId = iacTemplateId;
         this.accountId = accountId;
