@@ -18,6 +18,7 @@ package org.apache.cloudstack.service;
 
 import com.cloud.domain.Domain;
 import com.cloud.exception.InvalidParameterValueException;
+import com.cloud.exception.PermissionDeniedException;
 import com.cloud.projects.Project;
 import com.cloud.projects.ProjectManager;
 import com.cloud.user.Account;
@@ -116,8 +117,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Override
     public IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd) {
         Account owner = accountService.getActiveAccountById(cmd.getEntityOwnerId());
-        boolean isTemplateOwnerAdmin = accountService.isAdmin(owner.getId());
-        if (!isTemplateOwnerAdmin) {
+        if (!accountService.isAdmin(owner.getId())) {
             if (cmd.isRecursiveDomains()) {
                 throw new InvalidParameterValueException(String.format("An IaC template owned by [%s] cannot be shared recursively across different domains.", owner.getAccountName()));
             }
@@ -127,9 +127,11 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
             }
         }
 
-//        validateAccessToIacTemplateSharingEntities(owner, cmd);
-        toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
+        if (owner.getType() == Account.Type.PROJECT && cmd.isTemplateShared()) {
+            throw new InvalidParameterValueException("IaC templates owned by projects cannot be shared with other entities");
+        }
 
+        toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
         IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
         if (iacTemplate == null) {
             throw new CloudRuntimeException("Unable to register IaC template.");
@@ -142,7 +144,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 cmd.isRecursiveDomains(), owner.getDomainId(), owner.getAccountId());
         return Transaction.execute((TransactionCallback<IacTemplate>) (status) -> {
             IacTemplateVO persistedTemplate = iacTemplateDao.persist(iacTemplate);
-            List<IacTemplateDomainMapVO> domainMappings = persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId());
+            List<IacTemplateDomainMapVO> domainMappings = persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId(), owner);
             List<IacTemplateAccountMapVO> accountMappings = persistAccountMappings(cmd.getSharedAccountIds(), cmd.getSharedProjectIds(), persistedTemplate.getId(), owner);
             persistedTemplate.setDomainMappings(domainMappings);
             persistedTemplate.setAccountMappings(accountMappings);
@@ -150,70 +152,68 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         });
     }
 
+    private List<IacTemplateDomainMapVO> persistDomainMappings(List<Long> sharedDomainIds, long iacTemplateId, Account iacTemplateOwner) {
+        List<IacTemplateDomainMapVO> domainMappings = new ArrayList<>();
+        for (Long domainId : sharedDomainIds) {
+            Domain domain = domainManager.getDomain(domainId);
+            if (domain == null) {
+                throw new InvalidParameterValueException(String.format("Unable to find domain with ID [%s].", domainId));
+            }
+            try {
+                accountService.checkAccess(iacTemplateOwner, domain);
+            } catch (PermissionDeniedException e) {
+                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with domain with ID [%s].", iacTemplateOwner.getAccountName(), domain.getUuid()));
+            }
+            IacTemplateDomainMapVO domainMapping = new IacTemplateDomainMapVO(iacTemplateId, domainId);
+            iacTemplateDomainMapDao.persist(domainMapping);
+            domainMappings.add(domainMapping);
+        }
+        return domainMappings;
+    }
+
     private List<IacTemplateAccountMapVO> persistAccountMappings(List<Long> sharedAccountIds, List<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
         List<IacTemplateAccountMapVO> accountMappings = new ArrayList<>();
+        persistAccountMappingsForAccounts(accountMappings, sharedAccountIds, iacTemplateId, iacTemplateOwner);
+        persistAccountMappingsForProjects(accountMappings, sharedProjectIds, iacTemplateId, iacTemplateOwner);
+        return accountMappings;
+    }
 
+    private void persistAccountMappingsForAccounts(List<IacTemplateAccountMapVO> accountMappings, List<Long> sharedAccountIds, long iacTemplateId, Account iacTemplateOwner) {
         for (Long accountId : sharedAccountIds) {
             Account account = accountService.getActiveAccountById(accountId);
             if (account == null) {
                 throw new InvalidParameterValueException(String.format("Unable to find account with ID [%s].", accountId));
             }
-            accountService.checkAccess(iacTemplateOwner, null, false, account);
+            try {
+                accountService.checkAccess(iacTemplateOwner, null, false, account);
+            } catch (PermissionDeniedException e) {
+                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with account with ID [%s].", iacTemplateOwner.getAccountName(), account.getUuid()));
+            }
             IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, accountId);
             iacTemplateAccountMapDao.persist(accountMapping);
             accountMappings.add(accountMapping);
         }
+    }
 
+    private void persistAccountMappingsForProjects(List<IacTemplateAccountMapVO> accountMappings, List<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
         for (Long projectId : sharedProjectIds) {
             Project project = projectManager.getProject(projectId);
             if (project == null) {
                 throw new InvalidParameterValueException(String.format("Unable to find project with ID [%s].", projectId));
             }
-            if (!projectManager.canAccessProjectAccount(iacTemplateOwner, project.getProjectAccountId())) {
-                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with project [%s].", iacTemplateOwner.getAccountName(), project.getName()));
+
+            String exceptionMessage = String.format("Account [%s] does not have permission to share IaC template with project with ID [%s].", iacTemplateOwner.getAccountName(), project.getUuid());
+            try {
+                if (!projectManager.canAccessProjectAccount(iacTemplateOwner, project.getProjectAccountId())) {
+                    throw new InvalidParameterValueException(exceptionMessage);
+                }
+            } catch (PermissionDeniedException e) {
+                throw new InvalidParameterValueException(exceptionMessage);
             }
             IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, project.getProjectAccountId());
             iacTemplateAccountMapDao.persist(accountMapping);
             accountMappings.add(accountMapping);
         }
-
-        return accountMappings;
-    }
-
-    private List<IacTemplateDomainMapVO> persistDomainMappings(List<Long> sharedDomainIds, long iacTemplateId) {
-        return sharedDomainIds.stream()
-                .map(domainId -> {
-                    IacTemplateDomainMapVO domainMapping = new IacTemplateDomainMapVO(iacTemplateId, domainId);
-                    iacTemplateDomainMapDao.persist(domainMapping);
-                    return domainMapping;
-                }).collect(Collectors.toList());
-    }
-
-    protected void validateAccessToIacTemplateSharingEntities(Account owner, RegisterIacTemplateCmd cmd) {
-
-        cmd.getSharedDomainIds().forEach(domainId -> {
-            Domain domain = domainManager.getDomain(domainId);
-            if (domain == null) {
-                throw new InvalidParameterValueException(String.format("Unable to find domain with ID [%s].", domainId));
-            }
-            accountService.checkAccess(owner, domain);
-        });
-
-        cmd.getSharedAccountIds().forEach(accountId -> {
-            Account account = accountService.getActiveAccountById(accountId);
-            if (account == null) {
-                throw new InvalidParameterValueException(String.format("Unable to find account with ID [%s].", accountId));
-            }
-            accountService.checkAccess(owner, null, false, account);
-        });
-
-        cmd.getSharedProjectIds().forEach(projectId -> {
-            Project project = projectManager.getProject(projectId);
-            if (project == null) {
-                throw new InvalidParameterValueException(String.format("Unable to find project with ID [%s].", projectId));
-            }
-            projectManager.canAccessProjectAccount(owner, project.getProjectAccountId());
-        });
     }
 
     @Override
