@@ -17,6 +17,7 @@
 package org.apache.cloudstack.persistence.iactemplates;
 
 import com.cloud.utils.db.GenericDao;
+import org.apache.cloudstack.utils.reflectiontostringbuilderutils.ReflectionToStringBuilderUtils;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -156,5 +157,10 @@ public class IacTemplateVO implements IacTemplate {
     @Override
     public Class<?> getEntityType() {
         return IacTemplate.class;
+    }
+
+    @Override
+    public String toString() {
+        return ReflectionToStringBuilderUtils.reflectOnlySelectedFields(this, "uuid", "name");
     }
 }

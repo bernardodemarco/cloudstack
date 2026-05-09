@@ -39,6 +39,7 @@ import com.cloud.network.vpc.dao.VpcOfferingDetailsDao;
 import com.cloud.offerings.dao.NetworkOfferingDao;
 import com.cloud.offerings.dao.NetworkOfferingDetailsDao;
 import com.cloud.exception.ResourceAllocationException;
+import com.cloud.utils.component.ComponentContext;
 import org.apache.cloudstack.affinity.dao.AffinityGroupDomainMapDao;
 import org.apache.cloudstack.annotation.AnnotationService;
 import org.apache.cloudstack.annotation.dao.AnnotationDao;
@@ -52,10 +53,12 @@ import org.apache.cloudstack.engine.orchestration.service.NetworkOrchestrationSe
 import org.apache.cloudstack.framework.messagebus.MessageBus;
 import org.apache.cloudstack.framework.messagebus.PublishScope;
 import org.apache.cloudstack.network.RoutedIpv4Manager;
+import org.apache.cloudstack.nimble.NimbleServiceHelper;
 import org.apache.cloudstack.region.RegionManager;
 import org.apache.cloudstack.resourcedetail.dao.DiskOfferingDetailsDao;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.BooleanUtils;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.stereotype.Component;
 
 import com.cloud.api.query.dao.DiskOfferingJoinDao;
@@ -410,6 +413,7 @@ public class DomainManagerImpl extends ManagerBase implements DomainManager, Dom
                 logger.debug("Domain specific Virtual IP ranges  are successfully released as a part of domain {} cleanup.", domain);
             }
 
+            cleanUpIacTemplateDomainMappings(domain.getId());
             cleanupDomainDetails(domain.getId());
             cleanupDomainOfferings(domain.getId());
             annotationDao.removeByEntityType(AnnotationService.EntityType.DOMAIN.name(), domain.getUuid());
@@ -517,6 +521,15 @@ public class DomainManagerImpl extends ManagerBase implements DomainManager, Dom
             throw e;
         }
         _messageBus.publish(_name, MESSAGE_REMOVE_DOMAIN_EVENT, PublishScope.LOCAL, domain);
+    }
+
+    protected void cleanUpIacTemplateDomainMappings(Long domainId) {
+        try {
+            NimbleServiceHelper nimbleService = ComponentContext.getDelegateComponentOfType(NimbleServiceHelper.class);
+            nimbleService.cleanUpIacTemplateDomainMappings(domainId);
+        } catch (NoSuchBeanDefinitionException ignored) {
+            logger.debug("No NimbleServiceHelper bean found.");
+        }
     }
 
     protected void cleanupDomainDetails(Long domainId) {

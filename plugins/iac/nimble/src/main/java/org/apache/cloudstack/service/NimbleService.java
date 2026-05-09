@@ -19,15 +19,18 @@ package org.apache.cloudstack.service;
 import com.cloud.utils.component.PluggableService;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
+import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.framework.config.ConfigKey;
 import org.apache.cloudstack.framework.config.Configurable;
+import org.apache.cloudstack.nimble.NimbleServiceHelper;
+import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 
 import java.util.Map;
 
-public interface NimbleService extends PluggableService, Configurable {
+public interface NimbleService extends NimbleServiceHelper, PluggableService, Configurable {
     ConfigKey<Boolean> NimbleServiceEnabled = new ConfigKey<>("Advanced", Boolean.class,
             "nimble.service.enabled", "false",
             "Indicates whether NIMBLE (Native IaC Management, Build & Launch Engine) is enabled.", false);
@@ -51,4 +54,6 @@ public interface NimbleService extends PluggableService, Configurable {
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
     void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs);
     IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd);
+    void removeIacTemplate(RemoveIacTemplateCmd cmd);
+    IacTemplate findIacTemplateById(Long id);
 }

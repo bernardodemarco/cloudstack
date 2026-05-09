@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @APICommand(name = "registerIacTemplate",
-        description = "Register an IaC template, such as a TOSCA service template.",
+        description = "Registers an IaC template, such as a TOSCA service template.",
         responseObject = IacTemplateResponse.class, requestHasSensitiveInfo = false, responseHasSensitiveInfo = false,
         entityType = {IacTemplate.class}, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
 public class RegisterIacTemplateCmd extends BaseCmd {

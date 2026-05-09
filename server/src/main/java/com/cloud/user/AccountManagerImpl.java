@@ -77,6 +77,7 @@ import org.apache.cloudstack.framework.messagebus.PublishScope;
 import org.apache.cloudstack.managed.context.ManagedContextRunnable;
 import org.apache.cloudstack.network.RoutedIpv4Manager;
 import org.apache.cloudstack.network.dao.NetworkPermissionDao;
+import org.apache.cloudstack.nimble.NimbleServiceHelper;
 import org.apache.cloudstack.region.gslb.GlobalLoadBalancerRuleDao;
 import org.apache.cloudstack.resourcedetail.UserDetailVO;
 import org.apache.cloudstack.resourcedetail.dao.UserDetailsDao;
@@ -485,6 +486,15 @@ public class AccountManagerImpl extends ManagerBase implements AccountManager, M
             webhookService.deleteWebhooksForAccount(accountId);
         } catch (NoSuchBeanDefinitionException ignored) {
             logger.debug("No WebhookHelper bean found");
+        }
+    }
+
+    protected void cleanUpIacTemplates(long accountId) {
+        try {
+            NimbleServiceHelper nimbleService = ComponentContext.getDelegateComponentOfType(NimbleServiceHelper.class);
+            nimbleService.cleanUpAccountIacTemplates(accountId);
+        } catch (NoSuchBeanDefinitionException ignored) {
+            logger.debug("No NimbleServiceHelper bean found.");
         }
     }
 
@@ -1211,6 +1221,9 @@ public class AccountManagerImpl extends ManagerBase implements AccountManager, M
 
             // Delete Webhooks
             deleteWebhooksForAccount(accountId);
+
+            // Clean up NIMBLE IaC templates
+            cleanUpIacTemplates(accountId);
 
             return true;
         } catch (Exception ex) {

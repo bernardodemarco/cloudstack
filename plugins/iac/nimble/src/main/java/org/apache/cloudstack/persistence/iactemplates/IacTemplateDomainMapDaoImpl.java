@@ -17,8 +17,44 @@
 package org.apache.cloudstack.persistence.iactemplates;
 
 import com.cloud.utils.db.GenericDaoBase;
+import com.cloud.utils.db.SearchBuilder;
+import com.cloud.utils.db.SearchCriteria;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class IacTemplateDomainMapDaoImpl extends GenericDaoBase<IacTemplateDomainMapVO, Long> implements IacTemplateDomainMapDao {
+    private static final String IAC_TEMPLATE_ID = "iacTemplateId";
+    private static final String DOMAIN_ID = "domainId";
+
+    private final SearchBuilder<IacTemplateDomainMapVO> domainMappingSearch;
+
+    public IacTemplateDomainMapDaoImpl() {
+        domainMappingSearch = createSearchBuilder();
+        domainMappingSearch.and(IAC_TEMPLATE_ID, domainMappingSearch.entity().getIacTemplateId(), SearchCriteria.Op.EQ);
+        domainMappingSearch.and(DOMAIN_ID, domainMappingSearch.entity().getDomainId(), SearchCriteria.Op.EQ);
+        domainMappingSearch.done();
+    }
+
+    @Override
+    public List<IacTemplateDomainMapVO> listByIacTemplateId(long iacTemplateId) {
+        SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearch.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        return listBy(searchCriteria);
+    }
+
+    @Override
+    public void removeByIacTemplateId(long iacTemplateId) {
+        SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearch.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        remove(searchCriteria);
+    }
+
+    @Override
+    public void removeByDomainId(long domainId) {
+        SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearch.create();
+        searchCriteria.setParameters(DOMAIN_ID, domainId);
+        remove(searchCriteria);
+    }
 }

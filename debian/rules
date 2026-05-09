@@ -105,9 +105,6 @@ override_dh_auto_install:
 	install -D plugins/integrations/kubernetes-service/src/main/resources/conf/k8s-control-node-add.yml $(DESTDIR)/usr/share/$(PACKAGE)-management/cks/conf/k8s-control-node-add.yml
 	install -D plugins/integrations/kubernetes-service/src/main/resources/conf/k8s-node.yml $(DESTDIR)/usr/share/$(PACKAGE)-management/cks/conf/k8s-node.yml
 
-	install -D plugins/iac/nimble/src/main/resources/tosca/profile/compute/kubernetes-cluster.yaml $(DESTDIR)/usr/share/$(PACKAGE)-management/nimble/tosca/profile/compute/kubernetes-cluster.yaml
-	install -D plugins/iac/nimble/src/main/resources/tosca/profile/storage/volume.yaml $(DESTDIR)/usr/share/$(PACKAGE)-management/nimble/tosca/profile/storage/volume.yaml
-
 	# Remove configuration in /ur/share/cloudstack-management/webapps/client/WEB-INF
 	# This should all be in /etc/cloudstack/management
 	ln -s ../../..$(SYSCONFDIR)/$(PACKAGE)/management $(DESTDIR)/usr/share/$(PACKAGE)-management/conf

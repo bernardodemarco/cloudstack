@@ -18,5 +18,10 @@ package org.apache.cloudstack.persistence.iactemplates;
 
 import com.cloud.utils.db.GenericDao;
 
+import java.util.List;
+
 public interface IacTemplateDomainMapDao extends GenericDao<IacTemplateDomainMapVO, Long> {
+    List<IacTemplateDomainMapVO> listByIacTemplateId(long iacTemplateId);
+    void removeByIacTemplateId(long iacTemplateId);
+    void removeByDomainId(long domainId);
 }

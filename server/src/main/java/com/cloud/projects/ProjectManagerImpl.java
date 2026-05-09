@@ -47,6 +47,7 @@ import org.apache.cloudstack.framework.config.dao.ConfigurationDao;
 import org.apache.cloudstack.framework.messagebus.MessageBus;
 import org.apache.cloudstack.framework.messagebus.PublishScope;
 import org.apache.cloudstack.managed.context.ManagedContextRunnable;
+import org.apache.cloudstack.nimble.NimbleServiceHelper;
 import org.apache.cloudstack.utils.mailing.MailAddress;
 import org.apache.cloudstack.utils.mailing.SMTPMailProperties;
 import org.apache.cloudstack.utils.mailing.SMTPMailSender;
@@ -177,6 +178,17 @@ public class ProjectManagerImpl extends ManagerBase implements ProjectManager, C
             logger.debug("No WebhookHelper bean found");
         }
         return webhooks;
+    }
+
+    protected List<? extends ControlledEntity> listProjectIacTemplates(Project project) {
+        List<? extends ControlledEntity> iacTemplates = new ArrayList<>();
+        try {
+            NimbleServiceHelper nimbleService = ComponentContext.getDelegateComponentOfType(NimbleServiceHelper.class);
+            iacTemplates = nimbleService.listAccountIacTemplates(project.getProjectAccountId());
+        } catch (NoSuchBeanDefinitionException ignored) {
+            logger.debug("No NimbleServiceHelper bean found.");
+        }
+        return iacTemplates;
     }
 
     @Override
@@ -356,8 +368,9 @@ public class ProjectManagerImpl extends ManagerBase implements ProjectManager, C
             List<NetworkVO> networks = _networkDao.listByOwner(project.getProjectAccountId());
             List<? extends Vpc> vpcs = _vpcMgr.getVpcsForAccount(project.getProjectAccountId());
             List<? extends ControlledEntity> webhooks = listWebhooksForProject(project);
+            List<? extends ControlledEntity> iacTemplates = listProjectIacTemplates(project);
 
-            Optional<String> message = Stream.of(userTemplates, vmSnapshots, vms, volumes, networks, vpcs, webhooks)
+            Optional<String> message = Stream.of(userTemplates, vmSnapshots, vms, volumes, networks, vpcs, webhooks, iacTemplates)
                     .filter(entity -> !entity.isEmpty())
                     .map(entity -> entity.size() + " " +  entity.get(0).getEntityType().getSimpleName() + " to clean up")
                     .findFirst();

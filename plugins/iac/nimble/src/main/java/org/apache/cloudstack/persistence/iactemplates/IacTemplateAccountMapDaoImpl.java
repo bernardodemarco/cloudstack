@@ -17,8 +17,44 @@
 package org.apache.cloudstack.persistence.iactemplates;
 
 import com.cloud.utils.db.GenericDaoBase;
+import com.cloud.utils.db.SearchBuilder;
+import com.cloud.utils.db.SearchCriteria;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAccountMapVO, Long> implements IacTemplateAccountMapDao {
+    private static final String IAC_TEMPLATE_ID = "iacTemplateId";
+    private static final String ACCOUNT_ID = "accountId";
+
+    private final SearchBuilder<IacTemplateAccountMapVO> accountMappingSearch;
+
+    public IacTemplateAccountMapDaoImpl() {
+        accountMappingSearch = createSearchBuilder();
+        accountMappingSearch.and(IAC_TEMPLATE_ID, accountMappingSearch.entity().getIacTemplateId(), SearchCriteria.Op.EQ);
+        accountMappingSearch.and(ACCOUNT_ID, accountMappingSearch.entity().getAccountId(), SearchCriteria.Op.EQ);
+        accountMappingSearch.done();
+    }
+
+    @Override
+    public List<IacTemplateAccountMapVO> listByIacTemplateId(long iacTemplateId) {
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        return listBy(searchCriteria);
+    }
+
+    @Override
+    public void removeByIacTemplateId(long iacTemplateId) {
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        remove(searchCriteria);
+    }
+
+    @Override
+    public void removeByAccountId(long accountId) {
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
+        searchCriteria.setParameters(ACCOUNT_ID, accountId);
+        remove(searchCriteria);
+    }
 }

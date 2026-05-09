@@ -18,5 +18,9 @@ package org.apache.cloudstack.persistence.iactemplates;
 
 import com.cloud.utils.db.GenericDao;
 
+import java.util.List;
+
 public interface IacTemplateDao extends GenericDao<IacTemplateVO, Long> {
+    void removeByAccountId(long accountId);
+    List<IacTemplateVO> listByAccountId(long accountId);
 }

@@ -14,15 +14,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package org.apache.cloudstack.persistence.iactemplates;
+package org.apache.cloudstack.nimble;
 
-import com.cloud.utils.db.GenericDao;
+import org.apache.cloudstack.acl.ControlledEntity;
 
 import java.util.List;
 
-public interface IacTemplateAccountMapDao extends GenericDao<IacTemplateAccountMapVO, Long> {
-
-    List<IacTemplateAccountMapVO> listByIacTemplateId(long iacTemplateId);
-    void removeByIacTemplateId(long iacTemplateId);
-    void removeByAccountId(long accountId);
+public interface NimbleServiceHelper {
+    void cleanUpAccountIacTemplates(long accountId);
+    void cleanUpIacTemplateDomainMappings(long domainId);
+    List<? extends ControlledEntity> listAccountIacTemplates(long accountId);
 }

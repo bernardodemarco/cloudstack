@@ -30,9 +30,11 @@ import com.cloud.utils.component.ManagerBase;
 import com.cloud.utils.db.Transaction;
 import com.cloud.utils.db.TransactionCallback;
 import com.cloud.utils.exception.CloudRuntimeException;
+import org.apache.cloudstack.acl.ControlledEntity;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
+import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
@@ -117,26 +119,32 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     @Override
     public IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd) {
         Account owner = accountService.getActiveAccountById(cmd.getEntityOwnerId());
-        if (!accountService.isAdmin(owner.getId())) {
-            if (cmd.isRecursiveDomains()) {
-                throw new InvalidParameterValueException(String.format("An IaC template owned by [%s] cannot be shared recursively across different domains.", owner.getAccountName()));
-            }
-
-            if (cmd.isTemplateShared()) {
-                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with other entities.", owner.getAccountName()));
-            }
-        }
-
-        if (owner.getType() == Account.Type.PROJECT && cmd.isTemplateShared()) {
-            throw new InvalidParameterValueException("IaC templates owned by projects cannot be shared with other entities");
-        }
-
+        verifyOwnerPermissionToShareIacTemplates(owner, cmd.isTemplateShared(), cmd.isRecursiveDomains());
         toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
         IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
         if (iacTemplate == null) {
             throw new CloudRuntimeException("Unable to register IaC template.");
         }
         return responseBuilder.createIacTemplateResponse(iacTemplate, false);
+    }
+
+    private void verifyOwnerPermissionToShareIacTemplates(Account owner, boolean isTemplateShared, boolean isRecursiveDomains) {
+        boolean iacTemplateBelongsToProject = owner.getType() == Account.Type.PROJECT;
+        if (!accountService.isAdmin(owner.getId()) || iacTemplateBelongsToProject) {
+            if (isTemplateShared) {
+                if (iacTemplateBelongsToProject) {
+                    throw new InvalidParameterValueException("IaC templates owned by projects cannot be shared with other entities.");
+                }
+                throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with other entities.", owner.getAccountName()));
+            }
+
+            if (isRecursiveDomains) {
+                if (iacTemplateBelongsToProject) {
+                    throw new InvalidParameterValueException("IaC templates owned by projects cannot be shared recursively across different domains.");
+                }
+                throw new InvalidParameterValueException(String.format("An IaC template owned by [%s] cannot be shared recursively across different domains.", owner.getAccountName()));
+            }
+        }
     }
 
     private IacTemplate persistIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
@@ -217,8 +225,38 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
+    public void removeIacTemplate(RemoveIacTemplateCmd cmd) {
+        IacTemplate iacTemplate = iacTemplateDao.findById(cmd.getId());
+        if (iacTemplate == null) {
+            throw new InvalidParameterValueException("Unable to find IaC template with the specified ID.");
+        }
+
+        iacTemplateDao.remove(iacTemplate.getId());
+    }
+
+    @Override
     public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
         toscaOrchestrator.deployIacTemplate(iacTemplateContent, inputs);
+    }
+
+    @Override
+    public IacTemplate findIacTemplateById(Long id) {
+        return iacTemplateDao.findById(id);
+    }
+
+    @Override
+    public void cleanUpAccountIacTemplates(long accountId) {
+        iacTemplateDao.removeByAccountId(accountId);
+    }
+
+    @Override
+    public void cleanUpIacTemplateDomainMappings(long domainId) {
+        iacTemplateDomainMapDao.removeByDomainId(domainId);
+    }
+
+    @Override
+    public List<? extends ControlledEntity> listAccountIacTemplates(long accountId) {
+        return iacTemplateDao.listByAccountId(accountId);
     }
 
     @Override
@@ -244,7 +282,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         if (!NimbleServiceEnabled.value()) {
             return commands;
         }
-        return List.of(ListIacResourceTypesCmd.class, RegisterIacTemplateCmd.class, DeployIacTemplateCmd.class);
+        return List.of(ListIacResourceTypesCmd.class, RegisterIacTemplateCmd.class, RemoveIacTemplateCmd.class, DeployIacTemplateCmd.class);
     }
 
     @Override
