@@ -27,6 +27,7 @@ import java.util.List;
 public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAccountMapVO, Long> implements IacTemplateAccountMapDao {
     private static final String IAC_TEMPLATE_ID = "iacTemplateId";
     private static final String ACCOUNT_ID = "accountId";
+    private static final String IS_PROJECT_ACCOUNT = "isProjectAccount";
 
     private final SearchBuilder<IacTemplateAccountMapVO> accountMappingSearch;
 
@@ -34,6 +35,7 @@ public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAcco
         accountMappingSearch = createSearchBuilder();
         accountMappingSearch.and(IAC_TEMPLATE_ID, accountMappingSearch.entity().getIacTemplateId(), SearchCriteria.Op.EQ);
         accountMappingSearch.and(ACCOUNT_ID, accountMappingSearch.entity().getAccountId(), SearchCriteria.Op.EQ);
+        accountMappingSearch.and(IS_PROJECT_ACCOUNT, accountMappingSearch.entity().isProjectAccount(), SearchCriteria.Op.EQ);
         accountMappingSearch.done();
     }
 
@@ -48,6 +50,22 @@ public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAcco
     public void removeByIacTemplateId(long iacTemplateId) {
         SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
         searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        remove(searchCriteria);
+    }
+
+    @Override
+    public void removeUserAccountMappingsByIacTemplateId(long iacTemplateId) {
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        searchCriteria.setParameters(IS_PROJECT_ACCOUNT, false);
+        remove(searchCriteria);
+    }
+
+    @Override
+    public void removeProjectAccountMappingsByIacTemplateId(long iacTemplateId) {
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        searchCriteria.setParameters(IS_PROJECT_ACCOUNT, true);
         remove(searchCriteria);
     }
 

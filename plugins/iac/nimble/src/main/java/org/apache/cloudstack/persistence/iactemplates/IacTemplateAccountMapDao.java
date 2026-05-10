@@ -25,4 +25,6 @@ public interface IacTemplateAccountMapDao extends GenericDao<IacTemplateAccountM
     List<IacTemplateAccountMapVO> listByIacTemplateId(long iacTemplateId);
     void removeByIacTemplateId(long iacTemplateId);
     void removeByAccountId(long accountId);
+    void removeUserAccountMappingsByIacTemplateId(long iacTemplateId);
+    void removeProjectAccountMappingsByIacTemplateId(long iacTemplateId);
 }

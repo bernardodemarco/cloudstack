@@ -25,8 +25,9 @@ import org.apache.cloudstack.api.response.ProjectResponse;
 import org.apache.cloudstack.service.NimbleService;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public abstract class BaseIacTemplateRegistrationCmd extends BaseCmd {
     @Inject
@@ -66,19 +67,16 @@ public abstract class BaseIacTemplateRegistrationCmd extends BaseCmd {
         return sharedDomainIds != null || sharedAccountIds != null || sharedProjectIds != null;
     }
 
-    public List<Long> getSharedDomainIds() {
-        return sharedDomainIds;
+    public Set<Long> getSharedDomainIds() {
+        return sharedDomainIds == null ? null : new HashSet<>(sharedDomainIds);
     }
 
-    public List<Long> getSharedAccountIds() {
-        return sharedAccountIds;
+    public Set<Long> getSharedAccountIds() {
+        return sharedAccountIds == null ? null : new HashSet<>(sharedAccountIds);
     }
 
-    public List<Long> getSharedProjectIds() {
-        if (sharedProjectIds == null) {
-            return new ArrayList<>();
-        }
-        return sharedProjectIds;
+    public Set<Long> getSharedProjectIds() {
+        return sharedProjectIds == null ? null : new HashSet<>(sharedProjectIds);
     }
 
     public Boolean isRecursiveDomains() {

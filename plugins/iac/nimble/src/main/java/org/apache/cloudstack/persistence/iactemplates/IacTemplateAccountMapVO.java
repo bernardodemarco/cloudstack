@@ -29,12 +29,16 @@ public class IacTemplateAccountMapVO {
     @Column(name = "account_id", nullable = false)
     private long accountId;
 
+    @Column(name = "is_project_account", nullable = false)
+    private boolean projectAccount;
+
     public IacTemplateAccountMapVO() {
     }
 
-    public IacTemplateAccountMapVO(long iacTemplateId, long accountId) {
+    public IacTemplateAccountMapVO(long iacTemplateId, long accountId, boolean projectAccount) {
         this.iacTemplateId = iacTemplateId;
         this.accountId = accountId;
+        this.projectAccount = projectAccount;
     }
 
     public long getIacTemplateId() {
@@ -43,5 +47,9 @@ public class IacTemplateAccountMapVO {
 
     public long getAccountId() {
         return accountId;
+    }
+
+    public boolean isProjectAccount() {
+        return projectAccount;
     }
 }

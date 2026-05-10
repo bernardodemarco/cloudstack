@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS `cloud`.`iac_templates` (
 CREATE TABLE IF NOT EXISTS `cloud`.`iac_template_account_map` (
     `iac_template_id` BIGINT(20) UNSIGNED NOT NULL,
     `account_id` BIGINT(20) UNSIGNED NOT NULL,
+    `is_project_account` TINYINT(1) NOT NULL,
     PRIMARY KEY (`iac_template_id`, `account_id`),
     CONSTRAINT `fk_iac_template_account_map__iac_template_id` FOREIGN KEY (`iac_template_id`) REFERENCES `iac_templates`(`id`),
     CONSTRAINT `fk_iac_template_account_map__account_id` FOREIGN KEY (`account_id`) REFERENCES `account`(`id`)

@@ -64,6 +64,7 @@ import javax.naming.ConfigurationException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class NimbleManagerImpl extends ManagerBase implements NimbleService {
@@ -206,25 +207,23 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 if (iacTemplateUpdate) {
                     iacTemplateDomainMapDao.removeByIacTemplateId(iacTemplate.getId());
                 }
-//                convert to sets -> remove duplicates
-                List<IacTemplateDomainMapVO> domainMappings = persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId(), owner);
-                persistedTemplate.setDomainMappings(domainMappings);
+                persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId(), owner);
             }
 
-//            add project flag to the iactemplatwaccountmapvo -> if not, when updating and removing only projects or accoutns, all of them will be removed
-            if (cmd.getSharedAccountIds() != null) {
-                if (iacTemplateUpdate) {
-                    iacTemplateAccountMapDao.removeByIacTemplateId(iacTemplate.getId());
+            if (cmd.getSharedAccountIds() != null || cmd.getSharedProjectIds() != null) {
+                if (iacTemplateUpdate && cmd.getSharedAccountIds() != null) {
+                    iacTemplateAccountMapDao.removeUserAccountMappingsByIacTemplateId(iacTemplate.getId());
                 }
-                List<IacTemplateAccountMapVO> accountMappings = persistAccountMappings(cmd.getSharedAccountIds(), cmd.getSharedProjectIds(), persistedTemplate.getId(), owner);
-                persistedTemplate.setAccountMappings(accountMappings);
+                if (iacTemplateUpdate && cmd.getSharedProjectIds() != null) {
+                    iacTemplateAccountMapDao.removeProjectAccountMappingsByIacTemplateId(iacTemplate.getId());
+                }
+                persistAccountMappings(cmd.getSharedAccountIds(), cmd.getSharedProjectIds(), persistedTemplate.getId(), owner);
             }
-            return persistedTemplate;
+            return iacTemplateDao.findById(persistedTemplate.getId());
         });
     }
 
-    private List<IacTemplateDomainMapVO> persistDomainMappings(List<Long> sharedDomainIds, long iacTemplateId, Account iacTemplateOwner) {
-        List<IacTemplateDomainMapVO> domainMappings = new ArrayList<>();
+    private void persistDomainMappings(Set<Long> sharedDomainIds, long iacTemplateId, Account iacTemplateOwner) {
         for (Long domainId : sharedDomainIds) {
             Domain domain = domainManager.getDomain(domainId);
             if (domain == null) {
@@ -237,36 +236,40 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
             }
             IacTemplateDomainMapVO domainMapping = new IacTemplateDomainMapVO(iacTemplateId, domainId);
             iacTemplateDomainMapDao.persist(domainMapping);
-            domainMappings.add(domainMapping);
         }
-        return domainMappings;
     }
 
-    private List<IacTemplateAccountMapVO> persistAccountMappings(List<Long> sharedAccountIds, List<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
-        List<IacTemplateAccountMapVO> accountMappings = new ArrayList<>();
-        persistAccountMappingsForAccounts(accountMappings, sharedAccountIds, iacTemplateId, iacTemplateOwner);
-        persistAccountMappingsForProjects(accountMappings, sharedProjectIds, iacTemplateId, iacTemplateOwner);
-        return accountMappings;
+    private void persistAccountMappings(Set<Long> sharedAccountIds, Set<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
+        if (sharedAccountIds != null) {
+            persistAccountMappingsForAccounts(sharedAccountIds, iacTemplateId, iacTemplateOwner);
+        }
+        if (sharedProjectIds != null) {
+            persistAccountMappingsForProjects(sharedProjectIds, iacTemplateId, iacTemplateOwner);
+        }
     }
 
-    private void persistAccountMappingsForAccounts(List<IacTemplateAccountMapVO> accountMappings, List<Long> sharedAccountIds, long iacTemplateId, Account iacTemplateOwner) {
+    private void persistAccountMappingsForAccounts(Set<Long> sharedAccountIds, long iacTemplateId, Account iacTemplateOwner) {
         for (Long accountId : sharedAccountIds) {
             Account account = accountService.getActiveAccountById(accountId);
             if (account == null) {
                 throw new InvalidParameterValueException(String.format("Unable to find account with ID [%s].", accountId));
             }
+
+            if (account.getId() == iacTemplateOwner.getId()) {
+                throw new InvalidParameterValueException(String.format("Account [%s] cannot share IaC template with itself.", iacTemplateOwner.getAccountName()));
+            }
+
             try {
                 accountService.checkAccess(iacTemplateOwner, null, false, account);
             } catch (PermissionDeniedException e) {
                 throw new InvalidParameterValueException(String.format("Account [%s] does not have permission to share IaC template with account with ID [%s].", iacTemplateOwner.getAccountName(), account.getUuid()));
             }
-            IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, accountId);
+            IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, accountId, false);
             iacTemplateAccountMapDao.persist(accountMapping);
-            accountMappings.add(accountMapping);
         }
     }
 
-    private void persistAccountMappingsForProjects(List<IacTemplateAccountMapVO> accountMappings, List<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
+    private void persistAccountMappingsForProjects(Set<Long> sharedProjectIds, long iacTemplateId, Account iacTemplateOwner) {
         for (Long projectId : sharedProjectIds) {
             Project project = projectManager.getProject(projectId);
             if (project == null) {
@@ -281,9 +284,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
             } catch (PermissionDeniedException e) {
                 throw new InvalidParameterValueException(exceptionMessage);
             }
-            IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, project.getProjectAccountId());
+            IacTemplateAccountMapVO accountMapping = new IacTemplateAccountMapVO(iacTemplateId, project.getProjectAccountId(), true);
             iacTemplateAccountMapDao.persist(accountMapping);
-            accountMappings.add(accountMapping);
         }
     }
 
