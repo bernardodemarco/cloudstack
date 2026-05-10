@@ -31,10 +31,13 @@ import com.cloud.utils.db.Transaction;
 import com.cloud.utils.db.TransactionCallback;
 import com.cloud.utils.exception.CloudRuntimeException;
 import org.apache.cloudstack.acl.ControlledEntity;
+import org.apache.cloudstack.api.ApiConstants;
+import org.apache.cloudstack.api.command.BaseIacTemplateRegistrationCmd;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
+import org.apache.cloudstack.api.command.UpdateIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
@@ -52,7 +55,9 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplateVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
 import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
@@ -117,13 +122,29 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
-    public IacTemplateResponse registerIacTemplate(RegisterIacTemplateCmd cmd) {
+    public IacTemplateResponse saveIacTemplate(BaseIacTemplateRegistrationCmd cmd) {
+        boolean iacTemplateUpdate = cmd instanceof UpdateIacTemplateCmd;
+        if (iacTemplateUpdate) {
+            IacTemplate iacTemplate = iacTemplateDao.findById(((UpdateIacTemplateCmd) cmd).getId());
+            if (iacTemplate == null) {
+                throw new InvalidParameterValueException("Unable to find IaC template with the specified ID.");
+            }
+        } else {
+            if (StringUtils.isBlank(cmd.getIacTemplateContent()) || StringUtils.isBlank(cmd.getName())) {
+                throw new InvalidParameterValueException(String.format("The [%s] parameter must be specified. It must not be an empty string.",
+                        StringUtils.isBlank(cmd.getIacTemplateContent()) ? ApiConstants.IAC_TEMPLATE_CONTENT : ApiConstants.NAME));
+            }
+        }
+
         Account owner = accountService.getActiveAccountById(cmd.getEntityOwnerId());
-        verifyOwnerPermissionToShareIacTemplates(owner, cmd.isTemplateShared(), cmd.isRecursiveDomains());
-        toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
-        IacTemplate iacTemplate = persistIacTemplate(cmd, owner);
+        verifyOwnerPermissionToShareIacTemplates(owner, cmd.isTemplateShared(), BooleanUtils.toBoolean(cmd.isRecursiveDomains()));
+        if (StringUtils.isNotBlank(cmd.getIacTemplateContent())) {
+            toscaOrchestrator.parseServiceTemplate(cmd.getIacTemplateContent());
+        }
+
+        IacTemplate iacTemplate = persistIacTemplate(cmd, owner, iacTemplateUpdate);
         if (iacTemplate == null) {
-            throw new CloudRuntimeException("Unable to register IaC template.");
+            throw new CloudRuntimeException(String.format("Unable to %s IaC template.", iacTemplateUpdate ? "update" : "register"));
         }
         return responseBuilder.createIacTemplateResponse(iacTemplate, false);
     }
@@ -147,15 +168,57 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         }
     }
 
-    private IacTemplate persistIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
-        IacTemplateVO iacTemplate = new IacTemplateVO(cmd.getName(), cmd.getDescription(), cmd.getIacTemplateContent(),
-                cmd.isRecursiveDomains(), owner.getDomainId(), owner.getAccountId());
+    private IacTemplateVO getUpdatedIacTemplate(UpdateIacTemplateCmd cmd) {
+        IacTemplateVO iacTemplate = iacTemplateDao.findById(cmd.getId());
+
+        if (StringUtils.isNotBlank(cmd.getName())) {
+            iacTemplate.setName(cmd.getName());
+        }
+
+        if (StringUtils.isNotBlank(cmd.getDescription())) {
+            iacTemplate.setDescription(cmd.getDescription());
+        }
+
+        if (StringUtils.isNotBlank(cmd.getIacTemplateContent())) {
+            iacTemplate.setIacTemplateContent(cmd.getIacTemplateContent());
+        }
+
+        if (cmd.isRecursiveDomains() != null) {
+            iacTemplate.setRecursiveDomains(cmd.isRecursiveDomains());
+        }
+
+        return iacTemplate;
+    }
+
+    private IacTemplateVO getNewIacTemplate(RegisterIacTemplateCmd cmd, Account owner) {
+        return new IacTemplateVO(cmd.getName(), cmd.getDescription(), cmd.getIacTemplateContent(),
+                BooleanUtils.toBoolean(cmd.isRecursiveDomains()), owner.getDomainId(), owner.getAccountId());
+    }
+
+    private IacTemplate persistIacTemplate(BaseIacTemplateRegistrationCmd cmd, Account owner, boolean iacTemplateUpdate) {
+        IacTemplateVO iacTemplate = iacTemplateUpdate ? getUpdatedIacTemplate((UpdateIacTemplateCmd) cmd)
+                : getNewIacTemplate((RegisterIacTemplateCmd) cmd, owner);
+
         return Transaction.execute((TransactionCallback<IacTemplate>) (status) -> {
             IacTemplateVO persistedTemplate = iacTemplateDao.persist(iacTemplate);
-            List<IacTemplateDomainMapVO> domainMappings = persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId(), owner);
-            List<IacTemplateAccountMapVO> accountMappings = persistAccountMappings(cmd.getSharedAccountIds(), cmd.getSharedProjectIds(), persistedTemplate.getId(), owner);
-            persistedTemplate.setDomainMappings(domainMappings);
-            persistedTemplate.setAccountMappings(accountMappings);
+
+            if (cmd.getSharedDomainIds() != null) {
+                if (iacTemplateUpdate) {
+                    iacTemplateDomainMapDao.removeByIacTemplateId(iacTemplate.getId());
+                }
+//                convert to sets -> remove duplicates
+                List<IacTemplateDomainMapVO> domainMappings = persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId(), owner);
+                persistedTemplate.setDomainMappings(domainMappings);
+            }
+
+//            add project flag to the iactemplatwaccountmapvo -> if not, when updating and removing only projects or accoutns, all of them will be removed
+            if (cmd.getSharedAccountIds() != null) {
+                if (iacTemplateUpdate) {
+                    iacTemplateAccountMapDao.removeByIacTemplateId(iacTemplate.getId());
+                }
+                List<IacTemplateAccountMapVO> accountMappings = persistAccountMappings(cmd.getSharedAccountIds(), cmd.getSharedProjectIds(), persistedTemplate.getId(), owner);
+                persistedTemplate.setAccountMappings(accountMappings);
+            }
             return persistedTemplate;
         });
     }
@@ -282,7 +345,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         if (!NimbleServiceEnabled.value()) {
             return commands;
         }
-        return List.of(ListIacResourceTypesCmd.class, RegisterIacTemplateCmd.class, RemoveIacTemplateCmd.class, DeployIacTemplateCmd.class);
+        return List.of(ListIacResourceTypesCmd.class, RegisterIacTemplateCmd.class, RemoveIacTemplateCmd.class,
+                UpdateIacTemplateCmd.class, DeployIacTemplateCmd.class);
     }
 
     @Override

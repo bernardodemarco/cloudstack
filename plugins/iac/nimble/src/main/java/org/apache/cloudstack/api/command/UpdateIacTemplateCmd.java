@@ -18,56 +18,30 @@ package org.apache.cloudstack.api.command;
 
 import com.cloud.user.Account;
 import org.apache.cloudstack.acl.RoleType;
+import org.apache.cloudstack.api.ACL;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.Parameter;
-import org.apache.cloudstack.api.response.DomainResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
-import org.apache.cloudstack.api.response.ProjectResponse;
-import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 
-@APICommand(name = "registerIacTemplate",
-        description = "Registers an IaC template, such as a TOSCA service template.",
+@APICommand(name = "updateIacTemplate", description = "Updates an existing IaC template.",
         responseObject = IacTemplateResponse.class, requestHasSensitiveInfo = false, responseHasSensitiveInfo = false,
         entityType = {IacTemplate.class}, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
-public class RegisterIacTemplateCmd extends BaseIacTemplateRegistrationCmd {
+public class UpdateIacTemplateCmd extends BaseIacTemplateRegistrationCmd {
+    @ACL
+    @Parameter(name = ApiConstants.ID, type = CommandType.UUID, entityType = IacTemplateResponse.class, required = true, description = "ID of the IaC template to be updated.")
+    private Long id;
+
     @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "Description of the IaC template.")
     private String description;
 
-    @Parameter(name = ApiConstants.DOMAIN_ID, type = CommandType.UUID, entityType = DomainResponse.class,
-            description = "ID of the domain associated with the IaC template. It must be used along with the \"account\" parameter.")
-    private Long domainId;
-
-    @Parameter(name = ApiConstants.ACCOUNT, type = CommandType.STRING,
-            description = "Name of the account that will own the IaC template. It must be used along with the \"domainid\" parameter.")
-    private String accountName;
-
-    @Parameter(name = ApiConstants.PROJECT_ID, type = CommandType.UUID, entityType = ProjectResponse.class,
-            description = "ID of the project that will own the IaC template. Mutually exclusive with the \"account\" parameter.")
-    private Long projectId;
+    public Long getId() {
+        return id;
+    }
 
     public String getDescription() {
         return description;
-    }
-
-    public Long getDomainId() {
-        return domainId;
-    }
-
-    public String getAccountName() {
-        return accountName;
-    }
-
-    public Long getProjectId() {
-        return projectId;
-    }
-
-    @Override
-    public long getEntityOwnerId() {
-        Account caller = CallContext.current().getCallingAccount();
-        Account owner = _accountService.finalizeOwner(caller, getAccountName(), getDomainId(), getProjectId());
-        return owner == null ? caller.getAccountId() : owner.getAccountId();
     }
 
     @Override
@@ -75,5 +49,14 @@ public class RegisterIacTemplateCmd extends BaseIacTemplateRegistrationCmd {
         IacTemplateResponse response = nimbleService.saveIacTemplate(this);
         response.setResponseName(getCommandName());
         setResponseObject(response);
+    }
+
+    @Override
+    public long getEntityOwnerId() {
+        IacTemplate iacTemplate = nimbleService.findIacTemplateById(id);
+        if (iacTemplate == null) {
+            return Account.ACCOUNT_ID_SYSTEM;
+        }
+        return iacTemplate.getAccountId();
     }
 }

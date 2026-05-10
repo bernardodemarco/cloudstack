@@ -54,7 +54,7 @@ public class IacTemplateVO implements IacTemplate {
     private String iacTemplateContent;
 
     @Column(name = "recursive_domains", nullable = false)
-    private boolean recursiveDomains;
+    private boolean recursiveDomains = false;
 
     @Column(name = "domain_id", nullable = false)
     private long domainId;
@@ -103,9 +103,17 @@ public class IacTemplateVO implements IacTemplate {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     @Override
     public String getDescription() {
         return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override
@@ -113,9 +121,17 @@ public class IacTemplateVO implements IacTemplate {
         return iacTemplateContent;
     }
 
+    public void setIacTemplateContent(String iacTemplateContent) {
+        this.iacTemplateContent = iacTemplateContent;
+    }
+
     @Override
     public boolean isRecursiveDomains() {
         return recursiveDomains;
+    }
+
+    public void setRecursiveDomains(boolean recursiveDomains) {
+        this.recursiveDomains = recursiveDomains;
     }
 
     @Override
