@@ -1332,6 +1332,8 @@ public class ApiConstants {
     public static final String INPUTS = "inputs";
     public static final String IAC_RESOURCE_TYPE_CONTENT = "iacresourcetypecontent";
     public static final String SHOW_IAC_RESOURCE_TYPE_CONTENT = "showiacresourcetypecontent";
+    public static final String SHOW_SHARED_IAC_TEMPLATES = "showsharediactemplates";
+    public static final String SHOW_IAC_TEMPLATE_CONTENT = "showiactemplatecontent";
     public static final String IAC_TEMPLATE_CONTENT = "iactemplatecontent";
     public static final String SHARED_DOMAIN_IDS = "shareddomainids";
     public static final String SHARED_ACCOUNT_IDS = "sharedaccountids";

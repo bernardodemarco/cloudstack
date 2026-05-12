@@ -17,6 +17,7 @@
 package org.apache.cloudstack.service;
 
 import com.cloud.domain.Domain;
+import com.cloud.domain.dao.DomainDao;
 import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.exception.PermissionDeniedException;
 import com.cloud.projects.Project;
@@ -35,6 +36,7 @@ import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.command.BaseIacTemplateRegistrationCmd;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
+import org.apache.cloudstack.api.command.ListIacTemplatesCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
 import org.apache.cloudstack.api.command.UpdateIacTemplateCmd;
@@ -96,6 +98,9 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     private DomainManager domainManager;
 
     @Inject
+    private DomainDao domainDao;
+
+    @Inject
     private ProjectManager projectManager;
 
     @Override
@@ -111,6 +116,67 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         ListResponse<IacResourceTypeResponse> response = new ListResponse<>();
         response.setResponses(iacResourceTypeResponses, iacResourceTypeResponses.size());
         return response;
+    }
+
+    /**
+     *
+     * ok, aqui temos vários casos possíveis
+     * 1. Caller usuario normal
+     * 1.1. nao especificou ACL params? forca para que retorne so seus templates
+     * 1.2. especificou ACL params -> checagem de acesso
+     *
+     * SE tem acesso aos ACL params
+     * 1. Pegar lista de domain ids (considerando recursividade)
+     * 2. lista de contas -> tipo listconsolesessions
+     *
+     * SO QUE, se é para listar templates compartilhados, buscar os IDs nas tabelas auxiliares (templates compartilhados tem que ser os compartilhados com a conta definida pelos ACL params)
+     * dominios compartilhados com o dominio e com a conta do ACL
+     */
+    @Override
+    public ListResponse<IacTemplateResponse> listIacTemplates(ListIacTemplatesCmd cmd) {
+        Account caller = CallContext.current().getCallingAccount();
+        long domainId = getBaseDomainIdToListIacTemplatesFrom(cmd.getDomainId(), caller);
+        Project projectId = getProjectToListIacTemplatesFor(cmd.getProjectId(), caller);
+        List<Long> domainIds = cmd.isRecursive() ? domainDao.getDomainAndChildrenIds(cmd.getDomainId()) : List.of(cmd.getDomainId());
+// ACL validations are ready -> need to understand how to grab those shared templates and that's basically it :)
+
+        return null;
+    }
+
+    private long getBaseDomainIdToListIacTemplatesFrom(Long domainId, Account caller) {
+        if (domainId == null) {
+            return caller.getDomainId();
+        }
+
+        Domain domain = domainDao.findById(domainId);
+        if (domain == null) {
+            throw new InvalidParameterValueException("Unable to find the specified domain.");
+        }
+
+        accountService.checkAccess(caller, domain);
+        return domainId;
+    }
+
+    private Project getProjectToListIacTemplatesFor(Long projectId, Account caller) {
+        if (projectId == null) {
+            return null;
+        }
+
+        Project project = projectManager.getProject(projectId);
+        if (project == null) {
+            throw new InvalidParameterValueException("Unable to find the specified project.");
+        }
+
+        String exceptionMessage = String.format("Account [%s] does not have permission to access project with ID [%s].", caller.getAccountName(), project.getUuid());
+        try {
+            if (!projectManager.canAccessProjectAccount(caller, project.getProjectAccountId())) {
+                throw new InvalidParameterValueException(exceptionMessage);
+            }
+        } catch (PermissionDeniedException e) {
+            throw new InvalidParameterValueException(exceptionMessage);
+        }
+
+        return project;
     }
 
     private boolean doesUserHaveAccessToNodeTypeApis(Pair<String, String> nodeTypeApis) {
