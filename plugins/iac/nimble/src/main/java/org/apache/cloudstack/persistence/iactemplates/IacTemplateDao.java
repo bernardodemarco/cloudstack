@@ -16,6 +16,7 @@
 // under the License.
 package org.apache.cloudstack.persistence.iactemplates;
 
+import com.cloud.utils.Pair;
 import com.cloud.utils.db.GenericDao;
 
 import java.util.List;
@@ -23,4 +24,7 @@ import java.util.List;
 public interface IacTemplateDao extends GenericDao<IacTemplateVO, Long> {
     void removeByAccountId(long accountId);
     List<IacTemplateVO> listByAccountId(long accountId);
+    Pair<List<IacTemplateVO>, Integer> listIacTemplates(Long id, String name, List<Long> domainIds, Long accountId,
+                                                        boolean showIacTemplateContent, boolean showSharedIacTemplates,
+                                                        String keyword, Long pageSizeVal, Long startIndex);
 }

@@ -45,6 +45,13 @@ public class IacTemplateDomainMapDaoImpl extends GenericDaoBase<IacTemplateDomai
     }
 
     @Override
+    public List<IacTemplateDomainMapVO> listByDomainId(long domainId) {
+        SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearch.create();
+        searchCriteria.setParameters(DOMAIN_ID, domainId);
+        return listBy(searchCriteria);
+    }
+
+    @Override
     public void removeByIacTemplateId(long iacTemplateId) {
         SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearch.create();
         searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);

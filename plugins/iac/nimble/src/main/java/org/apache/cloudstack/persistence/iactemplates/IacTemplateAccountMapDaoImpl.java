@@ -47,6 +47,13 @@ public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAcco
     }
 
     @Override
+    public List<IacTemplateAccountMapVO> listByAccountId(long accountId) {
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
+        searchCriteria.setParameters(ACCOUNT_ID, accountId);
+        return listBy(searchCriteria);
+    }
+
+    @Override
     public void removeByIacTemplateId(long iacTemplateId) {
         SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
         searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);

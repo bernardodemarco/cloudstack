@@ -12,7 +12,6 @@ import org.apache.cloudstack.api.response.DomainResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.ProjectResponse;
-import org.apache.cloudstack.context.CallContext;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 import org.apache.cloudstack.service.NimbleService;
 

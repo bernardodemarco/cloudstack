@@ -23,6 +23,7 @@ import java.util.List;
 public interface IacTemplateAccountMapDao extends GenericDao<IacTemplateAccountMapVO, Long> {
 
     List<IacTemplateAccountMapVO> listByIacTemplateId(long iacTemplateId);
+    List<IacTemplateAccountMapVO> listByAccountId(long accountId);
     void removeByIacTemplateId(long iacTemplateId);
     void removeByAccountId(long accountId);
     void removeUserAccountMappingsByIacTemplateId(long iacTemplateId);

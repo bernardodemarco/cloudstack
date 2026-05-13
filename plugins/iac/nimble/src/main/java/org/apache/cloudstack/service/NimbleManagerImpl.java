@@ -136,11 +136,34 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     public ListResponse<IacTemplateResponse> listIacTemplates(ListIacTemplatesCmd cmd) {
         Account caller = CallContext.current().getCallingAccount();
         long domainId = getBaseDomainIdToListIacTemplatesFrom(cmd.getDomainId(), caller);
-        Project projectId = getProjectToListIacTemplatesFor(cmd.getProjectId(), caller);
-        List<Long> domainIds = cmd.isRecursive() ? domainDao.getDomainAndChildrenIds(cmd.getDomainId()) : List.of(cmd.getDomainId());
-// ACL validations are ready -> need to understand how to grab those shared templates and that's basically it :)
+        List<Long> domainIds = cmd.isRecursive() ? domainDao.getDomainAndChildrenIds(domainId) : List.of(domainId);
+        Long accountId = getAccountIdToListIacTemplatesFor(cmd.getAccountId(), cmd.getProjectId(), caller);
+
+        List<Long> sharedIacTemplateIds = new ArrayList<>();
+        // WHERE id = blabla AND name = blabla AND name LIKE %blabla%
+        // AND domain_id IN (domain1, domain2, domain3) OR id IN (shareddomainid1, shareddomainid2)
+        if (cmd.isShowSharedIacTemplates()) {
+            sharedIacTemplateIds = getListOfSharedIacTemplatesIds(domainId, ObjectUtils.defaultIfNull(accountId, caller.getId()));
+        }
+
+        iacTemplateDao.listIacTemplates(cmd.getId(), cmd.getName(), domainIds, accountId,
+                cmd.isShowIacTemplateContent(), cmd.isShowSharedIacTemplates(), cmd.getKeyword(),
+                cmd.getPageSizeVal(), cmd.getStartIndex());
 
         return null;
+    }
+
+    List<Long> getListOfSharedIacTemplatesIds(long domainId, Long accountId) {
+        List<Long> sharedIacTemplateIds = new ArrayList<>();
+
+        iacTemplateAccountMapDao.listByAccountId(accountId).stream()
+                .map(IacTemplateAccountMapVO::getIacTemplateId)
+                .forEach(sharedIacTemplateIds::add);
+        iacTemplateDomainMapDao.listByDomainId(domainId).stream()
+                .map(IacTemplateDomainMapVO::getIacTemplateId)
+                .forEach(sharedIacTemplateIds::add);
+        
+        return sharedIacTemplateIds;
     }
 
     private long getBaseDomainIdToListIacTemplatesFrom(Long domainId, Account caller) {
@@ -157,11 +180,27 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         return domainId;
     }
 
-    private Project getProjectToListIacTemplatesFor(Long projectId, Account caller) {
-        if (projectId == null) {
-            return null;
+    private Long getAccountIdToListIacTemplatesFor(Long accountId, Long projectId, Account caller) {
+        if (ObjectUtils.allNotNull(accountId, projectId)) {
+            throw new InvalidParameterValueException("Parameters [accountid, projectid] cannot be specified together. Please specify only one of them.");
         }
 
+        if (projectId != null) {
+            return getProjectAccountIdToListIacTemplatesFor(projectId, caller);
+        }
+
+        if (accountId != null) {
+            return accountId;
+        }
+
+        if (accountService.isNormalUser(caller.getId())) {
+            return caller.getId();
+        }
+
+        return null;
+    }
+
+    private long getProjectAccountIdToListIacTemplatesFor(long projectId, Account caller) {
         Project project = projectManager.getProject(projectId);
         if (project == null) {
             throw new InvalidParameterValueException("Unable to find the specified project.");
@@ -176,7 +215,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
             throw new InvalidParameterValueException(exceptionMessage);
         }
 
-        return project;
+        return project.getProjectAccountId();
     }
 
     private boolean doesUserHaveAccessToNodeTypeApis(Pair<String, String> nodeTypeApis) {
@@ -290,6 +329,9 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     private void persistDomainMappings(Set<Long> sharedDomainIds, long iacTemplateId, Account iacTemplateOwner) {
+
+
+        // alterar aqui para ja fazer o spread sobre os dominios recursivamente
         for (Long domainId : sharedDomainIds) {
             Domain domain = domainManager.getDomain(domainId);
             if (domain == null) {

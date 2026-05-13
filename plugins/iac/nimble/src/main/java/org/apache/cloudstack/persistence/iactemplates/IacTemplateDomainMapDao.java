@@ -22,6 +22,7 @@ import java.util.List;
 
 public interface IacTemplateDomainMapDao extends GenericDao<IacTemplateDomainMapVO, Long> {
     List<IacTemplateDomainMapVO> listByIacTemplateId(long iacTemplateId);
+    List<IacTemplateDomainMapVO> listByDomainId(long domainId);
     void removeByIacTemplateId(long iacTemplateId);
     void removeByDomainId(long domainId);
 }
