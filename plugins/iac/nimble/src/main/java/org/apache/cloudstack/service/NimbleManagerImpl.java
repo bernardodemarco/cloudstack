@@ -64,6 +64,7 @@ import org.apache.commons.lang3.StringUtils;
 import javax.inject.Inject;
 import javax.naming.ConfigurationException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -118,51 +119,33 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         return response;
     }
 
-    /**
-     *
-     * ok, aqui temos vários casos possíveis
-     * 1. Caller usuario normal
-     * 1.1. nao especificou ACL params? forca para que retorne so seus templates
-     * 1.2. especificou ACL params -> checagem de acesso
-     *
-     * SE tem acesso aos ACL params
-     * 1. Pegar lista de domain ids (considerando recursividade)
-     * 2. lista de contas -> tipo listconsolesessions
-     *
-     * SO QUE, se é para listar templates compartilhados, buscar os IDs nas tabelas auxiliares (templates compartilhados tem que ser os compartilhados com a conta definida pelos ACL params)
-     * dominios compartilhados com o dominio e com a conta do ACL
-     */
     @Override
     public ListResponse<IacTemplateResponse> listIacTemplates(ListIacTemplatesCmd cmd) {
         Account caller = CallContext.current().getCallingAccount();
         long domainId = getBaseDomainIdToListIacTemplatesFrom(cmd.getDomainId(), caller);
         List<Long> domainIds = cmd.isRecursive() ? domainDao.getDomainAndChildrenIds(domainId) : List.of(domainId);
         Long accountId = getAccountIdToListIacTemplatesFor(cmd.getAccountId(), cmd.getProjectId(), caller);
+        Set<Long> sharedIacTemplateIds = cmd.isShowSharedIacTemplates() ?
+                getListOfSharedIacTemplatesIds(domainId, ObjectUtils.defaultIfNull(accountId, caller.getId())) : new HashSet<>();
 
-        List<Long> sharedIacTemplateIds = new ArrayList<>();
-        // WHERE id = blabla AND name = blabla AND name LIKE %blabla%
-        // AND domain_id IN (domain1, domain2, domain3) OR id IN (shareddomainid1, shareddomainid2)
-        if (cmd.isShowSharedIacTemplates()) {
-            sharedIacTemplateIds = getListOfSharedIacTemplatesIds(domainId, ObjectUtils.defaultIfNull(accountId, caller.getId()));
-        }
-
-        iacTemplateDao.listIacTemplates(cmd.getId(), cmd.getName(), domainIds, accountId,
-                cmd.isShowIacTemplateContent(), cmd.isShowSharedIacTemplates(), cmd.getKeyword(),
-                cmd.getPageSizeVal(), cmd.getStartIndex());
-
-        return null;
+        Pair<List<IacTemplateVO>, Integer> iacTemplates = iacTemplateDao.listIacTemplates(cmd.getId(), cmd.getName(), domainIds, accountId,
+                sharedIacTemplateIds, cmd.getKeyword(), cmd.getPageSizeVal(), cmd.getStartIndex());
+        List<IacTemplateResponse> iacTemplateResponses = iacTemplates.first()
+                .stream().map(iacTemplate -> responseBuilder.createIacTemplateResponse(iacTemplate, cmd.isShowIacTemplateContent()))
+                .collect(Collectors.toList());
+        ListResponse<IacTemplateResponse> response = new ListResponse<>();
+        response.setResponses(iacTemplateResponses, iacTemplates.second());
+        return response;
     }
 
-    List<Long> getListOfSharedIacTemplatesIds(long domainId, Long accountId) {
-        List<Long> sharedIacTemplateIds = new ArrayList<>();
-
-        iacTemplateAccountMapDao.listByAccountId(accountId).stream()
-                .map(IacTemplateAccountMapVO::getIacTemplateId)
+    Set<Long> getListOfSharedIacTemplatesIds(long domainId, Long accountId) {
+        Set<Long> sharedIacTemplateIds = new HashSet<>();
+        iacTemplateAccountMapDao.listByAccountId(accountId)
+                .stream().map(IacTemplateAccountMapVO::getIacTemplateId)
                 .forEach(sharedIacTemplateIds::add);
-        iacTemplateDomainMapDao.listByDomainId(domainId).stream()
-                .map(IacTemplateDomainMapVO::getIacTemplateId)
+        iacTemplateDomainMapDao.listByDomainId(domainId)
+                .stream().map(IacTemplateDomainMapVO::getIacTemplateId)
                 .forEach(sharedIacTemplateIds::add);
-        
         return sharedIacTemplateIds;
     }
 
@@ -312,7 +295,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 if (iacTemplateUpdate) {
                     iacTemplateDomainMapDao.removeByIacTemplateId(iacTemplate.getId());
                 }
-                persistDomainMappings(cmd.getSharedDomainIds(), persistedTemplate.getId(), owner);
+                Set<Long> sharedDomainIds = cmd.isRecursiveDomains() ? getSharedDomainIdsRecursively(cmd.getSharedDomainIds()) : cmd.getSharedDomainIds();
+                persistDomainMappings(sharedDomainIds, persistedTemplate.getId(), owner);
             }
 
             if (cmd.getSharedAccountIds() != null || cmd.getSharedProjectIds() != null) {
@@ -326,6 +310,14 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
             }
             return iacTemplateDao.findById(persistedTemplate.getId());
         });
+    }
+
+    private Set<Long> getSharedDomainIdsRecursively(Set<Long> sharedDomainIds) {
+        Set<Long> sharedDomainIdsRecursively = new HashSet<>();
+        for (Long domainId : sharedDomainIds) {
+            sharedDomainIdsRecursively.addAll(domainDao.getDomainAndChildrenIds(domainId));
+        }
+        return sharedDomainIdsRecursively;
     }
 
     private void persistDomainMappings(Set<Long> sharedDomainIds, long iacTemplateId, Account iacTemplateOwner) {
@@ -455,8 +447,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         if (!NimbleServiceEnabled.value()) {
             return commands;
         }
-        return List.of(ListIacResourceTypesCmd.class, RegisterIacTemplateCmd.class, RemoveIacTemplateCmd.class,
-                UpdateIacTemplateCmd.class, DeployIacTemplateCmd.class);
+        return List.of(ListIacResourceTypesCmd.class, ListIacTemplatesCmd.class, RegisterIacTemplateCmd.class,
+                RemoveIacTemplateCmd.class, UpdateIacTemplateCmd.class, DeployIacTemplateCmd.class);
     }
 
     @Override

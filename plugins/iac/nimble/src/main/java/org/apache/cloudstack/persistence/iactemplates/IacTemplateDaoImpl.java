@@ -26,15 +26,17 @@ import org.springframework.stereotype.Component;
 
 import javax.inject.Inject;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class IacTemplateDaoImpl extends GenericDaoBase<IacTemplateVO, Long> implements IacTemplateDao {
     private static final String ID = "id";
     private static final String NAME = "name";
+    private static final String NAME_LIKE_KEYWORD = "nameLikeKeyword";
+    private static final String SHARED_IAC_TEMPLATE_IDS = "sharedIacTemplateIds";
     private static final String DOMAIN_IDS = "domainIds";
     private static final String ACCOUNT_ID = "accountId";
     private static final String CREATED = "created";
-    private static final String NAME_LIKE_KEYWORD = "nameLikeKeyword";
 
     @Inject
     private IacTemplateAccountMapDao iacTemplateAccountMapDao;
@@ -45,11 +47,26 @@ public class IacTemplateDaoImpl extends GenericDaoBase<IacTemplateVO, Long> impl
     private final SearchBuilder<IacTemplateVO> iacTemplatesSearch;
 
     public IacTemplateDaoImpl() {
+        /**
+         * WHERE id = <id> AND name = <name> AND name LIKE %<keyword>%
+         * AND (id IN (<shareddomainid1>, <shareddomainid2>) OR (domain_id IN (<domain1>, <domain2>, <domain3>) AND account_id = <account-id>)))
+
+         ./engine/schema/src/main/java/org/apache/cloudstack/gui/theme/dao/GuiThemeDetailsDaoImpl.java:        detailsDaoSearchBuilder.and().op("firstReplace", detailsDaoSearchBuilder.entity().getValue(), SearchCriteria.Op.LIKE_REPLACE);
+         ./engine/schema/src/main/java/com/cloud/gpu/dao/GpuDeviceDaoImpl.java:            sb.op("cardNameKeyword", cardSb.entity().getName(), SearchCriteria.Op.LIKE);
+         grep: ./engine/service/target/engine/WEB-INF/lib/jaxb-impl-2.3.9.jar: binary file matches
+         ./engine/schema/src/main/java/com/cloud/gpu/dao/GpuDeviceDaoImpl.java:            sb.op("profileNameKeyword", profileSb.entity().getName(), SearchCriteria.Op.LIKE);
+         ./engine/schema/src/main/java/com/cloud/gpu/dao/GpuDeviceDaoImpl.java:            sb.op("profileDescriptionKeyword", profileSb.entity().getDescription(), SearchCriteria.Op.LIKE);
+         ./engine/schema/src/main/java/com/cloud/gpu/dao/GpuCardDaoImpl.java:            sb.op("nameKeyword", sb.entity().getName(), SearchCriteria.Op.LIKE);
+
+         */
         iacTemplatesSearch = createSearchBuilder();
         iacTemplatesSearch.and(ID, iacTemplatesSearch.entity().getId(), SearchCriteria.Op.EQ);
         iacTemplatesSearch.and(NAME, iacTemplatesSearch.entity().getName(), SearchCriteria.Op.EQ);
-        iacTemplatesSearch.and(DOMAIN_IDS, iacTemplatesSearch.entity().getDomainId(), SearchCriteria.Op.IN);
+        iacTemplatesSearch.and(NAME_LIKE_KEYWORD, iacTemplatesSearch.entity().getName(), SearchCriteria.Op.LIKE);
+        iacTemplatesSearch.and().op(SHARED_IAC_TEMPLATE_IDS, iacTemplatesSearch.entity().getId(), SearchCriteria.Op.IN);
+        iacTemplatesSearch.or().op(DOMAIN_IDS, iacTemplatesSearch.entity().getDomainId(), SearchCriteria.Op.IN);
         iacTemplatesSearch.and(ACCOUNT_ID, iacTemplatesSearch.entity().getAccountId(), SearchCriteria.Op.EQ);
+        iacTemplatesSearch.cp().cp();
         iacTemplatesSearch.done();
     }
 
@@ -93,18 +110,18 @@ public class IacTemplateDaoImpl extends GenericDaoBase<IacTemplateVO, Long> impl
 
     @Override
     public Pair<List<IacTemplateVO>, Integer> listIacTemplates(Long id, String name, List<Long> domainIds, Long accountId,
-                                                               boolean showIacTemplateContent, boolean showSharedIacTemplates,
-                                                               String keyword, Long pageSizeVal, Long startIndex) {
+                                                               Set<Long> sharedIacTemplateIds, String keyword, Long pageSizeVal, Long startIndex) {
         SearchCriteria<IacTemplateVO> searchCriteria = iacTemplatesSearch.create();
         searchCriteria.setParametersIfNotNull(ID, id);
         searchCriteria.setParametersIfNotNull(NAME, name);
-        searchCriteria.setParameters(DOMAIN_IDS, domainIds.toArray());
-        searchCriteria.setParametersIfNotNull(ACCOUNT_ID, accountId);
         if (keyword != null) {
             searchCriteria.setParameters(NAME_LIKE_KEYWORD, "%" + keyword + "%");
         }
+        searchCriteria.setParameters(SHARED_IAC_TEMPLATE_IDS, sharedIacTemplateIds.toArray());
+        searchCriteria.setParameters(DOMAIN_IDS, domainIds.toArray());
+        searchCriteria.setParametersIfNotNull(ACCOUNT_ID, accountId);
 
         Filter filter = new Filter(IacTemplateVO.class, CREATED, false, startIndex, pageSizeVal);
-        return null;
+        return searchAndCount(searchCriteria, filter);
     }
 }
