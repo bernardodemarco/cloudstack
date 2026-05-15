@@ -19,17 +19,21 @@ package org.apache.cloudstack.persistence.iactemplates;
 import com.cloud.utils.db.GenericDaoBase;
 import com.cloud.utils.db.SearchBuilder;
 import com.cloud.utils.db.SearchCriteria;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAccountMapVO, Long> implements IacTemplateAccountMapDao {
+    private static final String IAC_TEMPLATE_IDS = "iacTemplateIds";
     private static final String IAC_TEMPLATE_ID = "iacTemplateId";
     private static final String ACCOUNT_ID = "accountId";
     private static final String IS_PROJECT_ACCOUNT = "isProjectAccount";
 
     private final SearchBuilder<IacTemplateAccountMapVO> accountMappingSearch;
+    private final SearchBuilder<IacTemplateAccountMapVO> accountMappingSearchByIacTemplateIds;
 
     public IacTemplateAccountMapDaoImpl() {
         accountMappingSearch = createSearchBuilder();
@@ -37,12 +41,27 @@ public class IacTemplateAccountMapDaoImpl extends GenericDaoBase<IacTemplateAcco
         accountMappingSearch.and(ACCOUNT_ID, accountMappingSearch.entity().getAccountId(), SearchCriteria.Op.EQ);
         accountMappingSearch.and(IS_PROJECT_ACCOUNT, accountMappingSearch.entity().isProjectAccount(), SearchCriteria.Op.EQ);
         accountMappingSearch.done();
+
+        accountMappingSearchByIacTemplateIds = createSearchBuilder();
+        accountMappingSearchByIacTemplateIds.and(IAC_TEMPLATE_IDS, accountMappingSearchByIacTemplateIds.entity().getIacTemplateId(), SearchCriteria.Op.IN);
+        accountMappingSearchByIacTemplateIds.done();
     }
 
     @Override
     public List<IacTemplateAccountMapVO> listByIacTemplateId(long iacTemplateId) {
         SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearch.create();
         searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        return listBy(searchCriteria);
+    }
+
+    @Override
+    public List<IacTemplateAccountMapVO> listByIacTemplateIds(List<Long> iacTemplateIds) {
+        if (CollectionUtils.isEmpty(iacTemplateIds)) {
+            return new ArrayList<>();
+        }
+
+        SearchCriteria<IacTemplateAccountMapVO> searchCriteria = accountMappingSearchByIacTemplateIds.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_IDS, iacTemplateIds.toArray());
         return listBy(searchCriteria);
     }
 

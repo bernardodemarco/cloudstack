@@ -19,28 +19,47 @@ package org.apache.cloudstack.persistence.iactemplates;
 import com.cloud.utils.db.GenericDaoBase;
 import com.cloud.utils.db.SearchBuilder;
 import com.cloud.utils.db.SearchCriteria;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class IacTemplateDomainMapDaoImpl extends GenericDaoBase<IacTemplateDomainMapVO, Long> implements IacTemplateDomainMapDao {
+    private static final String IAC_TEMPLATE_IDS = "iacTemplateIds";
     private static final String IAC_TEMPLATE_ID = "iacTemplateId";
     private static final String DOMAIN_ID = "domainId";
 
     private final SearchBuilder<IacTemplateDomainMapVO> domainMappingSearch;
+    private final SearchBuilder<IacTemplateDomainMapVO> domainMappingSearchByIacTemplateIds;
 
     public IacTemplateDomainMapDaoImpl() {
         domainMappingSearch = createSearchBuilder();
         domainMappingSearch.and(IAC_TEMPLATE_ID, domainMappingSearch.entity().getIacTemplateId(), SearchCriteria.Op.EQ);
         domainMappingSearch.and(DOMAIN_ID, domainMappingSearch.entity().getDomainId(), SearchCriteria.Op.EQ);
         domainMappingSearch.done();
+
+        domainMappingSearchByIacTemplateIds = createSearchBuilder();
+        domainMappingSearchByIacTemplateIds.and(IAC_TEMPLATE_IDS, domainMappingSearchByIacTemplateIds.entity().getIacTemplateId(), SearchCriteria.Op.IN);
+        domainMappingSearchByIacTemplateIds.done();
     }
 
     @Override
     public List<IacTemplateDomainMapVO> listByIacTemplateId(long iacTemplateId) {
         SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearch.create();
         searchCriteria.setParameters(IAC_TEMPLATE_ID, iacTemplateId);
+        return listBy(searchCriteria);
+    }
+
+    @Override
+    public List<IacTemplateDomainMapVO> listByIacTemplateIds(List<Long> iacTemplateIds) {
+        if (CollectionUtils.isEmpty(iacTemplateIds)) {
+            return new ArrayList<>();
+        }
+
+        SearchCriteria<IacTemplateDomainMapVO> searchCriteria = domainMappingSearchByIacTemplateIds.create();
+        searchCriteria.setParameters(IAC_TEMPLATE_IDS, iacTemplateIds.toArray());
         return listBy(searchCriteria);
     }
 

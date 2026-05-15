@@ -62,7 +62,6 @@ public class NimbleResponseBuilder {
         response.setId(iacTemplate.getUuid());
         response.setName(iacTemplate.getName());
         response.setDescription(iacTemplate.getDescription());
-        response.setRecursiveDomains(iacTemplate.isRecursiveDomains());
         response.setCreated(iacTemplate.getCreated());
         response.setRemoved(iacTemplate.getRemoved());
         if (showIacTemplateContent) {
@@ -117,6 +116,7 @@ public class NimbleResponseBuilder {
 
     private void populateIacTemplateSharedEntitiesFields(IacTemplateResponse response, IacTemplate iacTemplate, Account caller, Account owner) {
         if (verifyCallerAccessToIacTemplateOwner(caller, owner)) {
+            response.setRecursiveDomains(iacTemplate.isRecursiveDomains());
             response.setSharedDomains(getSharedDomainResponses(iacTemplate.getDomainMappings()));
             Pair<List<IacTemplateResponse.SharedAccountResponse>, List<IacTemplateResponse.SharedProjectResponse>> sharedAccountAndProjectResponses = getSharedAccountAndProjectResponses(iacTemplate.getAccountMappings());
             response.setSharedAccounts(sharedAccountAndProjectResponses.first());
