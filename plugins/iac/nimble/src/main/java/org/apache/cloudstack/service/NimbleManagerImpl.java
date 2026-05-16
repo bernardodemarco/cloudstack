@@ -121,7 +121,11 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
 
     @Override
     public ListResponse<IacTemplateResponse> listIacTemplates(ListIacTemplatesCmd cmd) {
-        Account caller = CallContext.current().getCallingAccount();
+        CallContext currentCallContext = CallContext.current();
+        Account caller = currentCallContext.getCallingAccount();
+        if (cmd.getId() != null) {
+            checkCallerAccessToIacTemplate(currentCallContext, cmd.getId());
+        }
         long domainId = getBaseDomainIdToListIacTemplatesFrom(cmd.getDomainId(), caller);
         List<Long> domainIds = cmd.isRecursive() ? domainDao.getDomainAndChildrenIds(domainId) : List.of(domainId);
         Long accountId = getAccountIdToListIacTemplatesFor(cmd.getAccountId(), cmd.getProjectId(), caller);
@@ -136,6 +140,35 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         ListResponse<IacTemplateResponse> response = new ListResponse<>();
         response.setResponses(iacTemplateResponses, iacTemplates.second());
         return response;
+    }
+
+    private void checkCallerAccessToIacTemplate(CallContext callContext, long iacTemplateId) {
+        IacTemplateVO iacTemplate = iacTemplateDao.findById(iacTemplateId);
+        if (iacTemplate == null) {
+            throw new InvalidParameterValueException("Unable to find IaC template with the specified ID.");
+        }
+
+        boolean hasAccess = false;
+        Account iacTemplateOwner = accountService.getActiveAccountById(iacTemplate.getAccountId());
+        if (iacTemplateOwner != null) {
+            try {
+                accountService.checkAccess(callContext.getCallingUser(), iacTemplateOwner);
+                hasAccess = true;
+            } catch (PermissionDeniedException ignored) {}
+        }
+
+        Account caller = callContext.getCallingAccount();
+        boolean isIacTemplateSharedWithCallingAccount = iacTemplate.getAccountMappings()
+                .stream().anyMatch((accountMap) -> accountMap.getAccountId() == caller.getId());
+        boolean isIacTemplateSharedWithCallingAccountDomain = iacTemplate.getDomainMappings()
+                .stream().anyMatch((domainMap) -> domainMap.getDomainId() == caller.getDomainId());
+        if (isIacTemplateSharedWithCallingAccount || isIacTemplateSharedWithCallingAccountDomain) {
+            hasAccess = true;
+        }
+
+        if (!hasAccess) {
+            throw new PermissionDeniedException(String.format("Account [%s] does not have permission to operate over the requested IaC template.", caller.getAccountName()));
+        }
     }
 
     Set<Long> getListOfSharedIacTemplatesIds(long domainId, Long accountId) {
@@ -295,7 +328,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
                 if (iacTemplateUpdate) {
                     iacTemplateDomainMapDao.removeByIacTemplateId(iacTemplate.getId());
                 }
-                Set<Long> sharedDomainIds = cmd.isRecursiveDomains() ? getSharedDomainIdsRecursively(cmd.getSharedDomainIds()) : cmd.getSharedDomainIds();
+                Set<Long> sharedDomainIds = BooleanUtils.toBoolean(cmd.isRecursiveDomains()) ?
+                        getSharedDomainIdsRecursively(cmd.getSharedDomainIds()) : cmd.getSharedDomainIds();
                 persistDomainMappings(sharedDomainIds, persistedTemplate.getId(), owner);
             }
 
@@ -411,6 +445,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
 
     @Override
     public void cleanUpAccountIacTemplates(long accountId) {
+        // not cleaning up relationships here?
         iacTemplateDao.removeByAccountId(accountId);
     }
 

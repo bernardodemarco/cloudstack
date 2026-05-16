@@ -24,7 +24,6 @@ public class ListIacTemplatesCmd extends BaseListCmd {
     @Inject
     private NimbleService nimbleService;
 
-    @ACL
     @Parameter(name = ApiConstants.ID, type = CommandType.UUID, entityType = IacTemplateResponse.class, description = "ID of the IaC template.")
     private Long id;
 
@@ -87,13 +86,6 @@ public class ListIacTemplatesCmd extends BaseListCmd {
 
     @Override
     public long getEntityOwnerId() {
-        if (getId() != null) {
-            IacTemplate iacTemplate = nimbleService.findIacTemplateById(id);
-            if (iacTemplate != null) {
-                return iacTemplate.getAccountId();
-            }
-        }
-
         if (getAccountId() != null) {
             return getAccountId();
         }
