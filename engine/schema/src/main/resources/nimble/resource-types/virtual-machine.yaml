@@ -170,7 +170,7 @@ node_types:
         type: list
         entry_schema:
           type: string
-        description: The IDs of the key pairs to be used for SSH access to the VM.
+        description: The names the key pairs to be used for SSH access to the VM.
         required: false
         metadata:
           api-parameter: keypairs

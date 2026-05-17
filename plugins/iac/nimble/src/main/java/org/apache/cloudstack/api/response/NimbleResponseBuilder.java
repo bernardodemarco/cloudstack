@@ -29,11 +29,17 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplateAccountMapVO;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
+import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
+import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class NimbleResponseBuilder {
@@ -152,5 +158,21 @@ public class NimbleResponseBuilder {
         }
 
         return new Pair<>(sharedAccountResponses, sharedProjectResponses);
+    }
+
+    public IacTemplateGraphResponse createIacTemplateGraphResponse(IacTemplate iacTemplate, ToscaServiceTemplate serviceTemplate) {
+        Map<String, List<String>> graphOutput = new LinkedHashMap<>();
+        Set<String> nodesWithOutDependencies = new HashSet<>(serviceTemplate.getNodeTemplates().keySet());
+        nodesWithOutDependencies.removeAll(serviceTemplate.getDependencyGraph().keySet());
+        nodesWithOutDependencies.forEach(node -> graphOutput.put(node, new ArrayList<>()));
+
+        serviceTemplate.getDependencyGraph().forEach((node, dependencies) -> {
+            List<String> dependenciesOutput = dependencies.stream().map(ToscaNodeTemplate::getName).collect(Collectors.toList());
+            graphOutput.put(node, dependenciesOutput);
+        });
+
+        IacTemplateGraphResponse response = new IacTemplateGraphResponse(iacTemplate.getUuid(), graphOutput);
+        response.setObjectName("iactemplategraph");
+        return response;
     }
 }

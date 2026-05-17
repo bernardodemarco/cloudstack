@@ -104,7 +104,7 @@ public class ToscaOrchestrator {
 
     private ExecutorService executorPool;
 
-    public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
+    public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs, BaseCmd.HTTPMethod httpMethod) {
         ToscaServiceTemplate serviceTemplate = parseServiceTemplate(iacTemplateContent);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
 
@@ -112,7 +112,7 @@ public class ToscaOrchestrator {
         Runnable cancelAllProvisioningTasks = getCancelAllProvisioningTasks(provisioningTasksFutures);
         List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
         getCurrentNimbleExecutorPoolStatus("before creating provisioning tasks");
-        provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, errors, cancelAllProvisioningTasks));
+        provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, errors, cancelAllProvisioningTasks, httpMethod));
         awaitDeployCompletion(provisioningTasksFutures, errors, cancelAllProvisioningTasks);
     }
 
@@ -199,7 +199,7 @@ public class ToscaOrchestrator {
         property.setEvaluatedValue(evaluatedValue);
     }
 
-    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
+    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, List<Throwable> errors, Runnable cancelAllProvisioningTasks, BaseCmd.HTTPMethod httpMethod) {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<Void>> futures = new HashMap<>();
         CallContext callContext = CallContext.current();
@@ -208,7 +208,7 @@ public class ToscaOrchestrator {
             CompletableFuture<Void> taskFuture;
             if (dependencies.isEmpty()) {
                 logger.debug("Node [{}] has no dependencies. Building its provisioning task, which will be ready to be allocated for execution.", node);
-                taskFuture = provisionNode(nodeTemplate, callContext, errors);
+                taskFuture = provisionNode(nodeTemplate, callContext, httpMethod);
             } else {
                 logger.debug("Node [{}] has [{}] dependencies. Building its provisioning task, which will only be allocated for execution when all dependencies are ready.", node, dependencies.size());
                 CompletableFuture<?>[] dependenciesFutures = dependencies.stream()
@@ -216,7 +216,7 @@ public class ToscaOrchestrator {
                 taskFuture = CompletableFuture.allOf(dependenciesFutures).thenCompose(v -> {
                     logger.debug("All dependencies of the node [{}] are ready. Building its provisioning task.", node);
                     executeGetAttributeAndGetPropertyFunctionCalls(nodeTemplate, serviceTemplate);
-                    return provisionNode(nodeTemplate, callContext, errors);
+                    return provisionNode(nodeTemplate, callContext, httpMethod);
                 });
             }
 
@@ -283,7 +283,7 @@ public class ToscaOrchestrator {
         topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
     }
 
-    private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext, List<Throwable> errors) {
+    private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext, BaseCmd.HTTPMethod httpMethod) {
         return CompletableFuture.runAsync(() -> {
             CallContext.register(callContext, null);
             ManagedContextExecutor.execute(() -> {
@@ -293,12 +293,12 @@ public class ToscaOrchestrator {
                     throw new CancellationException(String.format("Provisioning interrupted before dispatching the provisioning command of the node template [%s].", nodeTemplate.getName()));
                 }
 
-                dispatchProvisioningCommand(nodeTemplate, callContext);
+                dispatchProvisioningCommand(nodeTemplate, callContext, httpMethod);
             });
         }, executorPool);
     }
 
-    private void dispatchProvisioningCommand(ToscaNodeTemplate nodeTemplate, CallContext callContext) {
+    private void dispatchProvisioningCommand(ToscaNodeTemplate nodeTemplate, CallContext callContext, BaseCmd.HTTPMethod httpMethod) {
         Class<?> apiClass = apiServer.getCmdClass(nodeTemplate.getType().getProvisioningApi());
         try {
             Object cmd = apiClass.getDeclaredConstructor().newInstance();
@@ -306,9 +306,9 @@ public class ToscaOrchestrator {
             Map<String, String> apiParams = nodeTemplate.getApiParams();
             logger.info("Dispatching the provisioning command [{}] of the node template [{}] with the following parameters {}.", cmd.getClass().getName(), nodeTemplate.getName(), apiParams);
             if (cmd instanceof BaseAsyncCreateCmd) {
-                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, apiParams, callContext);
+                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, apiParams, callContext, httpMethod);
             } else if (cmd instanceof BaseCmd && !(cmd instanceof BaseAsyncCmd)) {
-                provisioningResult = dispatchProvisioningSynchronousCommand((BaseCmd) cmd, apiParams);
+                provisioningResult = dispatchProvisioningSynchronousCommand((BaseCmd) cmd, apiParams, httpMethod);
             } else {
                 throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
             }
@@ -321,16 +321,18 @@ public class ToscaOrchestrator {
         }
     }
 
-    private Map<String, Object> dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams) throws Exception {
+    private Map<String, Object> dispatchProvisioningSynchronousCommand(BaseCmd syncCmd, Map<String, String> apiParams, BaseCmd.HTTPMethod httpMethod) throws Exception {
         syncCmd = ComponentContext.inject(syncCmd);
+        syncCmd.setHttpMethod(String.valueOf(httpMethod));
         apiDispatcher.dispatch(syncCmd, apiParams, false);
         return ApiSerializerHelper.fromSerializedStringToMap(ApiSerializerHelper.toSerializedString(syncCmd.getResponseObject()));
     }
 
-    private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) throws Exception {
+    private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext, BaseCmd.HTTPMethod httpMethod) throws Exception {
         AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
         try {
             asyncCmd = ComponentContext.inject(asyncCmd);
+            asyncCmd.setHttpMethod(String.valueOf(httpMethod));
             logger.trace("Dispatching the create workflow for the command [{}].", asyncCmd.getClass().getName());
             apiDispatcher.dispatchCreateCmd(asyncCmd, apiParams);
 

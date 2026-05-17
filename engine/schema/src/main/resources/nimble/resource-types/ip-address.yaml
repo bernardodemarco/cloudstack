@@ -28,7 +28,7 @@ node_types:
       zone-id:
         type: string
         description: The ID of the zone from which an IP address will be acquired.
-        required: true
+        required: false
         metadata:
           api-parameter: zoneid
       ip-address:

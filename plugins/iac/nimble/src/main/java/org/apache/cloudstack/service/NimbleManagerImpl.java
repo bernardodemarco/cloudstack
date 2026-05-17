@@ -37,10 +37,12 @@ import org.apache.cloudstack.api.command.BaseIacTemplateRegistrationCmd;
 import org.apache.cloudstack.api.command.DeployIacTemplateCmd;
 import org.apache.cloudstack.api.command.ListIacResourceTypesCmd;
 import org.apache.cloudstack.api.command.ListIacTemplatesCmd;
+import org.apache.cloudstack.api.command.PlanIacTemplateDeploymentCmd;
 import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
 import org.apache.cloudstack.api.command.UpdateIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.IacTemplateGraphResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
 import org.apache.cloudstack.api.response.NimbleResponseBuilder;
@@ -56,6 +58,7 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapVO;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplateVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
+import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.ObjectUtils;
@@ -124,7 +127,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         CallContext currentCallContext = CallContext.current();
         Account caller = currentCallContext.getCallingAccount();
         if (cmd.getId() != null) {
-            checkCallerAccessToIacTemplate(currentCallContext, cmd.getId());
+            checkCallerAccessToIacTemplate(currentCallContext, findIacTemplateById(cmd.getId()));
         }
         long domainId = getBaseDomainIdToListIacTemplatesFrom(cmd.getDomainId(), caller);
         List<Long> domainIds = cmd.isRecursive() ? domainDao.getDomainAndChildrenIds(domainId) : List.of(domainId);
@@ -142,8 +145,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         return response;
     }
 
-    private void checkCallerAccessToIacTemplate(CallContext callContext, long iacTemplateId) {
-        IacTemplateVO iacTemplate = iacTemplateDao.findById(iacTemplateId);
+    private void checkCallerAccessToIacTemplate(CallContext callContext, IacTemplate iacTemplate) {
         if (iacTemplate == null) {
             throw new InvalidParameterValueException("Unable to find IaC template with the specified ID.");
         }
@@ -171,7 +173,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         }
     }
 
-    Set<Long> getListOfSharedIacTemplatesIds(long domainId, Long accountId) {
+    private Set<Long> getListOfSharedIacTemplatesIds(long domainId, Long accountId) {
         Set<Long> sharedIacTemplateIds = new HashSet<>();
         iacTemplateAccountMapDao.listByAccountId(accountId)
                 .stream().map(IacTemplateAccountMapVO::getIacTemplateId)
@@ -355,9 +357,6 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     private void persistDomainMappings(Set<Long> sharedDomainIds, long iacTemplateId, Account iacTemplateOwner) {
-
-
-        // alterar aqui para ja fazer o spread sobre os dominios recursivamente
         for (Long domainId : sharedDomainIds) {
             Domain domain = domainManager.getDomain(domainId);
             if (domain == null) {
@@ -434,8 +433,19 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
-    public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs) {
-        toscaOrchestrator.deployIacTemplate(iacTemplateContent, inputs);
+    public void deployIacTemplate(DeployIacTemplateCmd cmd) {
+        Map<String, String> inputs = cmd.getInputs();
+        IacTemplate iacTemplate = findIacTemplateById(cmd.getId());
+        checkCallerAccessToIacTemplate(CallContext.current(), iacTemplate);
+        toscaOrchestrator.deployIacTemplate(iacTemplate.getIacTemplateContent(), inputs, cmd.getHttpMethod());
+    }
+
+    @Override
+    public IacTemplateGraphResponse planIacTemplateDeployment(PlanIacTemplateDeploymentCmd cmd) {
+        IacTemplate iacTemplate = findIacTemplateById(cmd.getId());
+        checkCallerAccessToIacTemplate(CallContext.current(), iacTemplate);
+        ToscaServiceTemplate serviceTemplate = toscaOrchestrator.parseServiceTemplate(iacTemplate.getIacTemplateContent());
+        return responseBuilder.createIacTemplateGraphResponse(iacTemplate, serviceTemplate);
     }
 
     @Override
@@ -445,7 +455,6 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
 
     @Override
     public void cleanUpAccountIacTemplates(long accountId) {
-        // not cleaning up relationships here?
         iacTemplateDao.removeByAccountId(accountId);
     }
 
@@ -483,7 +492,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
             return commands;
         }
         return List.of(ListIacResourceTypesCmd.class, ListIacTemplatesCmd.class, RegisterIacTemplateCmd.class,
-                RemoveIacTemplateCmd.class, UpdateIacTemplateCmd.class, DeployIacTemplateCmd.class);
+                RemoveIacTemplateCmd.class, UpdateIacTemplateCmd.class, DeployIacTemplateCmd.class, PlanIacTemplateDeploymentCmd.class);
     }
 
     @Override

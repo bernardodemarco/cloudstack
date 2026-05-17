@@ -16,66 +16,37 @@
 // under the License.
 package org.apache.cloudstack.api.command;
 
-import com.cloud.exception.InvalidParameterValueException;
 import com.cloud.user.Account;
 import org.apache.cloudstack.acl.RoleType;
 import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
-import org.apache.cloudstack.api.BaseAsyncCmd;
+import org.apache.cloudstack.api.BaseCmd;
 import org.apache.cloudstack.api.Parameter;
+import org.apache.cloudstack.api.response.IacTemplateGraphResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
-import org.apache.cloudstack.api.response.SuccessResponse;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 import org.apache.cloudstack.service.NimbleService;
-import org.apache.commons.collections.MapUtils;
 
 import javax.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
 
-@APICommand(name = "deployIacTemplate", description = "Deploys an already registered IaC template.", responseObject = SuccessResponse.class, entityType = {IacTemplate.class},
+@APICommand(name = "planIacTemplateDeployment", description = "Plans the deployment of a registered IaC template.", responseObject = IacTemplateGraphResponse.class, entityType = {IacTemplate.class},
         requestHasSensitiveInfo = false, responseHasSensitiveInfo = false, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
-public class DeployIacTemplateCmd extends BaseAsyncCmd {
+public class PlanIacTemplateDeploymentCmd extends BaseCmd {
     @Inject
     private NimbleService nimbleService;
 
-    @Parameter(name = ApiConstants.ID, type = CommandType.UUID, required = true, entityType = IacTemplateResponse.class, description = "ID of the IaC template to be deployed.")
+    @Parameter(name = ApiConstants.ID, type = CommandType.UUID, required = true, entityType = IacTemplateResponse.class, description = "ID of the IaC template whose deployment will be planned.")
     private Long id;
-
-    @Parameter(name = ApiConstants.INPUTS, type = CommandType.MAP, description = "Input variables of the IaC template. They must be specified as key-pairs, for instance: 'inputs[0].first-input=\"First input value\" inputs[0].second-input=\"Second input value\"'")
-    private Map<String, Map<String, String>> inputs;
 
     public Long getId() {
         return id;
     }
 
-    public Map<String, String> getInputs() {
-        if (MapUtils.isEmpty(inputs)) {
-            return new HashMap<>();
-        }
-
-        if (inputs.size() > 1) {
-            throw new InvalidParameterValueException("Please, specify the inputs as key-pairs, indexed with [0]. For instance: 'inputs[0].first-input=\"First input value\" inputs[0].second-input=\"Second input value\"'");
-        }
-
-        return inputs.values().iterator().next();
-    }
-
     @Override
     public void execute() {
-        nimbleService.deployIacTemplate(this);
-        SuccessResponse response = new SuccessResponse(getCommandName());
+        IacTemplateGraphResponse response = nimbleService.planIacTemplateDeployment(this);
+        response.setResponseName(getCommandName());
         setResponseObject(response);
-    }
-
-    @Override
-    public String getEventType() {
-        return "";
-    }
-
-    @Override
-    public String getEventDescription() {
-        return "";
     }
 
     @Override
