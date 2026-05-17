@@ -58,6 +58,7 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapVO;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplateVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeDao;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceTypeVO;
+import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 import org.apache.cloudstack.tosca.orchestrator.ToscaOrchestrator;
 import org.apache.commons.lang3.BooleanUtils;
@@ -445,7 +446,8 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         IacTemplate iacTemplate = findIacTemplateById(cmd.getId());
         checkCallerAccessToIacTemplate(CallContext.current(), iacTemplate);
         ToscaServiceTemplate serviceTemplate = toscaOrchestrator.parseServiceTemplate(iacTemplate.getIacTemplateContent());
-        return responseBuilder.createIacTemplateGraphResponse(iacTemplate, serviceTemplate);
+        Pair<Map<String, Set<ToscaNodeTemplate>>, Map<String, Integer>> topologicalSort = toscaOrchestrator.getServiceTemplateTopologicalSort(serviceTemplate);
+        return responseBuilder.createIacTemplateGraphResponse(iacTemplate, serviceTemplate, topologicalSort);
     }
 
     @Override

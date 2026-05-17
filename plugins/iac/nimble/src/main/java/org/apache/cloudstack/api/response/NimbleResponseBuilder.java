@@ -34,7 +34,6 @@ import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,18 +159,31 @@ public class NimbleResponseBuilder {
         return new Pair<>(sharedAccountResponses, sharedProjectResponses);
     }
 
-    public IacTemplateGraphResponse createIacTemplateGraphResponse(IacTemplate iacTemplate, ToscaServiceTemplate serviceTemplate) {
-        Map<String, List<String>> graphOutput = new LinkedHashMap<>();
-        Set<String> nodesWithOutDependencies = new HashSet<>(serviceTemplate.getNodeTemplates().keySet());
-        nodesWithOutDependencies.removeAll(serviceTemplate.getDependencyGraph().keySet());
-        nodesWithOutDependencies.forEach(node -> graphOutput.put(node, new ArrayList<>()));
+    public IacTemplateGraphResponse createIacTemplateGraphResponse(IacTemplate iacTemplate, ToscaServiceTemplate serviceTemplate,
+                                                                   Pair<Map<String, Set<ToscaNodeTemplate>>, Map<String, Integer>> topologicalSort) {
+        Map<String, Set<ToscaNodeTemplate>> graphTopology = topologicalSort.first();
+        Map<String, Integer> levelMap = topologicalSort.second();
 
-        serviceTemplate.getDependencyGraph().forEach((node, dependencies) -> {
-            List<String> dependenciesOutput = dependencies.stream().map(ToscaNodeTemplate::getName).collect(Collectors.toList());
-            graphOutput.put(node, dependenciesOutput);
-        });
+        int numberOfRootNodes = 0;
+        Map<String, IacTemplateGraphResponse.IacTemplateNodeResponse> graphNodes = new LinkedHashMap<>();
+        for (Map.Entry<String, Set<ToscaNodeTemplate>> entry : graphTopology.entrySet()) {
+            String node = entry.getKey();
+            Set<ToscaNodeTemplate> dependencies = entry.getValue();
 
-        IacTemplateGraphResponse response = new IacTemplateGraphResponse(iacTemplate.getUuid(), graphOutput);
+            String type = serviceTemplate.getNodeTemplates().get(node).getType().getName();
+            List<String> dependencyNames = new ArrayList<>();
+            if (dependencies.isEmpty()) {
+                numberOfRootNodes += 1;
+            } else {
+                dependencyNames = dependencies.stream().map(ToscaNodeTemplate::getName).collect(Collectors.toList());
+            }
+            IacTemplateGraphResponse.IacTemplateNodeResponse nodeResponse = new IacTemplateGraphResponse.IacTemplateNodeResponse(type, levelMap.get(node), dependencyNames);
+
+            graphNodes.put(node, nodeResponse);
+        }
+
+        IacTemplateGraphResponse.IacTemplateGraphSummary graphSummary = new IacTemplateGraphResponse.IacTemplateGraphSummary(graphTopology.size(), numberOfRootNodes);
+        IacTemplateGraphResponse response = new IacTemplateGraphResponse(iacTemplate.getUuid(), graphSummary, graphNodes);
         response.setObjectName("iactemplategraph");
         return response;
     }

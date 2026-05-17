@@ -203,7 +203,7 @@ public class ToscaOrchestrator {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<Void>> futures = new HashMap<>();
         CallContext callContext = CallContext.current();
-        getServiceTemplateTopologicalSort(serviceTemplate).forEach((node, dependencies) -> {
+        getServiceTemplateTopologicalSort(serviceTemplate).first().forEach((node, dependencies) -> {
             ToscaNodeTemplate nodeTemplate = serviceTemplate.getNodeTemplates().get(node);
             CompletableFuture<Void> taskFuture;
             if (dependencies.isEmpty()) {
@@ -252,35 +252,41 @@ public class ToscaOrchestrator {
     }
 
     // O(|V|+|E|)
-    private LinkedHashMap<String, Set<ToscaNodeTemplate>> getServiceTemplateTopologicalSort(ToscaServiceTemplate serviceTemplate) {
-        LinkedHashMap<String, Set<ToscaNodeTemplate>> topologicalSort = new LinkedHashMap<>();
+    public Pair<Map<String, Set<ToscaNodeTemplate>>, Map<String, Integer>> getServiceTemplateTopologicalSort(ToscaServiceTemplate serviceTemplate) {
+        Map<String, Set<ToscaNodeTemplate>> topologicalSort = new LinkedHashMap<>();
+        Map<String, Integer> levelMap = new LinkedHashMap<>();
         Set<String> visitedNodes = new HashSet<>();
         Set<String> branchAncestors = new HashSet<>();
         for (ToscaNodeTemplate node : serviceTemplate.getNodeTemplates().values()) {
             if (!visitedNodes.contains(node.getName())) {
-                depthFirstSearch(topologicalSort, node.getName(), serviceTemplate.getDependencyGraph(), branchAncestors, visitedNodes);
+                depthFirstSearch(topologicalSort, levelMap, node.getName(), serviceTemplate.getDependencyGraph(), branchAncestors, visitedNodes);
             }
         }
-        return topologicalSort;
+        return new Pair<>(topologicalSort, levelMap);
     }
 
-    private void depthFirstSearch(LinkedHashMap<String, Set<ToscaNodeTemplate>> topologicalSort, String node, Map<String, Set<ToscaNodeTemplate>> graph, Set<String> branchAncestors, Set<String> visitedNodes) {
+    private void depthFirstSearch(Map<String, Set<ToscaNodeTemplate>> topologicalSort, Map<String, Integer> levelMap, String node, Map<String, Set<ToscaNodeTemplate>> graph,
+                                  Set<String> branchAncestors, Set<String> visitedNodes) {
         visitedNodes.add(node);
         branchAncestors.add(node);
-        for (ToscaNodeTemplate dependency : graph.getOrDefault(node, Collections.emptySet())) {
+        Set<ToscaNodeTemplate> dependencies = graph.getOrDefault(node, Collections.emptySet());
+        for (ToscaNodeTemplate dependency : dependencies) {
             if (branchAncestors.contains(dependency.getName())) {
                 logger.error("A cycle was detected in the service template graph. Aborting IaC template deployment.");
                 throw new InvalidParameterValueException("A cycle was detected in the service template graph. Please, ensure that the service template graph is acyclic.");
             }
 
             if (!visitedNodes.contains(dependency.getName())) {
-                depthFirstSearch(topologicalSort, dependency.getName(), graph, branchAncestors, visitedNodes);
+                depthFirstSearch(topologicalSort, levelMap, dependency.getName(), graph, branchAncestors, visitedNodes);
             }
         }
 
         branchAncestors.remove(node);
-        logger.trace("Node [{}] has been added to the topological sort.", node);
-        topologicalSort.put(node, graph.getOrDefault(node, Collections.emptySet()));
+        topologicalSort.put(node, dependencies);
+        int level = dependencies.stream().mapToInt(dep -> levelMap.get(dep.getName()))
+                .max().orElse(0) + 1;
+        levelMap.put(node, level);
+        logger.trace("Node [{}] has been added to the topological sort with a level equal to [{}].", node, level);
     }
 
     private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext, BaseCmd.HTTPMethod httpMethod) {

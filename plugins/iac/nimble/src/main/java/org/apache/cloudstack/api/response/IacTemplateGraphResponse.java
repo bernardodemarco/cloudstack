@@ -29,12 +29,65 @@ public class IacTemplateGraphResponse extends BaseResponse {
     @Param(description = "ID of the IaC template.")
     private String id;
 
-    @SerializedName("graph")
-    @Param(description = "The graph representing the IaC template topology.")
-    private Map<String, List<String>> graph;
+    @SerializedName("summary")
+    @Param(description = "A summary of the IaC template topology.")
+    private IacTemplateGraphSummary summary;
 
-    public IacTemplateGraphResponse(String id, Map<String, List<String>> graph) {
+    @SerializedName("nodes")
+    @Param(description = "Nodes of the graph representing the IaC template topology.")
+    private Map<String, IacTemplateNodeResponse> nodes;
+
+    public IacTemplateGraphResponse(String id, IacTemplateGraphSummary summary, Map<String, IacTemplateNodeResponse> nodes) {
         this.id = id;
-        this.graph = graph;
+        this.summary = summary;
+        this.nodes = nodes;
+    }
+
+    public static class IacTemplateGraphSummary {
+        @SerializedName("totalnodes")
+        @Param(description = "Number of nodes in the IaC template graph.")
+        private int totalNodes;
+
+        @SerializedName("rootnodes")
+        @Param(description = "Number of root nodes in the IaC template graph. Root nodes do not depend on any other nodes to be deployed.")
+        private int rootNodes;
+
+        @SerializedName("nodeswithdependencies")
+        @Param(description = "Number of nodes in the IaC template graph with one or more dependencies.")
+        private int nodesWithDependencies;
+
+        public IacTemplateGraphSummary(int totalNodes, int rootNodes) {
+            this.totalNodes = totalNodes;
+            this.rootNodes = rootNodes;
+            this.nodesWithDependencies = totalNodes - rootNodes;
+        }
+    }
+
+    public static class IacTemplateNodeResponse {
+        @SerializedName(ApiConstants.TYPE)
+        @Param(description = "Type of the IaC template node.")
+        private String type;
+
+        @SerializedName("dependson")
+        @Param(description = "Names of the nodes that this IaC template node depends on.")
+        private List<String> dependencies;
+
+        @SerializedName(ApiConstants.LEVEL)
+        @Param(description = "The provisioning level of the node in the IaC template dependency graph. " +
+                "Nodes at level 1 have no dependencies and are provisioned first. " +
+                "Nodes sharing the same level have no dependencies on each other and may be provisioned in parallel. " +
+                "A node at level N is only provisioned after all nodes at levels 1 through N-1 of its dependency chain have been successfully provisioned.")
+        private int level;
+
+        @SerializedName("totaldependencies")
+        @Param(description = "Number of dependencies of the IaC template node.")
+        private int dependenciesCount;
+
+        public IacTemplateNodeResponse(String type, int level, List<String> dependencies) {
+            this.type = type;
+            this.level = level;
+            this.dependencies = dependencies;
+            this.dependenciesCount = dependencies.size();
+        }
     }
 }
