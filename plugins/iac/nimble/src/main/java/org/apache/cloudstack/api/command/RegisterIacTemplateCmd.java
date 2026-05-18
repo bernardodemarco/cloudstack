@@ -32,7 +32,7 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
         responseObject = IacTemplateResponse.class, requestHasSensitiveInfo = false, responseHasSensitiveInfo = false,
         entityType = {IacTemplate.class}, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
 public class RegisterIacTemplateCmd extends BaseIacTemplateRegistrationCmd {
-    @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "Description of the IaC template.")
+    @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "Description of the IaC template.", length = 4096)
     private String description;
 
     @Parameter(name = ApiConstants.DOMAIN_ID, type = CommandType.UUID, entityType = DomainResponse.class,

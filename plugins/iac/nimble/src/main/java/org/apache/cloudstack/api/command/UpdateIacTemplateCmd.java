@@ -33,7 +33,7 @@ public class UpdateIacTemplateCmd extends BaseIacTemplateRegistrationCmd {
     @Parameter(name = ApiConstants.ID, type = CommandType.UUID, entityType = IacTemplateResponse.class, required = true, description = "ID of the IaC template to be updated.")
     private Long id;
 
-    @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "Description of the IaC template.")
+    @Parameter(name = ApiConstants.DESCRIPTION, type = CommandType.STRING, description = "Description of the IaC template.", length = 4096)
     private String description;
 
     public Long getId() {
