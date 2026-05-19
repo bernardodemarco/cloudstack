@@ -29,16 +29,38 @@ node_types:
         type: string
         description: Name of the project.
         required: true
-      account:
+      display-text:
         type: string
-        description: "The account name associated with the project. It must be used with the 'domain-id' property."
+        description: Display text of the project.
         required: false
+      account-id:
+        type: string
+        description: The ID of the account owning the project.
+        required: false
+        metadata:
+          api-parameter: accountid
       domain-id:
         type: string
-        description: The domain ID associated with the project.
+        description: The domain ID of the account owning the project.
         required: false
         metadata:
           api-parameter: domainid
+      admin-account-name:
+        type: string
+        description: >
+          "The name of the account to be assigned as the administrator of the project.
+          It must be used with the 'domain-id' property."
+        required: false
+        metadata:
+          api-parameter: account
+      admin-user-id:
+        type: string
+        description: >
+          "The ID of the user to be assigned as the administrator of the project.
+          It must be used with the 'domain-id' and 'account-id' properties."
+        required: false
+        metadata:
+          api-parameter: userid
     attributes:
       id:
         type: string

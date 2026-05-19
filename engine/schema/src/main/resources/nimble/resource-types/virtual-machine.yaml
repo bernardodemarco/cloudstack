@@ -252,6 +252,14 @@ node_types:
         required: false
         metadata:
           api-parameter: snapshotid
+      details:
+        type: map
+        entry_schema:
+          type: string
+        description: >
+          The details of the VM. Most frequently used details are 'cpunumber', 'cpuspeed' and 'memory'
+          to specify, respectively, the number of vCPUs, the CPU speed and the amount of memory.
+        required: false
     attributes:
       id:
         type: string
