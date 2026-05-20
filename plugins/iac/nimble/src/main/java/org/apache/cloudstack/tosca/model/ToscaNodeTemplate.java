@@ -29,6 +29,12 @@ public class ToscaNodeTemplate {
     private final Set<ToscaProperty> unresolvedPropertiesByGetAttribute = new HashSet<>();
     private final Map<String, Object> attributes = new HashMap<>();
 
+    public enum ProvisioningState {
+        PENDING, SUCCEEDED, FAILED, CANCELLED
+    }
+
+    private volatile ProvisioningState provisioningState = ProvisioningState.PENDING;
+
     public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
         this.name = name;
         this.type = type;
@@ -91,5 +97,13 @@ public class ToscaNodeTemplate {
 
     public Map<String, Object> getAttributes() {
         return attributes;
+    }
+
+    public ProvisioningState getProvisioningState() {
+        return provisioningState;
+    }
+
+    public void setProvisioningState(ProvisioningState provisioningState) {
+        this.provisioningState = provisioningState;
     }
 }

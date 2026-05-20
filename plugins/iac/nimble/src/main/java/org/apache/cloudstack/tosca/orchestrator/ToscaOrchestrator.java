@@ -104,7 +104,7 @@ public class ToscaOrchestrator {
 
     private ExecutorService executorPool;
 
-    public void deployIacTemplate(String iacTemplateContent, Map<String, String> inputs, BaseCmd.HTTPMethod httpMethod) {
+    public ToscaServiceTemplate deployIacTemplate(String iacTemplateContent, Map<String, String> inputs, BaseCmd.HTTPMethod httpMethod) {
         ToscaServiceTemplate serviceTemplate = parseServiceTemplate(iacTemplateContent);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
 
@@ -114,6 +114,7 @@ public class ToscaOrchestrator {
         getCurrentNimbleExecutorPoolStatus("before creating provisioning tasks");
         provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, errors, cancelAllProvisioningTasks, httpMethod));
         awaitDeployCompletion(provisioningTasksFutures, errors, cancelAllProvisioningTasks);
+        return serviceTemplate;
     }
 
     public ToscaServiceTemplate parseServiceTemplate(String iacTemplateContent) {
@@ -221,7 +222,7 @@ public class ToscaOrchestrator {
             }
 
             taskFuture.whenComplete((result, ex) -> {
-                handleTaskCompletion(ex, errors, cancelAllProvisioningTasks);
+                handleTaskCompletion(nodeTemplate, ex, errors, cancelAllProvisioningTasks);
                 getCurrentNimbleExecutorPoolStatus(String.format("after node template [%s] provisioning", node));
             });
 
@@ -232,9 +233,10 @@ public class ToscaOrchestrator {
         return futures;
     }
 
-    private void handleTaskCompletion(Throwable ex, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
+    private void handleTaskCompletion(ToscaNodeTemplate nodeTemplate, Throwable ex, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
         if (ex == null) {
             logger.trace("The provisioning of the node template completed successfully. Skipping error handling.");
+            nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.SUCCEEDED);
             return;
         }
 
@@ -242,13 +244,16 @@ public class ToscaOrchestrator {
             ex = ex.getCause();
         }
 
-        if (!(ex instanceof CancellationException)) {
-            logger.trace("An error occurred during the provisioning of a node template. Adding it to the list of errors.", ex);
-            errors.add(ex);
-            cancelAllProvisioningTasks.run();
-        } else {
+        if (ex instanceof CancellationException) {
             logger.trace("The provisioning of the node template was cancelled. Skipping error handling.", ex);
+            nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.CANCELLED);
+            return;
         }
+
+        logger.trace("An error occurred during the provisioning of a node template. Adding it to the list of errors.", ex);
+        nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.FAILED);
+        errors.add(ex);
+        cancelAllProvisioningTasks.run();
     }
 
     // O(|V|+|E|)
