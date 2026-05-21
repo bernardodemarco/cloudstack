@@ -17,6 +17,7 @@
 package org.apache.cloudstack.api.response;
 
 import com.cloud.api.ApiDBUtils;
+import com.cloud.api.ApiGsonHelper;
 import com.cloud.domain.Domain;
 import com.cloud.exception.PermissionDeniedException;
 import com.cloud.projects.Project;
@@ -31,6 +32,8 @@ import org.apache.cloudstack.persistence.iactemplates.IacTemplateDomainMapVO;
 import org.apache.cloudstack.persistence.iactemplatesprofile.IacResourceType;
 import org.apache.cloudstack.tosca.model.ToscaNodeTemplate;
 import org.apache.cloudstack.tosca.model.ToscaServiceTemplate;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -185,6 +188,47 @@ public class NimbleResponseBuilder {
         IacTemplateGraphResponse.IacTemplateGraphSummary graphSummary = new IacTemplateGraphResponse.IacTemplateGraphSummary(graphTopology.size(), numberOfRootNodes);
         IacTemplateGraphResponse response = new IacTemplateGraphResponse(iacTemplate.getUuid(), graphSummary, graphNodes);
         response.setObjectName("iactemplategraph");
+        return response;
+    }
+
+    public IacTemplateDeploymentResponse createIacTemplateDeploymentResponse(ToscaServiceTemplate serviceTemplate, boolean success) {
+        List<IacTemplateDeploymentResponse.NodeTemplateDeploymentResponse> nodeResponses = serviceTemplate.getNodeTemplates().values().stream()
+                .map(this::createNodeTemplateDeploymentResponse)
+                .collect(Collectors.toList());
+
+        List<String> errorMessages = serviceTemplate.getNodeTemplates().values().stream()
+                .filter(n -> n.getProvisioningError() != null)
+                .map(n -> String.format("[%s]: %s", n.getName(), n.getProvisioningError()))
+                .collect(Collectors.toList());
+
+        IacTemplateDeploymentResponse response = new IacTemplateDeploymentResponse();
+        response.setSuccess(success);
+        response.setDeploymentError(serviceTemplate.getDeploymentError());
+        response.setNodes(nodeResponses);
+        response.setObjectName("iactemplatedeployment");
+        return response;
+    }
+
+    private IacTemplateDeploymentResponse.NodeTemplateDeploymentResponse createNodeTemplateDeploymentResponse(ToscaNodeTemplate nodeTemplate) {
+        IacTemplateDeploymentResponse.NodeTemplateDeploymentResponse response = new IacTemplateDeploymentResponse.NodeTemplateDeploymentResponse();
+        response.setName(nodeTemplate.getName());
+        response.setType(nodeTemplate.getType().getName());
+        response.setState(nodeTemplate.getProvisioningState().name());
+        if (StringUtils.isNotBlank(nodeTemplate.getProvisioningError())) {
+            response.setError(nodeTemplate.getProvisioningError());
+        }
+        if (MapUtils.isNotEmpty(nodeTemplate.getAttributes())) {
+            response.setAttributes(nodeTemplate.getAttributes().isEmpty() ? null :
+                    nodeTemplate.getAttributes().entrySet().stream()
+                            .collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    e -> ApiGsonHelper.getBuilder().create().toJson(e.getValue()))));
+        }
+        response.setProperties(nodeTemplate.getProperties().entrySet().stream()
+                .filter(e -> e.getValue().getEvaluatedValue() != null)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> ApiGsonHelper.getBuilder().create().toJson(e.getValue().getEvaluatedValue()))));
         return response;
     }
 }

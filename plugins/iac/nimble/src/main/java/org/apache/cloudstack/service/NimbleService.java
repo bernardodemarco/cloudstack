@@ -24,6 +24,7 @@ import org.apache.cloudstack.api.command.ListIacTemplatesCmd;
 import org.apache.cloudstack.api.command.PlanIacTemplateDeploymentCmd;
 import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.IacTemplateDeploymentResponse;
 import org.apache.cloudstack.api.response.IacTemplateGraphResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
@@ -55,7 +56,7 @@ public interface NimbleService extends NimbleServiceHelper, PluggableService, Co
 
     ListResponse<IacResourceTypeResponse> listIacResourceTypes(ListIacResourceTypesCmd cmd);
     ListResponse<IacTemplateResponse> listIacTemplates(ListIacTemplatesCmd cmd);
-    void deployIacTemplate(DeployIacTemplateCmd cmd);
+    IacTemplateDeploymentResponse deployIacTemplate(DeployIacTemplateCmd cmd);
     IacTemplateGraphResponse planIacTemplateDeployment(PlanIacTemplateDeploymentCmd cmd);
     IacTemplateResponse saveIacTemplate(BaseIacTemplateRegistrationCmd cmd);
     void removeIacTemplate(RemoveIacTemplateCmd cmd);

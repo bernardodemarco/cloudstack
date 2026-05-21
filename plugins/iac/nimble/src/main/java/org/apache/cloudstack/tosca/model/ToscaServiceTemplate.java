@@ -25,6 +25,7 @@ public class ToscaServiceTemplate {
     private final Map<String, ToscaInputDefinition> inputs;
     private final Map<String, Set<ToscaNodeTemplate>> dependencyGraph;
     private final Map<String, Set<ToscaProperty>> unresolvedPropertiesByGetInput;
+    private String deploymentError;
 
     public ToscaServiceTemplate(Map<String, ToscaNodeTemplate> nodeTemplates, Map<String, Set<ToscaNodeTemplate>> dependencyGraph, Map<String, ToscaInputDefinition> inputs, Map<String, Set<ToscaProperty>> unresolvedPropertiesByGetInput) {
         this.nodeTemplates = nodeTemplates;
@@ -47,5 +48,13 @@ public class ToscaServiceTemplate {
 
     public Map<String, Set<ToscaProperty>> getUnresolvedPropertiesByGetInput() {
         return Collections.unmodifiableMap(unresolvedPropertiesByGetInput);
+    }
+
+    public String getDeploymentError() {
+        return deploymentError;
+    }
+
+    public void setDeploymentError(String deploymentError) {
+        this.deploymentError = deploymentError;
     }
 }

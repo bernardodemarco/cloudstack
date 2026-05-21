@@ -104,17 +104,16 @@ public class ToscaOrchestrator {
 
     private ExecutorService executorPool;
 
-    public ToscaServiceTemplate deployIacTemplate(String iacTemplateContent, Map<String, String> inputs, BaseCmd.HTTPMethod httpMethod) {
+    public Pair<ToscaServiceTemplate, Boolean> deployIacTemplate(String iacTemplateContent, Map<String, String> inputs, BaseCmd.HTTPMethod httpMethod) {
         ToscaServiceTemplate serviceTemplate = parseServiceTemplate(iacTemplateContent);
         resolveServiceTemplateInputs(serviceTemplate, inputs);
 
         Map<String, CompletableFuture<Void>> provisioningTasksFutures = new HashMap<>();
         Runnable cancelAllProvisioningTasks = getCancelAllProvisioningTasks(provisioningTasksFutures);
-        List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
         getCurrentNimbleExecutorPoolStatus("before creating provisioning tasks");
-        provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, errors, cancelAllProvisioningTasks, httpMethod));
-        awaitDeployCompletion(provisioningTasksFutures, errors, cancelAllProvisioningTasks);
-        return serviceTemplate;
+        provisioningTasksFutures.putAll(createProvisioningTasksFutures(serviceTemplate, cancelAllProvisioningTasks, httpMethod));
+        boolean success = awaitDeployCompletion(serviceTemplate, provisioningTasksFutures, cancelAllProvisioningTasks);
+        return new Pair<>(serviceTemplate, success);
     }
 
     public ToscaServiceTemplate parseServiceTemplate(String iacTemplateContent) {
@@ -139,7 +138,7 @@ public class ToscaOrchestrator {
         };
     }
 
-    private void awaitDeployCompletion(Map<String, CompletableFuture<Void>> provisioningTasksFutures, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
+    private boolean awaitDeployCompletion(ToscaServiceTemplate serviceTemplate, Map<String, CompletableFuture<Void>> provisioningTasksFutures, Runnable cancelAllProvisioningTasks) {
         logger.debug("Awaiting for all the provisioning tasks of the service template to complete.");
         CompletableFuture<Void> serviceTemplateFeature = CompletableFuture.allOf(provisioningTasksFutures.values().toArray(new CompletableFuture[0]));
         int timeout = NimbleService.NimbleIaCTemplateExecutionTimeout.value();
@@ -147,18 +146,32 @@ public class ToscaOrchestrator {
             serviceTemplateFeature.get(timeout, TimeUnit.SECONDS);
             logger.info("All provisioning tasks of the service template completed successfully.");
         } catch (ExecutionException e) {
-            Set<String> errorMessages = errors.stream().map(Throwable::getMessage).collect(Collectors.toSet());
-            throw new CloudRuntimeException(String.format("The following errors occurred during the IaC template deployment: %s", String.join(" | ", errorMessages)), e);
+            List<String> errorMessages = serviceTemplate.getNodeTemplates().values().stream()
+                    .filter(n -> n.getProvisioningError() != null)
+                    .map(n -> String.format("[%s]: %s", n.getName(), n.getProvisioningError()))
+                    .collect(Collectors.toList());
+            String baseErrorMessage = "One or more node templates failed to be provisioned";
+            logger.error("{}: {}", baseErrorMessage, String.join(" | ", errorMessages), e);
+            serviceTemplate.setDeploymentError(baseErrorMessage + ".");
+            return false;
         } catch (TimeoutException e) {
             cancelAllProvisioningTasks.run();
-            throw new CloudRuntimeException(String.format("IaC template deployment timed out after [%d] seconds.", timeout), e);
+            String errorMessage = String.format("IaC template deployment timed out after [%d] seconds.", timeout);
+            logger.error(errorMessage, e);
+            serviceTemplate.setDeploymentError(errorMessage);
+            return false;
         }  catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             cancelAllProvisioningTasks.run();
-            throw new CloudRuntimeException("IaC template deployment was interrupted.", e);
+            String errorMessage = "IaC template deployment was interrupted.";
+            logger.error(errorMessage, e);
+            serviceTemplate.setDeploymentError(errorMessage);
+            return false;
         } finally {
             getCurrentNimbleExecutorPoolStatus("after awaiting the deployment of the service template");
         }
+
+        return true;
     }
 
     /**
@@ -200,7 +213,7 @@ public class ToscaOrchestrator {
         property.setEvaluatedValue(evaluatedValue);
     }
 
-    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, List<Throwable> errors, Runnable cancelAllProvisioningTasks, BaseCmd.HTTPMethod httpMethod) {
+    private Map<String, CompletableFuture<Void>> createProvisioningTasksFutures(ToscaServiceTemplate serviceTemplate, Runnable cancelAllProvisioningTasks, BaseCmd.HTTPMethod httpMethod) {
         logger.debug("Building provisioning tasks for the service template based on its graph topological sort.");
         Map<String, CompletableFuture<Void>> futures = new HashMap<>();
         CallContext callContext = CallContext.current();
@@ -222,7 +235,7 @@ public class ToscaOrchestrator {
             }
 
             taskFuture.whenComplete((result, ex) -> {
-                handleTaskCompletion(nodeTemplate, ex, errors, cancelAllProvisioningTasks);
+                handleTaskCompletion(nodeTemplate, ex, cancelAllProvisioningTasks);
                 getCurrentNimbleExecutorPoolStatus(String.format("after node template [%s] provisioning", node));
             });
 
@@ -233,7 +246,7 @@ public class ToscaOrchestrator {
         return futures;
     }
 
-    private void handleTaskCompletion(ToscaNodeTemplate nodeTemplate, Throwable ex, List<Throwable> errors, Runnable cancelAllProvisioningTasks) {
+    private void handleTaskCompletion(ToscaNodeTemplate nodeTemplate, Throwable ex, Runnable cancelAllProvisioningTasks) {
         if (ex == null) {
             logger.trace("The provisioning of the node template completed successfully. Skipping error handling.");
             nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.SUCCEEDED);
@@ -252,7 +265,7 @@ public class ToscaOrchestrator {
 
         logger.trace("An error occurred during the provisioning of a node template. Adding it to the list of errors.", ex);
         nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.FAILED);
-        errors.add(ex);
+        nodeTemplate.setProvisioningError(ex.getMessage());
         cancelAllProvisioningTasks.run();
     }
 

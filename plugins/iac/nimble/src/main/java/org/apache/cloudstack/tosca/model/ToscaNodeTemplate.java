@@ -34,6 +34,7 @@ public class ToscaNodeTemplate {
     }
 
     private volatile ProvisioningState provisioningState = ProvisioningState.PENDING;
+    private volatile String provisioningError;
 
     public ToscaNodeTemplate(String name, ToscaNodeType type, Map<String, ToscaProperty> properties) {
         this.name = name;
@@ -105,5 +106,13 @@ public class ToscaNodeTemplate {
 
     public void setProvisioningState(ProvisioningState provisioningState) {
         this.provisioningState = provisioningState;
+    }
+
+    public String getProvisioningError() {
+        return provisioningError;
+    }
+
+    public void setProvisioningError(String provisioningError) {
+        this.provisioningError = provisioningError;
     }
 }

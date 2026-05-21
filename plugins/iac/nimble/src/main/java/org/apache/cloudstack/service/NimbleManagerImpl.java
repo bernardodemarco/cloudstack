@@ -42,6 +42,7 @@ import org.apache.cloudstack.api.command.RegisterIacTemplateCmd;
 import org.apache.cloudstack.api.command.RemoveIacTemplateCmd;
 import org.apache.cloudstack.api.command.UpdateIacTemplateCmd;
 import org.apache.cloudstack.api.response.IacResourceTypeResponse;
+import org.apache.cloudstack.api.response.IacTemplateDeploymentResponse;
 import org.apache.cloudstack.api.response.IacTemplateGraphResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
 import org.apache.cloudstack.api.response.ListResponse;
@@ -434,12 +435,12 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
     }
 
     @Override
-    public void deployIacTemplate(DeployIacTemplateCmd cmd) {
+    public IacTemplateDeploymentResponse deployIacTemplate(DeployIacTemplateCmd cmd) {
         Map<String, String> inputs = cmd.getInputs();
         IacTemplate iacTemplate = findIacTemplateById(cmd.getId());
         checkCallerAccessToIacTemplate(CallContext.current(), iacTemplate);
-        ToscaServiceTemplate serviceTemplate = toscaOrchestrator.deployIacTemplate(iacTemplate.getIacTemplateContent(), inputs, cmd.getHttpMethod());
-        logger.info("WILL IT WORK?????", serviceTemplate);
+        Pair<ToscaServiceTemplate, Boolean> provisioningResult = toscaOrchestrator.deployIacTemplate(iacTemplate.getIacTemplateContent(), inputs, cmd.getHttpMethod());
+        return responseBuilder.createIacTemplateDeploymentResponse(provisioningResult.first(), provisioningResult.second());
     }
 
     @Override

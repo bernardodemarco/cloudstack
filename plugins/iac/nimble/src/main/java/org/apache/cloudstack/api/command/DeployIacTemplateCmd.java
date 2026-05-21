@@ -23,8 +23,8 @@ import org.apache.cloudstack.api.APICommand;
 import org.apache.cloudstack.api.ApiConstants;
 import org.apache.cloudstack.api.BaseAsyncCmd;
 import org.apache.cloudstack.api.Parameter;
+import org.apache.cloudstack.api.response.IacTemplateDeploymentResponse;
 import org.apache.cloudstack.api.response.IacTemplateResponse;
-import org.apache.cloudstack.api.response.SuccessResponse;
 import org.apache.cloudstack.persistence.iactemplates.IacTemplate;
 import org.apache.cloudstack.service.NimbleService;
 import org.apache.commons.collections.MapUtils;
@@ -33,7 +33,7 @@ import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
-@APICommand(name = "deployIacTemplate", description = "Deploys an already registered IaC template.", responseObject = SuccessResponse.class, entityType = {IacTemplate.class},
+@APICommand(name = "deployIacTemplate", description = "Deploys an already registered IaC template.", responseObject = IacTemplateDeploymentResponse.class, entityType = {IacTemplate.class},
         requestHasSensitiveInfo = false, responseHasSensitiveInfo = false, authorized = {RoleType.Admin, RoleType.ResourceAdmin, RoleType.DomainAdmin, RoleType.User})
 public class DeployIacTemplateCmd extends BaseAsyncCmd {
     @Inject
@@ -63,8 +63,8 @@ public class DeployIacTemplateCmd extends BaseAsyncCmd {
 
     @Override
     public void execute() {
-        nimbleService.deployIacTemplate(this);
-        SuccessResponse response = new SuccessResponse(getCommandName());
+        IacTemplateDeploymentResponse response = nimbleService.deployIacTemplate(this);
+        response.setResponseName(getCommandName());
         setResponseObject(response);
     }
 
