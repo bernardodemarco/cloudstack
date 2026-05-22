@@ -25,6 +25,10 @@ import java.util.List;
 import java.util.Map;
 
 public class IacTemplateDeploymentResponse extends BaseResponse {
+    @SerializedName(ApiConstants.ID)
+    @Param(description = "ID of the IaC template.")
+    private String id;
+
     @SerializedName(ApiConstants.SUCCESS)
     @Param(description = "Whether the IaC template deployment completed successfully.")
     private boolean success;
@@ -36,6 +40,10 @@ public class IacTemplateDeploymentResponse extends BaseResponse {
     @SerializedName("deploymenterror")
     @Param(description = "IaC template deployment error.")
     private String deploymentError;
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public void setSuccess(boolean success) {
         this.success = success;

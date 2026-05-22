@@ -30,7 +30,7 @@ public class ToscaNodeTemplate {
     private final Map<String, Object> attributes = new HashMap<>();
 
     public enum ProvisioningState {
-        PENDING, SUCCEEDED, FAILED, CANCELLED
+        PENDING, RUNNING, SUCCEEDED, FAILED, CANCELLED
     }
 
     private volatile ProvisioningState provisioningState = ProvisioningState.PENDING;

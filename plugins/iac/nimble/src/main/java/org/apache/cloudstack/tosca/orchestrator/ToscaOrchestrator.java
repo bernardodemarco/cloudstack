@@ -259,7 +259,9 @@ public class ToscaOrchestrator {
 
         if (ex instanceof CancellationException) {
             logger.trace("The provisioning of the node template was cancelled. Skipping error handling.", ex);
-            nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.CANCELLED);
+            if (nodeTemplate.getProvisioningState() != ToscaNodeTemplate.ProvisioningState.RUNNING) {
+                nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.CANCELLED);
+            }
             return;
         }
 
@@ -310,6 +312,7 @@ public class ToscaOrchestrator {
     private CompletableFuture<Void> provisionNode(ToscaNodeTemplate nodeTemplate, CallContext callContext, BaseCmd.HTTPMethod httpMethod) {
         return CompletableFuture.runAsync(() -> {
             CallContext.register(callContext, null);
+            nodeTemplate.setProvisioningState(ToscaNodeTemplate.ProvisioningState.RUNNING);
             ManagedContextExecutor.execute(() -> {
                 logger.trace("Checking whether thread has been interrupted, i.e., whether another task has cancelled its corresponding future.");
                 if (Thread.currentThread().isInterrupted()) {

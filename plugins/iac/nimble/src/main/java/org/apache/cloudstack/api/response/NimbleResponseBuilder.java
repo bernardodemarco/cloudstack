@@ -17,7 +17,6 @@
 package org.apache.cloudstack.api.response;
 
 import com.cloud.api.ApiDBUtils;
-import com.cloud.api.ApiGsonHelper;
 import com.cloud.domain.Domain;
 import com.cloud.exception.PermissionDeniedException;
 import com.cloud.projects.Project;
@@ -191,7 +190,7 @@ public class NimbleResponseBuilder {
         return response;
     }
 
-    public IacTemplateDeploymentResponse createIacTemplateDeploymentResponse(ToscaServiceTemplate serviceTemplate, boolean success) {
+    public IacTemplateDeploymentResponse createIacTemplateDeploymentResponse(IacTemplate iacTemplate, ToscaServiceTemplate serviceTemplate, boolean success) {
         List<IacTemplateDeploymentResponse.NodeTemplateDeploymentResponse> nodeResponses = serviceTemplate.getNodeTemplates().values().stream()
                 .map(this::createNodeTemplateDeploymentResponse)
                 .collect(Collectors.toList());
@@ -202,6 +201,7 @@ public class NimbleResponseBuilder {
                 .collect(Collectors.toList());
 
         IacTemplateDeploymentResponse response = new IacTemplateDeploymentResponse();
+        response.setId(iacTemplate.getUuid());
         response.setSuccess(success);
         response.setDeploymentError(serviceTemplate.getDeploymentError());
         response.setNodes(nodeResponses);
@@ -218,17 +218,29 @@ public class NimbleResponseBuilder {
             response.setError(nodeTemplate.getProvisioningError());
         }
         if (MapUtils.isNotEmpty(nodeTemplate.getAttributes())) {
-            response.setAttributes(nodeTemplate.getAttributes().isEmpty() ? null :
-                    nodeTemplate.getAttributes().entrySet().stream()
-                            .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    e -> ApiGsonHelper.getBuilder().create().toJson(e.getValue()))));
+            response.setAttributes(nodeTemplate.getAttributes().entrySet().stream()
+                            .collect(Collectors.toMap(Map.Entry::getKey, e -> convertNodeTemplateFieldToString(e.getValue()))));
         }
         response.setProperties(nodeTemplate.getProperties().entrySet().stream()
                 .filter(e -> e.getValue().getEvaluatedValue() != null)
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> ApiGsonHelper.getBuilder().create().toJson(e.getValue().getEvaluatedValue()))));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> convertNodeTemplateFieldToString(e.getValue().getEvaluatedValue()))));
         return response;
+    }
+
+    private String convertNodeTemplateFieldToString(Object value) {
+        if (value == null) return null;
+        if (value instanceof String) return (String) value;
+        if (value instanceof Boolean || value instanceof Number) return String.valueOf(value);
+        if (value instanceof List) {
+            return ((List<?>) value).stream()
+                    .map(this::convertNodeTemplateFieldToString)
+                    .collect(Collectors.joining(", "));
+        }
+        if (value instanceof Map) {
+            return ((Map<?, ?>) value).entrySet().stream()
+                    .map(e -> e.getKey() + "=" + convertNodeTemplateFieldToString(e.getValue()))
+                    .collect(Collectors.joining(", "));
+        }
+        return String.valueOf(value);
     }
 }

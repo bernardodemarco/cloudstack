@@ -440,7 +440,7 @@ public class NimbleManagerImpl extends ManagerBase implements NimbleService {
         IacTemplate iacTemplate = findIacTemplateById(cmd.getId());
         checkCallerAccessToIacTemplate(CallContext.current(), iacTemplate);
         Pair<ToscaServiceTemplate, Boolean> provisioningResult = toscaOrchestrator.deployIacTemplate(iacTemplate.getIacTemplateContent(), inputs, cmd.getHttpMethod());
-        return responseBuilder.createIacTemplateDeploymentResponse(provisioningResult.first(), provisioningResult.second());
+        return responseBuilder.createIacTemplateDeploymentResponse(iacTemplate, provisioningResult.first(), provisioningResult.second());
     }
 
     @Override
