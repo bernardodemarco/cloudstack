@@ -332,9 +332,9 @@ public class ToscaOrchestrator {
             Map<String, Object> provisioningResult;
             Map<String, String> apiParams = nodeTemplate.getApiParams();
             logger.info("Dispatching the provisioning command [{}] of the node template [{}] with the following parameters {}.", cmd.getClass().getName(), nodeTemplate.getName(), apiParams);
-            if (cmd instanceof BaseAsyncCreateCmd) {
-                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCreateCmd) cmd, apiParams, callContext, httpMethod);
-            } else if (cmd instanceof BaseCmd && !(cmd instanceof BaseAsyncCmd)) {
+            if (cmd instanceof BaseAsyncCmd) {
+                provisioningResult = dispatchProvisioningAsynchronousCommand((BaseAsyncCmd) cmd, apiParams, callContext, httpMethod);
+            } else if (cmd instanceof BaseCmd) {
                 provisioningResult = dispatchProvisioningSynchronousCommand((BaseCmd) cmd, apiParams, httpMethod);
             } else {
                 throw new CloudRuntimeException(String.format("The provisioning API associated with the node template [%s] is not available.", nodeTemplate.getName()));
@@ -355,13 +355,15 @@ public class ToscaOrchestrator {
         return ApiSerializerHelper.fromSerializedStringToMap(ApiSerializerHelper.toSerializedString(syncCmd.getResponseObject()));
     }
 
-    private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext, BaseCmd.HTTPMethod httpMethod) throws Exception {
+    private Map<String, Object> dispatchProvisioningAsynchronousCommand(BaseAsyncCmd asyncCmd, Map<String, String> apiParams, CallContext callContext, BaseCmd.HTTPMethod httpMethod) throws Exception {
         AsyncJobExecutionContext executionContext = AsyncJobExecutionContext.getCurrentExecutionContext();
         try {
             asyncCmd = ComponentContext.inject(asyncCmd);
             asyncCmd.setHttpMethod(String.valueOf(httpMethod));
-            logger.trace("Dispatching the create workflow for the command [{}].", asyncCmd.getClass().getName());
-            apiDispatcher.dispatchCreateCmd(asyncCmd, apiParams);
+            if (asyncCmd instanceof BaseAsyncCreateCmd) {
+                logger.trace("Dispatching the create workflow for the command [{}].", asyncCmd.getClass().getName());
+                apiDispatcher.dispatchCreateCmd((BaseAsyncCreateCmd) asyncCmd, apiParams);
+            }
 
             logger.trace("Successfully executed the create workflow for the command [{}]. Thus, dispatching its async job.", asyncCmd.getClass().getName());
             AsyncJobVO job = dispatchAsyncJob(asyncCmd, apiParams, callContext);
@@ -375,10 +377,15 @@ public class ToscaOrchestrator {
         }
     }
 
-    private AsyncJobVO dispatchAsyncJob(BaseAsyncCreateCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
+    private AsyncJobVO dispatchAsyncJob(BaseAsyncCmd asyncCmd, Map<String, String> apiParams, CallContext callContext) {
         apiParams.put("ctxStartEventId", "1");
-        Long objectId = ObjectUtils.defaultIfNull(asyncCmd.getEntityId(), asyncCmd.getApiResourceId());
-        apiParams.put("id", objectId.toString());
+        Long objectId = asyncCmd.getApiResourceId();
+        if (asyncCmd instanceof BaseAsyncCreateCmd) {
+            Long entityId = ((BaseAsyncCreateCmd) asyncCmd).getEntityId();
+            objectId = ObjectUtils.defaultIfNull(entityId, objectId);
+            apiParams.put("id", objectId.toString());
+        }
+
         apiParams.put("ctxUserId", String.valueOf(callContext.getCallingUserId()));
         apiParams.put("ctxAccountId", String.valueOf(callContext.getCallingAccountId()));
 
